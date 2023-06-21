@@ -1,0 +1,103 @@
+/*****************************************************************************
+ *                                                                           *
+ * Copyright 2004 Greg Bryan                                                 *
+ * Copyright 2004 Laboratory for Computational Astrophysics                  *
+ * Copyright 2004 Board of Trustees of the University of Illinois            *
+ * Copyright 2004 Regents of the University of California                    *
+ *                                                                           *
+ * This software is released under the terms of the "Enzo Public License"    *
+ * in the accompanying LICENSE file.                                         *
+ *                                                                           *
+ *****************************************************************************/
+#ifndef __typedefs_h_
+#define __typedefs_h_
+/***********************************************************************
+/
+/  MISCELANEOUS TYPEDEFS AND ENUMERATIONS
+/
+/  written by: Greg Bryan
+/  date:       November, 1994
+/  modified1:
+/
+/  PURPOSE:
+/
+************************************************************************/
+
+#include "CoolData.h"
+#include "RateData.h"
+#include "RadiationFieldData.h"
+#include "AnalysisParameters.h"
+/* These are the different types of baryon fields. */
+
+enum field_type {Density, TotalEnergy, InternalEnergy, Pressure,
+		 Velocity1, Velocity2, Velocity3, 
+		 ElectronDensity, HIDensity, HIIDensity,  HeIDensity, 
+		 HeIIDensity, HeIIIDensity, HMDensity, H2IDensity, 
+		 H2IIDensity, DIDensity, DIIDensity, HDIDensity,
+                 Metallicity, ExtraType0, ExtraType1, GravPotential,
+                 Acceleration0, Acceleration1,Acceleration2,
+		 MagneticField1type, MagneticField2type, MagneticField3type,
+                 ElectricField1type, ElectricField2type, ElectricField3type, 
+		 RadiationFreq0,
+		 RadiationFreq1,
+		 RadiationFreq2,
+		 RadiationFreq3,
+		 RadiationFreq4,
+		 RadiationFreq5,
+		 gParticlePosition,
+		 gParticleVelocity,
+		 gParticleMass,
+		 gParticleAcceleration,
+		 gParticleNumber,
+		 gParticleType,
+		 gParticleAttribute,
+		 gPotentialField,
+		 gAccelerationField,
+		 gGravitatingMassField,
+		 gFlaggingField,
+		 gVelocity,FieldUndefined};
+
+#define FieldTypeIsDensity(A) (((A) >= TotalEnergy && (A) <= Velocity3) ? FALSE : TRUE)
+
+/* These are the different types of fluid boundary conditions. */
+
+enum boundary_type {reflecting, outflow, inflow, periodic, BoundaryUndefined};
+
+/* These are the different types of gravity boundary conditions. */
+
+enum gravity_boundary_type {TopGridPeriodic, TopGridIsolated, 
+				    SubGridIsolated, GravityUndefined};
+
+/* Interpolation types. */
+
+enum interpolation_type {ThirdOrderA, SecondOrderA, SecondOrderB, SecondOrderC,
+			 FirstOrderA, InterpolationUndefined};
+
+/* Hydrodynamics methods. */
+
+#ifdef ATHENA
+enum hydro_method {PPM_DirectEuler, PPM_LagrangeRemap, Zeus_Hydro, MHD_Harten, Athena, MHD_None, MHD_Li, PPM_Local};
+
+#else //Athena
+
+enum hydro_method {PPM_DirectEuler, PPM_LagrangeRemap, Zeus_Hydro, MHD_Harten, Athena, MHD_None, MHD_Li, PPM_Local};
+
+#endif//Athena
+
+/* for MagneticField Centering */
+
+// old centering
+// enum MHD_Centering {MHD_CenteringUndefined, MHD_average, MHD_average_NoEngCorr, MHD_dtOnly};
+enum MHD_Centering {MHD_CenteringUndefined, MHD_SplitWithEng, MHD_Split, MHD_Volumetric, MHD_dtOnly, MHD_none, MHD_Non3d};
+
+enum MHD_divbmethod {MHD_DivB_none, MHD_DivB_Balsara, MHD_DivB_Poisson, MHD_DivB_RJ, MHD_DivB_Athena, MHD_DivB_Athena_Switch, MHD_DivB_Athena_LF, MHD_DivB_Athena_Balsara};
+enum MHD_interpolation_type {BalsaraDirect, BalsaraAverage, MHD_InterpolationUndefined};
+/* Define a float/int union. */
+
+union float_int {
+  int ival;
+  float fval;
+  FLOAT FVAL;
+};
+
+#endif

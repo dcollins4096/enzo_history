@@ -1,0 +1,3 @@
+C code for byte swapping.  Works for int or float of 1, 2, 4 or 8 byte precision.
+
+Code is courtesy of Mike Warren (T-6/LANL)

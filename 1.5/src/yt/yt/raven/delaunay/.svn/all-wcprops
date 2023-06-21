@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay
+END
+LICENSE.txt
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/LICENSE.txt
+END
+_delaunay.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/_delaunay.cpp
+END
+delaunay_utils.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/delaunay_utils.cpp
+END
+natneighbors.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/natneighbors.cpp
+END
+testfuncs.py
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/testfuncs.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/__init__.py
+END
+triangulate.py
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/triangulate.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/setup.py
+END
+VoronoiDiagramGenerator.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/VoronoiDiagramGenerator.cpp
+END
+delaunay_utils.h
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/delaunay_utils.h
+END
+natneighbors.h
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/natneighbors.h
+END
+README.txt
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/README.txt
+END
+VoronoiDiagramGenerator.h
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/VoronoiDiagramGenerator.h
+END
+interpolate.py
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/delaunay/interpolate.py
+END

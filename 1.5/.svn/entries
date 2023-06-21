@@ -1,0 +1,77 @@
+8
+
+dir
+1989
+svn://mngrid.ucsd.edu/Enzo/public/trunk
+svn://mngrid.ucsd.edu/Enzo
+
+
+
+2008-10-19T19:50:12.869025Z
+1983
+rpwagner
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+e1420ddf-aa2b-0410-86ea-f13f722ea44b
+
+input
+dir
+
+configure
+file
+
+
+
+
+2008-10-22T04:08:44.000000Z
+81a21f270a31eec2c9e86370254ec8ef
+2008-07-14T18:45:25.340905Z
+1616
+rpwagner
+has-props
+
+LICENSE
+file
+
+
+
+
+2008-10-22T04:08:44.000000Z
+4694c0f230677df0ef24d597d9f1d711
+2008-09-07T22:10:49.482525Z
+1828
+rpwagner
+
+doc
+dir
+
+src
+dir
+
+bin
+dir
+
+README
+file
+
+
+
+
+2008-10-22T04:08:44.000000Z
+b4155e79a45efe7340ea3bf1843553f2
+2008-09-08T03:38:51.656710Z
+1830
+rpwagner
+

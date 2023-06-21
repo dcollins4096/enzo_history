@@ -1,0 +1,16 @@
+#======================================================================
+#
+# Make.mach for NCSA Titan for HDF5 Pablo I/O profiling
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-30  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_TITAN_PABLO)
+
+DEFINES_PABLO = -DUSE_PABLO
+HDF5_DIR = /usr/apps/tools/Pablo
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5-inst -lPabloTraceExt -lPabloTrace $(LIBS_HDF4_ARCH)

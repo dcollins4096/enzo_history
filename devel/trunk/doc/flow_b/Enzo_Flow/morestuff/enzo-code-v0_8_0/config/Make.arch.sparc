@@ -1,0 +1,106 @@
+#======================================================================
+#
+# Make.arch for SUN SPARC
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-20  Created
+#
+#======================================================================
+
+TEXT_ARCH = $(TEXT_ARCH_SPARC)
+
+#======================================================================
+# Pre-processor cpp
+#======================================================================
+
+CPP_ARCH      = /usr/lib/cpp
+CPPFLAGS_ARCH = -P
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DSUN
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+COMPILER_MPI_HOME = /opt/SUNWhpc/bin
+
+CC_MPI_ARCH    = $(COMPILER_MPI_HOME)/mpcc
+CXX_MPI_ARCH   = $(COMPILER_MPI_HOME)/mpCC
+FC_MPI_ARCH    = $(COMPILER_MPI_HOME)/mpf77
+LD_MPI_ARCH    = $(COMPILER_MPI_HOME)/mpCC
+
+COMPILER_NOMPI_HOME = /opt/SUNWspro/bin
+
+CC_NOMPI_ARCH  = $(COMPILER_NOMPI_HOME)/cc
+CXX_NOMPI_ARCH = $(COMPILER_NOMPI_HOME)/CC
+FC_NOMPI_ARCH  = $(COMPILER_NOMPI_HOME)/f77
+LD_NOMPI_ARCH  = $(COMPILER_NOMPI_HOME)/CC
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = 
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -xtarget=ultra2 -xarch=v8plusa  -O3 
+FLAGS_OPT_AGGRESSIVE_ARCH = -xtarget=ultra2 -xarch=v8plusa  -O3 
+
+#======================================================================
+# Architecture-dependent compiler and linker flags 
+#======================================================================
+
+CFLAGS_ARCH   = -features=no%conststrings,no%localfor
+CXXFLAGS_ARCH = -features=no%conststrings,no%localfor
+FFLAGS_ARCH   = 
+LDFLAGS_ARCH  = 
+
+FFLAGS_PRECISION_SINGLE_ARCH = -xtypemap=real:32,double:64,integer:32
+FFLAGS_PRECISION_DOUBLE_ARCH = -xtypemap=real:64,double:64,integer:32
+
+#======================================================================
+# Architecture-dependent compiler and linker flags 
+#======================================================================
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -lM77 -lF77 -lsunmath
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = -I/opt/SUNWhpc/include
+LIBS_MPI_ARCH = -L/opt/SUNWhpc/lib -lmpi
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+HDF4_DIR = /usr/local/hdf4
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /usr/local/hdf5
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5

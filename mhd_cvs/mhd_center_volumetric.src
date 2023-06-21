@@ -1,0 +1,300 @@
+c72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72 72.
+c
+c Center MagneticField by volumetric interpolation.
+c David Collins.  01/23/06.  8:49 pm.
+c
+c Calculation of CenteredB[3] from MagneticField[3] can be done in a 
+c number of ways. This method makes a 3 dimensional, quadratic 
+c interpolation of the entire magnetic field, then volume averages 
+c the field to obtain CenteredB.
+c
+c 
+c This is the same interpolation used in the AMR routines in Enzo.
+c     (bxr for 'reconstructed')
+c     bxr= a(1) + a(2)*x   + a(3)*y   + a(4)*z 
+c              + a(5)*x^2 + a(6)*y*x + a(7)*z*x
+c     byr= b(1) + b(2)*x   + a(3)*y   + a(4)*z)
+c              + b(5)*y^2 + b(6)*x*y + b(7)*z*y
+c     bzr= c(1) + c(2)*x)  + c(3)*y   +c(4)*z
+c              + c(4)*z^2 + c(6)*x*z + c(7)*y*z
+c     (Plus higher terms for prologed grids, but that's not needed here.
+c
+c The coefficients are found by subjecting bxr,byr,and bzr to divergence
+c & boundary constraints.  Integration of the final result over the whole
+c 3d cell leaves only the even terms, a(1) and a(5) (etc.)  The final 
+c result is bxc = 0.5*(Bxf(i+1,j,k)+Bxf(i,j,k)) - a(5)*dx^2/6 
+c By the divergence condition, a(5) is related to the xz term in Bz 
+c and the xy term in By.  (with similar statements for byc and bzc) so
+c  
+c    a(5) = -1/2(b(6)+c(6))
+c    b(6) = (DxBy(j+1)/dx - DxBy(j)/dx )/dy
+c    c(6) = (DxBz(k+1)/dx - DxBz(k)/dx )/dz
+c 
+c    where DxBy is the MinMod undivided difference 
+c    (an oscillation minimizing derivative.)
+c
+c For a full discussion, see Balsara, J. Comp. Phys, (2001) 174, 614-648
+
+c
+c Note that, since higher order derivatives are taken, some cells don't
+c have all the proper derivatives.  In those cells, simple averaging
+c is done.  These zones are the first and last zones along each field 
+c direction.  (so i=1 and nx for bxc, etc.)
+c 
+c
+
+c
+c Variables used:
+c Input variables:
+c Bxf, Byf, Bzf  Face Centered magnetic fields (MagneticField in the 
+c                rest of enzo. 72 characters is a pain in the ass.)
+c                These will always be capital, since it's the primary 
+c                field variable.
+c bxc, bxc, bzc  Cell Centered Magnetic Fields (CenteredB in the rest 
+c                of enzo.  I should have been more consistant. Whatever)
+c                These will always be lower case since its a derived 
+c                quantity
+c energy         Total energy.  Currently (Jan 23 2006) this isn't 
+c                used, but the plan is to apply a correction to the 
+c                energy for consistancy.  We'll see how that works out.
+c nx, ny, nz     Number of cells (counted at the center.)
+c dx, dy, dz     Cell widths.
+c method         = 1, apply energy correction (not used)
+c                = 0, don't apply energy correction.
+c
+c Internal variables:
+c D1             Undivided Differences will be stored in this variable.
+c D2             Undivided Differences will also be stored here.
+c                (like a derivative, but without the 1/dx.  The 1/dx
+c                is taken care of algebraicly elsewhere.) 
+c                Since I only ever need two derivatives at a time, 
+c                I only store two.  Accordingly, the size of these
+c                variables is large enough to accomidate all variables.
+c                So for bxc: D1 = DxBy, D2 = DxBz
+c                       byc: D1 = DyBx, D2 = DyBz
+c                       bzc: D1 = DzBx, D2 = DzBy
+c aa, bb,cc      The coefficents of the reconstruction.  These
+c                are kept as scalars, because I only need one at a time.
+c                Repeated letters used because searching for 'a' is 
+c                friggin' rediculous.
+c dxi,dyi,dzi    1/dx, etc.  Faster this way.
+c     
+c OverTwelve     1.0/12.0  Comes out of the above algebra.
+c i,j,k          Loop variables. Also used for spelling Kilimanjaro.
+c                
+
+      subroutine mhd_center_volumetric(Bxf, Byf, Bzf, bxc, byc, bzc,
+     +     energy,dx, dy, dz, nx,ny,nz, method)
+      
+      
+      implicit none
+      
+c     Input Variables.
+      
+      integer nx,ny,nz, method
+      real dx,dy,dz
+      
+      real Bxf(nx+1,ny,nz)
+      real Byf(nx,ny+1,nz)
+      real Bzf(nx,ny,nz+1)
+
+      real bxc(nx,ny,nz) ,byc(nx,ny,nz) ,bzc(nx,ny,nz), energy(nx,ny,nz)
+
+c     Internal variables
+
+      integer i,j,k
+
+      real D1(nx+1,ny+1,nz+1), D2(nx+1,ny+1,nz+1)
+      real aa,bb,cc, dxi,dyi,dzi, OverTwelve
+
+c     The slope selector.  In the future, different slope selections
+c     may be tried, who knows.  The routine for minmod can be found 
+c     in mhd_interploate.src
+      real minmod
+
+c
+c     Let's get this party started.
+c
+
+c     This awful switch is for debugging purposes only.
+      if( 0 .eq. 0 ) then
+         dxi = 1.0/dx
+         dyi = 1.0/dy
+         dzi = 1.0/dz
+         OverTwelve = 1.0/12.0
+      else
+c	 debug
+      write(*,*) "kludge: mhd_center_volumetric, dx=dy=dz=12=1."
+         dxi = 1.0
+         dyi = 1.0
+         dzi = 1.0
+         OverTwelve = 1.0
+         dx = 1.0
+         dy = 1.0
+         dz = 1.0
+c	 end debug
+      endif
+
+c
+c     First do Bx.  More elaborate comments will be given for Bx,
+c     but most (especially methodological comments) won't be repeated.
+c
+
+c     Clear the derivatives.  This is important, because 
+c     we'll rely on this field being zero where there isn't enough 
+c     information to fill it (see the above comment)
+
+      do k=1,nz+1
+         do j=1,ny+1
+            do i=1,nx+1
+               D1(i,j,k) = 0
+               D2(i,j,k) = 0
+            enddo
+         enddo
+      enddo
+
+c     Take DxBy 
+c     The y loop is one longer due to the face centering of By
+c     The x loop is TWO shorter due to the differencing along x
+      
+c     DxBy
+      do k=1, nz
+         do j=1,ny+1
+            do i=2,nx-1
+
+               D1(i,j,k) = minmod( Byf(i+1,j,k) - Byf(i  ,j,k),
+     +                             Byf(i  ,j,k) - Byf(i-1,j,k))
+            enddo
+         enddo
+      enddo
+      
+c     DxBz
+      do k=1,nz+1
+         do j=1,ny
+            do i=2,nx-1
+               D2(i,j,k) = minmod( Bzf(i+1,j,k) - Bzf(i  ,j,k),
+     +                             Bzf(i  ,j,k) - Bzf(i-1,j,k))
+            enddo
+         enddo
+      enddo
+
+
+c     bxc
+      do k=1,nz
+         do j=1,ny
+            do i=1,nx
+               bb = dyi*( D1(i,j+1,k) - D1(i,j,k) )
+               cc = dzi*( D2(i,j,k+1) - D2(i,j,k) )
+               aa = (bb + cc ) * dx * OverTwelve
+               bxc(i,j,k) = 0.5*(Bxf(i+1,j,k) + Bxf(i,j,k) ) + aa
+            enddo
+         enddo
+      enddo
+
+c This comment belongs before the bxc loop.
+c     Fill Bxc.  Note that for i=1 and i=nx, D1=D2=0, and this
+c     reduces to simple centering.  
+c     For the curious, the 1/dx in bb & cc has been absorbed by the
+c     dx^2 appending aa, the 1/2 and 1/6 are in the 1/12.  Got rid 
+c     of the minus sign, too.  (See the Balsara paper, or ignore)
+
+c
+c     The Y Component.  I'll stop with the verbose comments now.
+c
+
+c     Initialize
+      do k=1,nz+1
+         do j=1,ny+1
+            do i=1,nx+1
+               D1(i,j,k) = 0
+               D2(i,j,k) = 0
+            enddo
+         enddo
+      enddo
+
+c     DyBx
+      do k=1,nz
+         do j=2,ny-1
+            do i=1,nx+1
+               D1(i,j,k) = minmod( Bxf(i,j+1,k) - Bxf(i,j  ,k),
+     +                             Bxf(i,j  ,k) - Bxf(i,j-1,k))
+            enddo
+         enddo
+      enddo
+
+c     DyBz
+      do k=1,nz+1
+         do j=2,ny-1
+            do i=1,nx
+               D2(i,j,k) = minmod( Bzf(i,j+1,k) - Bzf(i,j  ,k),
+     +                             Bzf(i,j  ,k) - Bzf(i,j-1,k))
+            enddo
+         enddo
+      enddo
+      
+
+c     byc
+      do k=1,nz
+         do j=1,ny
+            do i=1,nx
+               aa = dxi*(D1(i+1,j,k) - D1(i,j,k))
+               bb = dzi*(D2(i,j,k+1) - D2(i,j,k))
+               cc = (aa + bb)*dy*OverTwelve
+               byc(i,j,k) = 0.5*(Byf(i,j+1,k)+Byf(i,j,k)) + cc
+            enddo
+         enddo
+      enddo
+
+
+c
+c     The Z component
+c
+      do k=1,nz+1
+         do j=1,ny+1
+            do i=1,nx+1
+               D1(i,j,k) = 0
+               D2(i,j,k) = 0
+            enddo
+         enddo
+      enddo
+
+c     DzBx
+      do k=2,nz-1
+         do j=1,ny
+            do i=1,nx+1
+               D1(i,j,k) = minmod( Bxf(i,j,k+1) - Bxf(i,j,k  ),
+     +                             Bxf(i,j,k  ) - Bxf(i,j,k-1))
+            enddo
+         enddo
+      enddo
+
+c     DzBy
+      do k=2,nz-1
+         do j=1,ny+1
+            do i=1,nx
+               D2(i,j,k) = minmod( Byf(i,j,k+1) - Byf(i,j,k  ),
+     +                             Byf(i,j,k  ) - Byf(i,j,k-1))
+            enddo
+         enddo
+      enddo
+
+c     bzc
+      do k=1,nz
+         do j=1,ny
+            do i=1,nx
+               aa = dxi*( D1(i+1,j,k) - D1(i,j,k) )
+               bb = dyi*( D2(i,j+1,k) - D2(i,j,k) )
+               cc = (aa + bb) * dz * OverTwelve
+               bzc(i,j,k) = 0.5*(Bzf(i,j,k+1)+Bzf(i,j,k) ) + cc
+            enddo
+         enddo
+      enddo               
+
+
+c     Was it good for you?
+      return
+      end
+
+
+
+

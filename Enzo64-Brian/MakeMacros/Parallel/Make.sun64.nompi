@@ -1,0 +1,39 @@
+#
+# macros for sun
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /projects/paci/SciComp/harkness/hdf5/5-1.4.3-sol-64
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /projects/paci/SciComp/harkness/hdf4/4.1r5-solaris8
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+CPP          = /usr/lib/cpp
+DEFINES      = -DSUN -D$(PRECISION)
+
+## Fortran compiler
+FC           = /opt/SUNWspro/bin/f77 -xarch=v9
+FC_OPT       = -O3
+
+## C Compiler
+CC           = /opt/SUNWspro/bin/cc -xarch=v9
+CC_OPT       = -O2 -DSUN
+
+## C++ Compiler
+CCxx         = /opt/SUNWspro/bin/CC -xarch=v9
+CCxx_OPT     = -O3 -DSUN -features=no%conststrings,no%localfor
+
+## Linker/loader
+LDR          = /opt/SUNWspro/bin/CC -xarch=v9
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 \
+               -L/usr/local/lib -lM77 -lF77 -lsunmath -lnsl -lm -lsocket -lz
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I$(HDF4_INSTALL)/include
+
+OPTS         = -c -I/opt/SUNWhpc/include -DSUN ${INCLUDE}
+DEBUG        = -g

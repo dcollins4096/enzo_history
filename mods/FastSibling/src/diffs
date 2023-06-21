@@ -1,0 +1,1792 @@
+AdiabaticExpansionInitialize.C
+CheckEnergyConservation.C
+CheckForOutput.C
+46,47c46,49
+<   if (MetaData.Time >= MetaData.TimeLastDataDump + MetaData.dtDataDump
+<       && MetaData.dtDataDump > 0.0) {
+---
+>   //  if (MetaData.TimeLastDataDump + MetaData.dtDataDump - MetaData.Time <= 0
+>     if (MetaData.TimeLastDataDump + MetaData.dtDataDump - MetaData.Time <
+> 	0.001*MetaData.dtDataDump
+>         && MetaData.dtDataDump > 0.0) {
+CheckForTimeAction.C
+CollapseTestInitialize.C
+Commandline.C
+CommunicationBroadcastValue.C
+CommunicationBufferedSend.C
+CommunicationCombineGrids.C
+CommunicationInitialize.C
+CommunicationLoadBalanceGrids.C
+CommunicationMinValue.C
+CommunicationParallelFFT.C
+44c44
+<     DomainCellSize[dim] = (DomainRightEdge[dim]-DomainLeftEdge[dim])/float(DomainDim[dim]);
+---
+>     DomainCellSize[dim] = 1.0/float(DomainDim[dim]);
+CommunicationPartitionGrid.C
+CommunicationReceiveFluxes.C
+CommunicationReceiveHandler.C
+CommunicationSendFluxes.C
+CommunicationShareGrids.C
+CommunicationTransferParticles.C
+CommunicationTranspose.C
+55,56c55,56
+<   //    fprintf(stderr, "CT(%d): start From=%d  To=%d\n", MyProcessorNumber, 
+<   //  	  NumberOfFromRegions, NumberOfToRegions);
+---
+>   //  fprintf(stderr, "CT(%d): start From=%d  To=%d\n", MyProcessorNumber, 
+>   //	  NumberOfFromRegions, NumberOfToRegions);
+88d87
+< 	    //	    fprintf(stderr, "CTovr(%d): %d %d  %d %d  %d\n", MyProcessorNumber, LeftIndex[dim], RightIndex[dim], i, j, dim);
+136,141d134
+<       if (FromRegion[j].Data == NULL) {
+< 	int ijk, rsize = FromRegion[j].RegionDim[0]*FromRegion[j].RegionDim[1]*FromRegion[j].RegionDim[2];
+< 	FromRegion[j].Data = new float[rsize]; // allocate FROM field if not already done
+< 	for (ijk = 0; ijk < rsize; ijk++)
+< 	  FromRegion[j].Data[ijk] = 0;
+<       }
+183,184c176,177
+<       //      fprintf(stderr, "CT(%d): MPI SS/RS = %d/%d From/To = %d %d\n", 
+<       //	      MyProcessorNumber, SendSize, ReceiveSize, FromProc, ToProc);
+---
+> //      fprintf(stderr, "CT(%d): MPI SS/RS = %d/%d From/To = %d %d\n", 
+> //	      MyProcessorNumber, SendSize, ReceiveSize, FromProc, ToProc);
+217,222c210,212
+<       if (ToRegion[j].Data == NULL) {
+< 	int ijk, rsize = ToRegion[j].RegionDim[0]*ToRegion[j].RegionDim[1]*ToRegion[j].RegionDim[2];
+< 	ToRegion[j].Data = new float[rsize];
+< 	for (ijk = 0; ijk < rsize; ijk++)
+< 	  ToRegion[j].Data[ijk] = 0;
+<       }
+---
+>       if (ToRegion[j].Data == NULL)
+> 	ToRegion[j].Data = new float[ToRegion[j].RegionDim[0]*
+> 	      ToRegion[j].RegionDim[1]*ToRegion[j].RegionDim[2]];
+247c237
+<     //    fprintf(stderr, "CT(%d): end jump %d\n", MyProcessorNumber, n);
+---
+> //    fprintf(stderr, "CT(%d): end jump %d\n", MyProcessorNumber, n);
+255c245
+<   //  fprintf(stderr, "CT(%d): Deleting FromRegions\n", MyProcessorNumber);
+---
+> //  fprintf(stderr, "CT(%d): Deleting FromRegions\n", MyProcessorNumber);
+CommunicationUpdateStarParticleCount.C
+CommunicationUtilities.C
+ComputePotentialFieldLevelZero.C
+30,32d29
+< int PrepareIsolatedGreensFunction(region *GreensFunction, int proc, 
+< 				  int DomainDim[], TopGridData *MetaData);
+< 
+47c44
+<   int i, j, n, grid, grid2, dim, TransposeOnCompletion = TRUE;
+---
+>   int i, j, n, grid, grid2;
+66c63
+<      the Greens function. */
+---
+>      the Green's function. */
+85c82,85
+<       region *TempRegion = new region[NumberOfProcessors];
+---
+>       fprintf(stderr, "Isolated BC's not yet implemented.\n");
+>       return FAIL;
+> 
+> #ifdef UNUSED
+87c87
+<       /* Generate Greens function in real space. */
+---
+>       for (grid = 0; grid < NumberOfGrids; grid++) {
+89,92c89,99
+<       int proc;
+<       for (proc = 0; proc < NumberOfProcessors; proc++)
+< 	if (PrepareIsolatedGreensFunction(&TempRegion[proc], proc, DomainDim,
+< 					  MetaData) 
+---
+> 	/* Generate Green's function in real space (doesn't work!). */
+> 	
+> 	if (Grids[grid]->GridData->PrepareGreensFunction() == FAIL) {
+> 	  fprintf(stderr, "Error in grid->PrepareGreensFunction.\n");
+> 	  return FAIL;
+> 	}
+>       
+> 	/* Turn it into regions. */
+> 	
+> 	if (Grids[grid]->GridData->PrepareFFT(&InitialRegion[grid], 
+> 					      POTENTIAL_FIELD, DomainDim) 
+94c101
+< 	  fprintf(stderr, "Error in PrepareIsolatedGreensFunction.\n");
+---
+> 	  fprintf(stderr, "Error in grid->PrepareFFT.\n");
+98c105
+<       /* Forward FFT Greens function. */
+---
+>       } // end loop over grids
+100,101c107,109
+<       TransposeOnCompletion = FALSE;  // for isolated case we can skip transpose back
+<       if (CommunicationParallelFFT(TempRegion, NumberOfProcessors,
+---
+>       /* Forward FFT Green's function. */
+> 
+>       if (CommunicationParallelFFT(InitialRegion, NumberOfRegions,
+104c112
+< 				   FFT_FORWARD, TransposeOnCompletion) == FAIL) {
+---
+> 				   FFT_FORWARD, FALSE) == FAIL) {
+109,112c117
+<       /* Clean up. */
+<       
+<       if (GreensRegion != TempRegion)
+< 	delete [] TempRegion;
+---
+> #endif /* UNUSED */
+131,138d135
+<   /* If doing isolated BC's then double the domain size. */
+< 
+<   if (MetaData->GravityBoundary == TopGridIsolated) {
+<     for (dim = 0; dim < MetaData->TopGridRank; dim++)
+<       DomainDim[dim] *= 2;
+<     DomainDim[0] -= 2; /* correct for real-to-complex extra 2 */
+<   }
+< 
+144c141
+< 			       FFT_FORWARD, TransposeOnCompletion) == FAIL) {
+---
+> 			       FFT_FORWARD, TRUE) == FAIL) {
+157c154
+<   /* Compute coefficient for Periodic Greens function. */
+---
+>   /* Compute coefficient for Greens function. */
+169,193c166,168
+< 
+< 
+<       /* In periodic case, the Greens function is purely real. */
+< 
+<       if (MetaData->GravityBoundary == TopGridPeriodic) {
+< 	for (n = 0, j = 0; j < size; j += 2, n++) {
+< 	  OutRegion[i].Data[j  ] *= coef*GreensRegion[i].Data[n];
+< 	  OutRegion[i].Data[j+1] *= coef*GreensRegion[i].Data[n];
+< 	}
+<       }
+< 
+<       /* In the isolated case, we have compute the Greens function by transforming
+< 	 a real function so we must do a proper complex multiplication (this is a
+< 	 convolution with the real function defined in PrepareIsolatedGreensFunction). */
+< 
+<       if (MetaData->GravityBoundary == TopGridIsolated) {
+< 	float real_part, imag_part;
+< 	for (j = 0; j < size; j += 2) {
+< 	  real_part = OutRegion[i].Data[j  ]*GreensRegion[i].Data[j  ] -
+< 	              OutRegion[i].Data[j+1]*GreensRegion[i].Data[j+1];
+< 	  imag_part = OutRegion[i].Data[j+1]*GreensRegion[i].Data[j  ] +
+< 	              OutRegion[i].Data[j  ]*GreensRegion[i].Data[j+1];
+< 	  OutRegion[i].Data[j  ] = real_part;
+< 	  OutRegion[i].Data[j+1] = imag_part;
+< 	}
+---
+>       for (n = 0, j = 0; j < size; j += 2, n++) {
+> 	OutRegion[i].Data[j  ] *= coef*GreensRegion[i].Data[n];
+> 	OutRegion[i].Data[j+1] *= coef*GreensRegion[i].Data[n];
+195d169
+< 
+203c177
+< 			       FFT_INVERSE, TransposeOnCompletion) == FAIL) {
+---
+> 			       FFT_INVERSE, TRUE) == FAIL) {
+212c186
+< 			     DomainDim) == FAIL) {
+---
+> 			       DomainDim) == FAIL) {
+223d196
+< 
+226d198
+< 
+228,232c200,201
+< 
+<     for (int dim = 0; dim < MAX_DIMENSION; dim++)
+<       BCTempLeft[dim] = BCTempRight[dim] = reflecting; // doesn't matter as long as not periodic
+<     for (grid = 0; grid < NumberOfGrids; grid++)
+<       Grids[grid]->GridData->SetIsolatedPotentialBoundary();
+---
+>     fprintf(stderr, "Only periodic gravity BC's allowed.\n");
+>     return FAIL;
+ComputeTable.C
+CopyOverlappingParticleMassFields.C
+CopyOverlappingZones.C
+CosmologyComputeExpansionFactor.C
+CosmologyComputeExpansionTimestep.C
+CosmologyComputeTimeFromRedshift.C
+CosmologyGetUnits.C
+CosmologyReadParameters.C
+CosmologySimulationInitialize.C
+66a67
+> static int   CosmologySimulationUseCosmicRayField    = FALSE;
+91a93
+>   char *CREName   = "Cosmic_Ray_Energy";
+212a215,216
+>     ret += sscanf(line, "CosmologySimulationUseCosmicRayField = %d",
+> 		  &CosmologySimulationUseCosmicRayField);
+259a264,270
+>   /* Cannot use cosmic ray energy density with ppm yet. */
+> 
+>   if (CosmologySimulationUseCosmicRayField && HydroMethod != Zeus_Hydro) {
+>     fprintf(stderr, "Can only use cosmic-ray energy field with ZEUS.\n");
+>     return FAIL;
+>   }
+> 
+458a470
+> 			     CosmologySimulationUseCosmicRayField,
+520a533,534
+>   if (CosmologySimulationUseCosmicRayField)
+>     DataLabel[i++] = CREName;
+595c609
+<     fprintf(Outfptr, "CosmologySimulationUseMetallicityField  = %d\n\n",
+---
+>     fprintf(Outfptr, "CosmologySimulationUseMetallicityField  = %d\n",
+596a611,612
+>     fprintf(Outfptr, "CosmologySimulationUseCosmicRayField    = %d\n\n",
+> 	    CosmologySimulationUseCosmicRayField);
+703a720
+> 			     CosmologySimulationUseCosmicRayField,
+CosmologyWriteParameters.C
+DeleteFluxes.C
+DepositBaryons.C
+DepositParticleMassField.C
+DoubleMachInitialize.C
+EvolveHierarchy.C
+EvolveLevel.C
+110,111c110,111
+< int LevelZoneCycleCount[MAX_DEPTH_OF_HIERARCHY];
+< int LevelZoneCycleCountPerProc[MAX_DEPTH_OF_HIERARCHY];
+---
+> double LevelZoneCycleCount[MAX_DEPTH_OF_HIERARCHY];
+> double LevelZoneCycleCountPerProc[MAX_DEPTH_OF_HIERARCHY];
+EvolveLevelRoutines.C
+EvolveLevelRoutinesOptimized.C
+ExternalBoundary_constructor.C
+ExternalBoundary_IdentifyPhysicalQuantities.C
+ExternalBoundary_InitializeExternalBoundaryFace.C
+ExternalBoundary_Prepare.C
+ExternalBoundary_ReadExternalBoundary.C
+ExternalBoundary_SetDoubleMachBoundary.C
+ExternalBoundary_SetExternalBoundary.C
+ExternalBoundary_SetExternalBoundaryParticles.C
+ExternalBoundary_SetShockPoolBoundary.C
+ExternalBoundary_SetWavePoolBoundary.C
+ExternalBoundary_WriteExternalBoundary.C
+ExtractSection.C
+FastFourierTransform.C
+1,128c1,106
+< /***********************************************************************
+< /
+< /  COMPUTE A FAST FOURIER TRANSFORM (FORWARD OR INVERSE)
+< /
+< /  written by: Greg Bryan
+< /  date:       March, 1995
+< /  modified1:
+< /
+< /  PURPOSE:
+< /
+< /  INPUTS:
+< /      buffer - field to be FFTed
+< /      Rank   - rank of FFT
+< /      DimensionReal[] - declared dimensions of buffer
+< /      Dimension[]     - active dimensions of buffer
+< /      direction       - +1 forward, -1 inverse
+< /
+< ************************************************************************/
+< 
+< #include <stdlib.h>
+< #include <stdio.h>
+< #include "macros_and_parameters.h"
+< 
+< #ifdef GOT_FFT
+< # undef GOT_FFT
+< #endif
+< 
+< /* Defines */
+< 
+< int FastFourierTransformSGIMATH(float *buffer, int Rank, int DimensionReal[], 
+< 				int Dimension[], int direction, int type);
+< int FastFourierTransformSGIMATHComplex(float *buffer, int Rank, 
+< 				       int DimensionReal[], 
+< 				       int Dimension[], int direction);
+< int FastFourierTransformVECLIB(float *buffer, int Rank, int DimensionReal[], 
+< 			       int Dimension[], int direction);
+< 
+< int FastFourierTransformFFTW(float *buffer, int Rank, int DimensionReal[],
+<                                 int Dimension[], int direction, int type);
+< 
+< int FastFourierTransformPrepareFourn(float *buffer, int Rank, 
+< 				     int DimensionReal[], 
+<                                      int Dimension[], int direction, int type);
+< 
+< /* Start routine. */
+< 
+< int FastFourierTransform(float *buffer, int Rank, int DimensionReal[], 
+< 			 int Dimension[], int direction, int type)
+< {
+< 
+< #if defined(IRIS4) && defined(SGI_MATH)
+< 
+<   /* --------------------------------------------------------------------- */
+<   /* Use SGI's real-to-complex routines. */
+< 
+<   if (FastFourierTransformSGIMATH(buffer, Rank, DimensionReal, 
+< 				  Dimension, direction, type) == FAIL) {
+<     fprintf(stderr, "Error in FastFourierTransformSGIMATH.\n");
+<     return FAIL;
+<   }
+< 
+< #define GOT_FFT
+< #endif /* IRIS4 && SGI_MATH */
+< 
+< 
+< #if defined(IRIS4) && defined(SGI_MATH_COMPLEX)
+< 
+<   /* --------------------------------------------------------------------- */
+<   /* Use SGI's complex-to-complex routines. */
+< 
+<   if (FastFourierTransformSGIMATHComplex(buffer, Rank, DimensionReal, 
+< 				  Dimension, direction) == FAIL) {
+<     fprintf(stderr, "Error in FastFourierTransformSGIMATHComplex.\n");
+<     return FAIL;
+<   }
+< 
+< #define GOT_FFT
+< #endif /* IRIS4 && SGI_MATH_COMPLEX */
+< 
+< 
+< #if (defined(CONVEX) || defined(SPP)) && defined(VECLIB)
+< 
+<   /* --------------------------------------------------------------------- */
+<   /* Use Convex's VECLIB library. */
+< 
+<   if (FastFourierTransformVECLIB(buffer, Rank, DimensionReal, 
+< 				 Dimension, direction, type) == FAIL) {
+<     fprintf(stderr, "Error in FastFourierTransformVECLIB.\n");
+<     return FAIL;
+<   }
+< 
+< #define GOT_FFT
+< #endif /* (CONVEX || SPP) && VECLIB */
+< 
+< 
+< #if defined(FFTW)
+< 
+<   /* --------------------------------------------------------------------- */
+<   /* Use FFTW library. */
+< 
+<   if (FastFourierTransformFFTW(buffer, Rank, DimensionReal,
+<                                  Dimension, direction, type) == FAIL) {
+<     fprintf(stderr, "Error in FastFourierTransformFFTW.\n");
+<     return FAIL;
+<   }
+< 
+< #define GOT_FFT
+< #endif /* FFTW */
+< 
+< 
+< #ifndef GOT_FFT
+< 
+<   /* --------------------------------------------------------------------- */
+<   /* Catchall: if there is no available FFT, use FOURN. */
+< 
+<   printf("Using FOURN FT routine");
+< 
+< 
+<   if (FastFourierTransformPrepareFourn(buffer, Rank, DimensionReal,
+< 				       Dimension, direction, type) == FAIL) {
+<     fprintf(stderr, "Error in FastFourierTransformPrepareFourn.\n");
+<     return FAIL;
+<   }
+<   
+< #endif /* GOT_FFT */  
+< 
+<   return SUCCESS;
+< }
+---
+> /***********************************************************************
+> /
+> /  COMPUTE A FAST FOURIER TRANSFORM (FORWARD OR INVERSE)
+> /
+> /  written by: Greg Bryan
+> /  date:       March, 1995
+> /  modified1:
+> /
+> /  PURPOSE:
+> /
+> /  INPUTS:
+> /      buffer - field to be FFTed
+> /      Rank   - rank of FFT
+> /      DimensionReal[] - declared dimensions of buffer
+> /      Dimension[]     - active dimensions of buffer
+> /      direction       - +1 forward, -1 inverse
+> /
+> ************************************************************************/
+> 
+> #include <stdlib.h>
+> #include <stdio.h>
+> #include "macros_and_parameters.h"
+> 
+> #ifdef GOT_FFT
+> # undef GOT_FFT
+> #endif
+> 
+> /* Defines */
+> 
+> int FastFourierTransformSGIMATH(float *buffer, int Rank, int DimensionReal[], 
+> 				int Dimension[], int direction, int type);
+> int FastFourierTransformSGIMATHComplex(float *buffer, int Rank, 
+> 				       int DimensionReal[], 
+> 				       int Dimension[], int direction);
+> int FastFourierTransformVECLIB(float *buffer, int Rank, int DimensionReal[], 
+> 			       int Dimension[], int direction);
+> int FastFourierTransformPrepareFourn(float *buffer, int Rank, 
+> 				     int DimensionReal[], 
+>                                      int Dimension[], int direction, int type);
+> 
+> /* Start routine. */
+> 
+> int FastFourierTransform(float *buffer, int Rank, int DimensionReal[], 
+> 			 int Dimension[], int direction, int type)
+> {
+> 
+> #if defined(IRIS4) && defined(SGI_MATH)
+> 
+>   /* --------------------------------------------------------------------- */
+>   /* Use SGI's real-to-complex routines. */
+> 
+>   if (FastFourierTransformSGIMATH(buffer, Rank, DimensionReal, 
+> 				  Dimension, direction, type) == FAIL) {
+>     fprintf(stderr, "Error in FastFourierTransformSGIMATH.\n");
+>     return FAIL;
+>   }
+> 
+> #define GOT_FFT
+> #endif /* IRIS4 && SGI_MATH */
+> 
+> 
+> #if defined(IRIS4) && defined(SGI_MATH_COMPLEX)
+> 
+>   /* --------------------------------------------------------------------- */
+>   /* Use SGI's complex-to-complex routines. */
+> 
+>   if (FastFourierTransformSGIMATHComplex(buffer, Rank, DimensionReal, 
+> 				  Dimension, direction) == FAIL) {
+>     fprintf(stderr, "Error in FastFourierTransformSGIMATHComplex.\n");
+>     return FAIL;
+>   }
+> 
+> #define GOT_FFT
+> #endif /* IRIS4 && SGI_MATH_COMPLEX */
+> 
+> 
+> #if (defined(CONVEX) || defined(SPP)) && defined(VECLIB)
+> 
+>   /* --------------------------------------------------------------------- */
+>   /* Use Convex's VECLIB library. */
+> 
+>   if (FastFourierTransformVECLIB(buffer, Rank, DimensionReal, 
+> 				 Dimension, direction, type) == FAIL) {
+>     fprintf(stderr, "Error in FastFourierTransformVECLIB.\n");
+>     return FAIL;
+>   }
+> 
+> #define GOT_FFT
+> #endif /* (CONVEX || SPP) && VECLIB */
+> 
+> 
+> #ifndef GOT_FFT
+> 
+>   /* --------------------------------------------------------------------- */
+>   /* Catchall: if there is no available FFT, use FOURN. */
+> 
+>   if (FastFourierTransformPrepareFourn(buffer, Rank, DimensionReal,
+> 				       Dimension, direction, type) == FAIL) {
+>     fprintf(stderr, "Error in FastFourierTransformPrepareFourn.\n");
+>     return FAIL;
+>   }
+>   
+> #endif /* GOT_FFT */  
+> 
+>   return SUCCESS;
+> }
+FastFourierTransformFFTW.C
+FastFourierTransformPrepareFourn.C
+FastFourierTransformSGIMATH.C
+FastFourierTransformSGIMATHComplex.C
+FastFourierTransformVECLIB.C
+FastSiblingLocatorFinalize.C
+FastSiblingLocatorInitialize.C
+FindField.C
+FindSubgrids.C
+GravityEquilibriumTestInitialize.C
+Grid_AddBaryonsToGravitatingMassField.C
+Grid_AddExternalAcceleration.C
+Grid_AddFieldMassToMassFlaggingField.C
+Grid_AddOverlappingParticleMassField.C
+Grid_AddToBoundaryFluxes.C
+Grid_AllocateGrids.C
+Grid_AnalyzeTrackPeaks.C
+Grid_ApplyTimeAction.C
+Grid_CalculateAngularMomentum.C
+Grid_CheckForOverlap.C
+Grid_CheckForPossibleOverlap.C
+Grid_CleanUp.C
+Grid_CleanUpMovedParticles.C
+Grid_ClearBoundaryFluxes.C
+Grid_ClearFlaggingField.C
+Grid_ClearGravitatingMassField.C
+Grid_ClearGravitatingMassFieldParticles.C
+Grid_ClearMassFlaggingField.C
+Grid_ClearParticleAccelerations.C
+Grid_CoalesceSubgrids.C
+Grid_CollapseTestInitializeGrid.C
+Grid_CollectGridInformation.C
+Grid_CommunicationMoveGrid.C
+Grid_CommunicationReceiveRegion.C
+Grid_CommunicationSendParticles.C
+Grid_CommunicationSendRegion.C
+Grid_CommunicationTransferParticles.C
+Grid_ComovingExpansionTerms.C
+28a29
+> int FindField(int f, int farray[], int n);
+61c62
+<     int dim, size = 1;
+---
+>     int i, dim, size = 1;
+128c129
+<     for (int i = 0; i < size; i++)
+---
+>     for (i = 0; i < size; i++)
+244a246,258
+>     /* Do cosmic ray energy per unit volume if present */
+> 
+>     int CosmicRayNum = FindField(CosmicRayEnergy, FieldType,
+> 				 NumberOfBaryonFields);
+>     if (CosmicRayNum != -1) {
+>       const float GammaCosmicRay = 4.0/3.0; // also in zeus_source
+>       float alpha = 3.0*(GammaCosmicRay - 1.0)*0.5*Coefficient;
+>       for (i = 0; i < size; i++)
+> 	BaryonField[CosmicRayNum][i] *= (1.0 - alpha)/(1.0 + alpha);
+>     }
+> 
+>   this->DebugCheck("ComovingExpansionTerms (done)");
+> 
+Grid_ComovingGravitySourceTerm.C
+Grid_ComputeAccelerationField.C
+93c93
+<   //  DiffFlag = 1;
+---
+>   DiffFlag = 1;
+103d102
+< #if 0
+117d115
+< #endif
+Grid_ComputeAccelerationFieldExternal.C
+Grid_ComputeAccelerations.C
+Grid_ComputeCoolingTime.C
+Grid_ComputeElementalDensity.C
+Grid_ComputeEnergy.C
+Grid_ComputeGammaField.C
+Grid_ComputePressure.C
+Grid_ComputePressureDualEnergyFormalism.C
+Grid_ComputeTemperatureField.C
+Grid_ComputeTimeStep.C
+35a36,39
+> int FindField(int f, int farray[], int n);
+> int CosmologyGetUnits(float *DensityUnits, float *LengthUnits,
+> 		      float *TemperatureUnits, float *TimeUnits,
+> 		      float *VelocityUnits, FLOAT Time);
+43c47
+< 			     float *dt, float *dtviscous);
+---
+> 		  float *dt, float *dtviscous);
+60a65
+>   float dtCosmicRay    = huge_number;
+126c131
+<                                BaryonField[Vel3Num], &dtBaryons, &dtViscous);
+---
+> 			  BaryonField[Vel3Num], &dtBaryons, &dtViscous);
+131a137,151
+>     /* Compute Cosmic Ray diffusion timestep constraint (delta_x^2 / 4 kappa). */
+> 
+>     int CosmicRayNum = FindField(CosmicRayEnergy, FieldType, 
+> 				 NumberOfBaryonFields);
+>     float CosmicRayDiffusionCoefficientUnitless = CosmicRayDiffusionCoefficient;
+>     if (CosmicRayNum != -1) {
+>       float TemperatureUnits = 1, DensityUnits = 1, LengthUnits = 1, 
+>         VelocityUnits = 1, TimeUnits = 1, aUnits = 1;
+>       if (ComovingCoordinates)
+> 	CosmologyGetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits,
+> 			  &TimeUnits, &VelocityUnits, Time);
+>       CosmicRayDiffusionCoefficientUnitless *= double(TimeUnits/LengthUnits/LengthUnits);
+>       dtCosmicRay = CellWidth[0][0]*CellWidth[0][0]/(4.0*CosmicRayDiffusionCoefficientUnitless);
+>     }
+> 
+183a204
+>   dt = min(dt, dtCosmicRay);
+195a217,218
+>     if (dtCosmicRay != huge_number)
+>       printf("CRe = %f ", dtCosmicRay);
+Grid_ComputeXrayEmissivity.C
+Grid_constructor.C
+Grid_ConvertTotalEnergyToGasEnergy.C
+Grid_CopyBaryonFieldToOldBaryonField.C
+Grid_CopyOverlappingMassField.C
+Grid_CopyParentToGravitatingFieldBoundary.C
+Grid_CopyPotentialField.C
+Grid_CopyZonesFromGrid.C
+Grid_CopyZonesFromGridCountOnly.C
+Grid_CorrectForRefinedFluxes.C
+Grid_CosmologySimulationInitializeGrid.C
+76c76,77
+< 			  int   UseMetallicityField,
+---
+> 			  int   UseMetallicityField, 
+> 			  int   UseCosmicRayField,
+83c84
+<       DINum, DIINum, HDINum, MetalNum;
+---
+>       DINum, DIINum, HDINum, MetalNum, CosmicRayNum;
+135a137,138
+>     if (UseCosmicRayField)
+>       FieldType[CosmicRayNum = NumberOfBaryonFields++] = CosmicRayEnergy;
+271c274
+<   /* If using metallicity, set the field. */
+---
+>   /* If using metallicity, set the field to a small value. */
+275a279,284
+>  
+>   /* If using cosmic rays, set the energy density to a small value. */
+>  
+>   if (UseCosmicRayField && ReadData)
+>     for (i = 0; i < size; i++)
+>       BaryonField[CosmicRayNum][i] = 1.0e-10;
+Grid_DebugCheck.C
+Grid_DeleteAllFields.C
+Grid_DeleteFlaggingField.C
+Grid_DepositBaryons.C
+Grid_DepositParticlePositions.C
+Grid_DepositPositions.C
+Grid_destructor.C
+Grid_DoubleMachInitializeGrid.C
+Grid_FastSiblingLocatorAddGrid.C
+Grid_FastSiblingLocatorFindSiblings.C
+Grid_FinishFFT.C
+Grid_FlagBufferZones.C
+Grid_FlagCellsToBeRefinedByCoolingTime.C
+Grid_FlagCellsToBeRefinedByJeansLength.C
+Grid_FlagCellsToBeRefinedByMass.C
+Grid_FlagCellsToBeRefinedByMustRefineParticles.C
+Grid_FlagCellsToBeRefinedByShocks.C
+Grid_FlagCellsToBeRefinedBySlope.C
+Grid_GetProjectedBoundaryFluxes.C
+Grid_GravityEquilibriumTestInitializeGrid.C
+Grid_IdentifyNewSubgrids.C
+Grid_IdentifyNewSubgridsSmall.C
+Grid_IdentifyPhysicalQuantities.C
+Grid_IdentifySpeciesFields.C
+Grid_InheritProperties.C
+Grid_InitializeGravitatingMassField.C
+Grid_InitializeGravitatingMassFieldParticles.C
+Grid_InitializeUniformGrid.C
+Grid_InterpolateAccelerations.C
+Grid_InterpolateBoundaryFromParent.C
+Grid_InterpolateFieldValues.C
+Grid_InterpolateParticlePositions.C
+Grid_InterpolatePositions.C
+Grid_MoveAllParticles.C
+Grid_MoveSubgridParticles.C
+Grid_MoveSubgridParticlesFast.C
+62c62
+<       if (GridRank > 1)
+---
+>       if (GridRank > 0)
+64c64
+<       if (GridRank > 2)
+---
+>       if (GridRank > 1)
+150c150
+<       if (GridRank > 1)
+---
+>       if (GridRank > 0)
+152c152
+<       if (GridRank > 2)
+---
+>       if (GridRank > 1)
+Grid_OutputAsParticleData.C
+Grid_OutputGridMovieData.C
+Grid_OutputStarParticleInformation.C
+Grid_PrepareBoundaryFluxes.C
+Grid_PrepareFFT.C
+Grid_PrepareGreensFunction.C
+Grid_PrepareGrid.C
+Grid_PrepareGridDerivedQuantities.C
+Grid_PreparePeriodicGreensFunction.C
+88,92c88,90
+<     float DomainSize[] = {1,1,1};
+<     for (dim = 0; dim < GridRank; dim++) {
+<       DomainSize[dim] = DomainRightEdge[dim] - DomainLeftEdge[dim];
+<       DomainDim[dim] = nint(DomainSize[dim]/GravitatingMassFieldCellSize);
+<     }
+---
+>     for (dim = 0; dim < GridRank; dim++)
+>       DomainDim[dim] = nint((DomainRightEdge[dim] - DomainLeftEdge[dim])/
+> 			    GravitatingMassFieldCellSize);
+97c95
+<       kz = kk * twopi/DomainSize[2];
+---
+>       kz = kk * twopi;
+101c99
+< 	ky = jj * twopi/DomainSize[1];
+---
+> 	ky = jj * twopi;
+104c102
+< 	  kx = ii * twopi/DomainSize[0];
+---
+> 	  kx = ii * twopi;
+Grid_PreparePotentialField.C
+Grid_PressurelessCollapseInitialize.C
+Grid_ProjectSolutionToParentGrid.C
+Grid_ProjectToPlane.C
+106a107,115
+>   /* Find cosmic ray field and set flag. */
+> 
+>   int CosmicRayField = FALSE, CRENum;
+>   if ((CRENum = FindField(CosmicRayEnergy, FieldType, NumberOfBaryonFields)) 
+>       != -1)
+>     CosmicRayField = TRUE;
+>   else
+>     CRENum = 0;
+> 
+410c419
+<   /* 8) metallicity. */
+---
+>   /* 8) metallicity or cosmic-ray energy ratio. */
+412,413c421,427
+<   if (MetallicityField)
+<     FORTRAN_NAME(projplane)(BaryonField[MetalNum], NULL, 
+---
+>   if (MetallicityField || CosmicRayField) {
+>     float *ratio = new float[size];
+>     for (i = 0; i < size; i++)
+>       // ratio[i] = BaryonField[MetalNum][i];
+>       ratio[i] = BaryonField[CRENum][i]/BaryonField[TENum][i];
+> 
+>     FORTRAN_NAME(projplane)(ratio, NULL, 
+423a438,439
+>     delete [] ratio;
+>   }
+Grid_RadiationComputeDensities.C
+Grid_ReadGrid.C
+Grid_ReadPartialGrid.C
+Grid_RestoreEnergyConsistency.C
+Grid_ReturnFluxDims.C
+Grid_ReturnGridInfo.C
+Grid_SetExternalBoundaryValues.C
+Grid_SetFlaggingField.C
+Grid_SetFlaggingFieldStaticRegions.C
+Grid_SetIsolatedPotentialBoundary.C
+Grid_SetMinimumSupport.C
+Grid_ShockTubeInitializeGrid.C
+Grid_SolveForPotential.C
+82c82
+< #define NO_SMOOTH_SOURCE
+---
+> #define SMOOTH_SOURCE
+Grid_SolveHydroEquations.C
+19a20
+> #include <math.h>
+32a34,36
+> int CosmologyGetUnits(float *DensityUnits, float *LengthUnits,
+> 		      float *TemperatureUnits, float *TimeUnits,
+> 		      float *VelocityUnits, FLOAT Time);
+88c92,93
+< 			  float *minsupecoef);
+---
+> 			  float *minsupecoef, int *icosmicray, 
+> 			  float *kappa_cr, float *cr_coeff);
+158a164,192
+>  
+>     /* Add cosmic-ray energy per unit volume as a colour variable. */
+> 
+>     int CosmicRayNum = FindField(CosmicRayEnergy, FieldType, 
+> 				 NumberOfBaryonFields);
+>     int CosmicRayColourNum = 0;
+>     float CosmicRayDiffusionCoefficientUnitless = CosmicRayDiffusionCoefficient;
+>     float CosmicRayWorkTermCoefficient = 1.0;
+>     if (CosmicRayNum != -1) {
+>       if (colourpt == NULL) {
+> 	colourpt = BaryonField[CosmicRayNum];
+> 	ColourNum = CosmicRayNum;
+>       }
+>       coloff[NumberOfColours++] = BaryonField[CosmicRayNum] - colourpt;
+>       CosmicRayColourNum = NumberOfColours;
+> 
+>       float TemperatureUnits = 1, DensityUnits = 1, LengthUnits = 1, 
+>         VelocityUnits = 1, TimeUnits = 1, aUnits = 1;
+>       if (ComovingCoordinates)
+> 	CosmologyGetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits,
+> 			  &TimeUnits, &VelocityUnits, Time);
+>       CosmicRayDiffusionCoefficientUnitless *= double(a*a*TimeUnits/LengthUnits/LengthUnits);
+>       // we multiply by a^2 because the dx defined in the fortran code includes a factor of a already.
+> 
+>       float MagneticFieldCGS = 5.0e-6;  // 5 microgauss
+>       float Pi = 3.14159;
+>       CosmicRayWorkTermCoefficient = MagneticFieldCGS/sqrt(4.0 * Pi * DensityUnits) *
+> 	(TimeUnits/LengthUnits) * a; // dimensionless Alfven speed (again multiply by a because dx has it already)
+>     }
+507c541,543
+< 			&LowestLevel, &MinimumSupportEnergyCoefficient);
+---
+> 			&LowestLevel, &MinimumSupportEnergyCoefficient,
+> 			&CosmicRayColourNum, &CosmicRayDiffusionCoefficientUnitless,
+> 			&CosmicRayWorkTermCoefficient);
+Grid_SolveRadiativeCooling.C
+Grid_SolveRateEquations.C
+Grid_SortParticlesByNumber.C
+Grid_SphericalInfallGetProfile.C
+Grid_SphericalInfallInitializeGrid.C
+Grid_StarParticleHandler.C
+134a135,149
+> extern "C" void FORTRAN_NAME(star_feedback5)(int *nx, int *ny, int *nz,
+>              float *d, float *dm, float *te, float *ge, float *u, float *v, 
+> 		       float *w, float *metal, float *ecr,
+>              int *idual, int *imetal, int *icosmicray, 
+> 	     hydro_method *imethod, float *dt, 
+> 		       float *r, float *dx, FLOAT *t, float *z, 
+>              float *d1, float *x1, float *v1, float *t1,
+>                        float *sn_param, float *m_eject, float *yield,
+>              int *nmax, FLOAT *xstart, FLOAT *ystart, FLOAT *zstart, 
+> 		       int *ibuff,
+>              FLOAT *xp, FLOAT *yp, FLOAT *zp, float *up, float *vp, float *wp,
+>              float *mp, float *tdp, float *tcp, float *metalf, 
+> 			float *justburn,
+>              float *temp, int *procnum);
+> 
+181a197,205
+>   /* Find cosmic-ray energy per unit (comoving) volume field. */
+> 
+>   int CosmicRayField = FALSE, CosmicRayNum;
+>   if ((CosmicRayNum = FindField(CosmicRayEnergy, FieldType, 
+> 				NumberOfBaryonFields)) != -1)
+>     CosmicRayField = TRUE;
+>   else
+>     CosmicRayNum = 0;
+> 
+512a537,565
+>   if (StarParticleFeedback == 5) {
+> 
+>     /* Call FORTRAN routine to do the actual work. 
+>          (we pass all particles, the routine only uses those w/ tcreate > 0).*/
+> 
+>       FORTRAN_NAME(star_feedback5)(
+>        GridDimension, GridDimension+1, GridDimension+2,
+>           BaryonField[DensNum], dmfield, 
+>           BaryonField[TENum], BaryonField[GENum], BaryonField[Vel1Num],
+>           BaryonField[Vel2Num], BaryonField[Vel3Num], BaryonField[MetalNum],
+>        BaryonField[CosmicRayNum],
+>        &DualEnergyFormalism, &MetallicityField, &CosmicRayField, &HydroMethod, 
+>        &dtFixed, BaryonField[NumberOfBaryonFields], &CellWidthTemp, 
+>           &Time, &zred,
+>        &DensityUnits, &LengthUnits, &VelocityUnits, &TimeUnits,
+>           &StarEnergyToThermalFeedback, &StarMassEjectionFraction, 
+>           &StarMetalYield,
+>        &NumberOfParticles,
+>           CellLeftEdge[0], CellLeftEdge[1], CellLeftEdge[2], &GhostZones,
+>        ParticlePosition[0], ParticlePosition[1], 
+>           ParticlePosition[2], 
+>        ParticleVelocity[0], ParticleVelocity[1], 
+>           ParticleVelocity[2], 
+>        ParticleMass, ParticleAttribute[1], ParticleAttribute[0],
+>           ParticleAttribute[2], &RadiationData.IntegratedStarFormation,
+>        temperature, &MyProcessorNumber);
+> 
+>   } // end: if (StarParticleFeedback == 5)
+> 
+531c584
+<   //  if (debug) printf("StarParticle: end\n");
+---
+>   if (debug) printf("StarParticle: end\n");
+Grid_SupernovaRestartInitialize.C
+Grid_TestGravityCheckResults.C
+36c36
+<   float r, fanalytic, fradial, ftang, pi = 3.14159;
+---
+>   float r, fanalytic, fradial, ftang;
+47c47
+<   float TopGridCellWidth = TopGrid->CellWidth[0][0];
+---
+>   float TopGridCellWidth = *TopGrid->CellWidth[0];
+73c73
+<       fradial += ParticleVelocity[dim][i]/dtFixed * dist[dim];
+---
+>       fradial += (*(ParticleVelocity[dim] + i))/dtFixed * dist[dim];
+92c92
+<       fanalytic = 2.0*pi*TopGridCellWidth;
+---
+>       fanalytic = 1.0*TopGridCellWidth;
+94c94
+<       fanalytic = 2.0/r*TopGridCellWidth*TopGridCellWidth;
+---
+>       fanalytic = 1.0/r*TopGridCellWidth*TopGridCellWidth;
+Grid_TestGravityInitializeGrid.C
+122,130d121
+<       /* Make sure particle is not outside grid. */
+< 
+<       for (dim = 0; dim < GridRank; dim++) {
+< 	if (ParticlePosition[dim][i] > DomainRightEdge[dim])
+< 	  ParticlePosition[dim][i] -= (DomainRightEdge[dim]-DomainLeftEdge[dim]);
+< 	if (ParticlePosition[dim][i] < DomainLeftEdge[dim])
+< 	  ParticlePosition[dim][i] += (DomainRightEdge[dim]-DomainLeftEdge[dim]);
+<       }
+< 
+Grid_TestGravityMotionInitializeGrid.C
+Grid_TestGravitySphereCheckResults.C
+Grid_TestGravitySphereInitializeGrid.C
+Grid_TracerParticleCreateParticles.C
+Grid_TracerParticleOutputData.C
+Grid_TracerParticleSetVelocity.C
+Grid_UpdateParticlePosition.C
+Grid_UpdateParticleVelocity.C
+Grid_WriteGridDFSD.C
+Grid_WriteGridFlexIO.C
+Grid_WriteGridFortran.C
+Grid_WriteGridInterpolate.C
+Grid_WriteGridRaw.C
+Grid_WriteGridSD.C
+Grid_ZeldovichPancakeInitializeGrid.C
+Grid_ZeroSolutionUnderSubgrid.C
+Hierarchy_DeleteHierarchyEntry.C
+IdentifyNewSubgridsBySignature.C
+InitializeEquilibriumCoolData.C
+InitializeNew.C
+72a73,74
+> int GalaxySimulationInitialize(FILE *fptr, FILE *Outfptr, 
+> 			  HierarchyEntry &TopGrid, TopGridData &MetaData);
+280a283,287
+>  /* 31) Galaxy Simulation. */
+> 
+>   if (ProblemType == 31)
+>     ret = GalaxySimulationInitialize(fptr, Outfptr, TopGrid, MetaData);
+> 
+374c381
+<       ProblemType != 27)
+---
+>       ProblemType != 27 && ProblemType != 31)
+InitializeRadiationFieldData.C
+InitializeRateData.C
+InterpretCommandLine.C
+LevelHierarchy_AddLevel.C
+ListIO.C
+main.C
+91a92
+>   printf("1:%d\n", argc);
+92a94
+>   printf("2:%d\n", argc);
+211c213,216
+<   if (project) 
+---
+>   if (project) {
+>     char ProjectionFileName[MAX_LINE_LENGTH];
+>     strcpy(ProjectionFileName, ParameterFile);
+>     strcat(ProjectionFileName, ".project");
+214c219
+< 		     RegionLevel, ProjectionDimension, "amr.project",
+---
+> 		     RegionLevel, ProjectionDimension, ProjectionFileName,
+218a224
+>   }
+MemoryAllocationRoutines.C
+MultigridSolver.C
+OutputAsParticleData.C
+OutputLevelInformation.C
+OutputPerformanceInformation.C
+36,37c36,37
+< extern int LevelZoneCycleCount[MAX_DEPTH_OF_HIERARCHY];
+< extern int LevelZoneCycleCountPerProc[MAX_DEPTH_OF_HIERARCHY];
+---
+> extern double LevelZoneCycleCount[MAX_DEPTH_OF_HIERARCHY];
+> extern double LevelZoneCycleCountPerProc[MAX_DEPTH_OF_HIERARCHY];
+40c40
+< static int CumulativeZoneCycleCount = 0;
+---
+> static double CumulativeZoneCycleCount = 0;
+95c95
+<   int TotalZoneCycle = 0;
+---
+>   double TotalZoneCycle = 0;
+126c126
+<   fprintf(fptr, "global: %"GOUTSYM"  %d %g %g  (EvolveLevel: %g %g)   cumulative: %d %g %g\n", MetaData.Time, 
+---
+>   fprintf(fptr, "global: %"GOUTSYM"  %g %g %g  (EvolveLevel: %g %g)   cumulative: %g %g %g\n", MetaData.Time, 
+136c136
+<     fprintf(fptr, "%d %d %g %g %g %g   ", level,
+---
+>     fprintf(fptr, "%d %g %g %g %g %g   ", level,
+PrepareGravitatingMassField.C
+PrepareIsolatedGreensFunction.C
+PressurelessCollapseInitialize.C
+ProjectToPlane.C
+360c360
+<         ProjectedField[3][j] /= ProjectedField[1][j];
+---
+>         ProjectedField[i][j] /= ProjectedField[1][j];
+366c366
+<         ProjectedField[7][j] /= ProjectedField[0][j];
+---
+>         ProjectedField[i][j] /= ProjectedField[0][j];
+ProtoSubgrid_AcceptableGrid.C
+ProtoSubgrid_CleanUp.C
+ProtoSubgrid_ComputeSecondDerivative.C
+ProtoSubgrid_ComputeSignature.C
+ProtoSubgrid_constructor.C
+ProtoSubgrid_CopyFlaggedZonesFromGrid.C
+ProtoSubgrid_CopyToNewSubgrid.C
+ProtoSubgrid_FindGridsByZeroSignature.C
+ProtoSubgrid_ReturnNthLongestDimension.C
+ProtoSubgrid_ShrinkToMinimumSize.C
+QuickSortAndDrag.C
+RadiationFieldCalculateRates.C
+RadiationFieldUpdate.C
+ReadAllData.C
+ReadDataHierarchy.C
+ReadFlexIOFile.C
+ReadHDFFile.C
+ReadParameterFile.C
+126c126
+<     ret += sscanf(line, "MovieTracerParticleNumber = %d", 
+---
+>     ret += sscanf(line, "TracerParticleDumpNumber = %d", 
+235c235
+<     ret += sscanf(line, "PointSourceGravityConstant = %f", 
+---
+>     ret += sscanf(line, "PointSourceGravityConstant = %lf", 
+237c237
+<     ret += sscanf(line, "PointSourceGravityCoreRadius = %f", 
+---
+>     ret += sscanf(line, "PointSourceGravityCoreRadius = %lf", 
+272a273,274
+>     ret += sscanf(line, "CosmicRayDiffusionCoefficient = %f",
+> 		  &CosmicRayDiffusionCoefficient);
+395a398
+>     if (strstr(line, "GalaxySimulation")    ) ret++;
+ReadRadiationData.C
+ReadStarParticleData.C
+RebuildHierarchy.C
+ReduceFragmentation.C
+ReportMemoryUsage.C
+ReturnCPUTime.C
+SetDefaultGlobalValues.C
+188a189
+>   CosmicRayDiffusionCoefficient    = 0.0;
+ShockInABoxInitialize.C
+ShockPoolInitialize.C
+ShockTubeInitialize.C
+SphericalInfallInitialize.C
+SupernovaRestartInitialize.C
+TestGravityCheckResults.C
+TestGravityInitialize.C
+TestGravityMotion.C
+TestGravitySphereCheckResults.C
+TestGravitySphereInitialize.C
+TracerParticleCreation.C
+UpdateParticlePositions.C
+WavePoolInitialize.C
+WriteAllData.C
+WriteDataHierarchy.C
+WriteEvolution.C
+WriteMovieData.C
+WriteParameterFile.C
+240a241,242
+>   fprintf(fptr, "CosmicRayDiffusionCoefficient    = %g\n",
+> 	  CosmicRayDiffusionCoefficient);
+WriteRadiationData.C
+WriteStarParticleData.C
+WriteTracerParticleData.C
+ZeldovichPancakeInitialize.C
+Commandline.h
+communication.h
+CoolData.h
+CosmologyParameters.h
+ExternalBoundary.h
+FastSiblingLocator.h
+Fluxes.h
+global_data.h
+127,128c127,128
+< EXTERN float PointSourceGravityConstant;
+< EXTERN float PointSourceGravityCoreRadius;
+---
+> EXTERN double PointSourceGravityConstant;
+> EXTERN double PointSourceGravityCoreRadius;
+208a209,212
+> /* Cosmic Ray diffusion coefficient. */
+> 
+> EXTERN float CosmicRayDiffusionCoefficient;
+> 
+Grid.h
+641,644d640
+< /* Gravity: set the potential boundary for isolated BC's */
+< 
+<    int SetIsolatedPotentialBoundary();
+< 
+1032a1029,1046
+> /* Galaxy simulation: initialize the grid. */
+> 
+> int GalaxySimulationInitializeGrid(int NumberOfDisks, 
+> 					 float DiskRadius[MAX_SPHERES], 
+> 					 float GalaxyMass[MAX_SPHERES],
+> 					 float GasMass[MAX_SPHERES], 
+> 					 float DiskPosition[MAX_SPHERES][MAX_DIMENSION], 
+> 					 float ScaleHeightz[MAX_SPHERES],
+> 					 float ScaleHeightR[MAX_SPHERES], 
+> 					 float DMConcentration[MAX_SPHERES],
+> 					 float DiskTemperature[MAX_SPHERES],
+> 					 float InitialTemperature,
+> 					 int DiskUseParticles,
+> 					 int DiskUseMetalField, 
+> 					 int DiskUseCosmicRayField, 
+> 					 float AngularMomentum[MAX_DIMENSION][MAX_DIMENSION],
+> 				   float UniformVelocity[MAX_DIMENSION], int level);
+> 
+1055a1070
+> 			  int   CosmologySimulationUseCosmicRayField,
+GridList.h
+Hierarchy.h
+LevelHierarchy.h
+ListOfParticles.h
+macros_and_parameters.h
+malloc.h
+MTLPARAM.h
+ProtoSubgrid.h
+RadiationFieldData.h
+RateData.h
+region.h
+ShockPoolGlobalData.h
+SphericalInfall.h
+StarParticleData.h
+TestGravitySphereGlobalData.h
+TopGridData.h
+typedefs.h
+19c19,21
+< /* These are the different types of baryon fields. */
+---
+> /* These are the different types of baryon fields.  
+>    Note that CosmicRayEnergy is energy per unit volume, unlike the
+>    other energies which are per unit mass. */
+26c28
+<                  Metallicity, FieldUndefined};
+---
+>                  Metallicity, CosmicRayEnergy, FieldUndefined};
+WavePoolGlobalData.h
+WriteEvolution.h
+calcdiss.src
+calc_dt.src
+35d34
+< c    dtviscous - viscous time for stability (if used)
+38a38
+> c    dtviscous - viscous time for stability (if used)
+calc_photo_rates.src
+calc_rad.src
+calc_rates.src
+chtable.src
+cic_deposit.src
+cic_flag.src
+cic_interp.src
+cicinterp.src
+cie_thin_cooling_rate.src
+colh2diss.src
+coll_rates.src
+comp_accel.src
+cool1d_multi.src
+cool1d.src
+cool_multi_time.src
+cool_time.src
+euler.src
+expand_terms.src
+fft_utils.src
+fortio.src
+fourn.src
+grid_cic.src
+interp1d.src
+interp2d.src
+interp3d.src
+interpolate.src
+inteuler.src
+intlgrg.src
+int_lin3d.src
+intrmp.src
+int_spline.src
+intvar.src
+lgrg.src
+mcooling.src
+mg_calc_defect.src
+mg_prolong2.src
+mg_prolong.src
+mg_relax.src
+mg_restrict2.src
+mg_restrict.src
+multi_cool.src
+ngpinterp.src
+pgas2d_dual.src
+pgas2d.src
+ppm_de.src
+ppm_lr.src
+prefourn.src
+project.src
+projplane.src
+34a35,36
+> c                     3 - multiply field1*field2**2 by weight
+> c                     4 - multiply field1*field2 by weight
+156a159,161
+>                      if (ifield .eq. 4) plane(i,j) = plane(i,j) + 
+>      &                                sample1*sample2 * weight1
+> 	
+205a211,212
+>                      if (ifield .eq. 4) plane(i,j) = plane(i,j) + 
+>      &                                sample1*sample2 * weight1
+254a262,263
+>                      if (ifield .eq. 4) plane(i,j) = plane(i,j) + 
+>      &                                sample1*sample2 * weight1
+294a304,305
+>                   if (ifield .eq. 4) plane(i,j) = plane(i,j) + 
+>      &                 sample1      *grid2(n,j0,k0)    * weight1
+327a339,340
+>                   if (ifield .eq. 4) plane(i,j) = plane(i,j) + 
+>      &                 sample1      *grid2(i0,n,k0)    * weight1
+360a374,375
+>                   if (ifield .eq. 4) plane(i,j) = plane(i,j) + 
+>      &                 sample1      *grid2(i0,j0,n)    * weight1
+prolong.src
+prolong_tsc.src
+remap.src
+smooth_deposit.src
+smooth.src
+solve_cool.src
+solve_rate.src
+star_maker1.src
+star_maker2.src
+star_maker3.src
+star_maker4.src
+tscint1d.src
+tscint2d.src
+tscint3d.src
+twoshock.src
+utilities.src
+xeuler_sweep.src
+xlagrange_sweep.src
+yeuler_sweep.src
+ylagrange_sweep.src
+zeuler_sweep.src
+zeus_main.src
+16c16,17
+<      &                  bottom, minsupecoef)
+---
+>      &                  bottom, minsupecoef, icosmicray, 
+>      &                  kappa_cr, cr_coeff)
+51a53,56
+> c     icosmicray - index (1-based) of color variable being used for cosmic-ray
+> c               energy density (comoving), or 0 if not used.
+> c     kappa_cr - cosmic-ray diffusion coefficient
+> c     cr_coeff - coefficient for cosmic ray work term
+63c68
+<      &        ncolor, coloff(ncolor), bottom, igamfield
+---
+>      &        ncolor, coloff(ncolor), bottom, igamfield, icosmicray
+75c80
+<       real dt, eta1, eta2, gridvel(3), pmin, C1, C2
+---
+>       real dt, eta1, eta2, gridvel(3), pmin, C1, C2, kappa_cr, cr_coeff
+141c146
+< c     
+---
+> c
+144,151c149,157
+< c      j=(js+je)/2
+< c      k=(ks+ke)/2
+< c      write(30,*) 'zeus_a:'
+< c      do i=is,ie
+< c         write(30,1040) i,d(i,j,k),u(i,j,k),v(i,j,k),e(i,j,k)
+< c 1040    format(i4,1p,5(g12.4,1x))
+< c      enddo
+<       call zeus_source(d, e, u, v, w, p, in, jn, kn, rank, igamfield,
+---
+>       if (icosmicray .eq. 0) then
+>          call zeus_source(d, e, u, v, w, p, in, jn, kn, rank, igamfield,
+>      &                       is, ie, js, je, ks, ke, C1, C2, ipresfree,
+>      &                       gamma, dt, pmin, dx, dy, dz,
+>      &                       gravity, gr_xacc, gr_yacc, gr_zacc, 
+>      &                       bottom, minsupecoef, 
+>      &                       icosmicray, e, kappa_cr, cr_coeff)
+>       else
+>          call zeus_source(d, e, u, v, w, p, in, jn, kn, rank, igamfield,
+155c161,164
+<      &                       bottom, minsupecoef)
+---
+>      &                       bottom, minsupecoef, icosmicray,
+>      &                       colorpt(coloff(icosmicray)+1), kappa_cr,
+>      &                       cr_coeff)
+>       endif
+175c184
+<                      stop
+---
+> c                     stop
+zeus_source.src
+10c10,11
+<      &                       bottom, minsupecoef)
+---
+>      &                       bottom, minsupecoef, 
+>      &                       icosmicray, ecr, kappa_cr, cr_coeff)
+39a41,45
+> c     icosmicray - index of color variable being used for cosmic-ray
+> c               energy density (comoving), or 0 if not used.
+> c     ecr     - cosmic-ray energy field (if present)
+> c     kappa_cr - cosmic-ray diffusion coefficient (code units)
+> c     cr_coeff - coefficient for cosmic-ray work term
+50c56
+<      &        bottom, igamfield, ipresfree, nstep
+---
+>      &        bottom, igamfield, ipresfree, nstep, icosmicray
+53,54c59,62
+<      &        gr_xacc(in,jn,kn), gr_yacc(in,jn,kn), gr_zacc(in,jn,kn)
+<       real    gamma(in,jn,kn), dt, pmin, C1, C2, C3, minsupecoef
+---
+>      &        gr_xacc(in,jn,kn), gr_yacc(in,jn,kn), gr_zacc(in,jn,kn),
+>      &        ecr(in,jn,kn)
+>       real    gamma(in,jn,kn), dt, pmin, C1, C2, minsupecoef, 
+>      &        kappa_cr, cr_coeff
+58a67
+>       real    crgamma, vlim
+59a69
+>       parameter (crgamma=4.0/3.0, vlim = 0.5)
+65,69c75
+<       real    dt1, mom(ijk), momf(ijk), dt2, pfparam, u1, C1a
+<       integer nmax
+<       parameter (pfparam = 0.001, nmax=200)
+< c
+< #define NO_NEW_VISCOSITY
+---
+>       real    u1, edelta
+91d96
+<             if (ipresfree .eq. 1) then
+94a100
+>             if (ipresfree .eq. 1) then
+127a134,141
+> c        Add in cosmic-ray pressure, if it exists (ecr is energy/vol)
+> c
+>             if (icosmicray .gt. 0) then
+>                do i = 1, in
+>                   p(i,j,k) = p(i,j,k) + (crgamma-1.0)*ecr(i,j,k)
+>                enddo
+>             endif
+> c
+133,157d146
+< #define NO_OVERCOOLING_FIXUP
+< #ifdef OVERCOOLING_FIXUP
+<       if (gravity .eq. 1 .and. bottom .eq. 1) then
+<          do k = ks, ke
+<             do j = js, je
+<                do i = is, ie
+<                   if (e(i,j,k)/d(i,j,k) .lt. 
+<      &               min(e(i-1,j,k)/d(i-1,j,k), e(i+1,j,k)/d(i+1,j,k)))
+<      &               p(i,j,k) = 0.5*(p(i-1,j,k) + p(i+1,j,k))
+<                   if (rank .gt. 1) then
+<                     if (e(i,j,k)/d(i,j,k) .lt. 
+<      &               min(e(i,j-1,k)/d(i,j-1,k), e(i,j+1,k)/d(i,j+1,k)))
+<      &               p(i,j,k) = 0.5*(p(i,j-1,k) + p(i,j+1,k))
+<                   endif
+<                   if (rank .gt. 2) then
+<                     if (e(i,j,k)/d(i,j,k) .lt. 
+<      &               min(e(i,j,k-1)/d(i,j,k-1), e(i,j,k+1)/d(i,j,k+1)))
+<      &               p(i,j,k) = 0.5*(p(i,j,k-1) + p(i,j,k+1))
+<                   endif
+<                enddo
+<             enddo
+<          enddo
+<       endif
+< #endif /* OVERCOOLING_FIXUP */
+< c
+169,173c158,162
+< c               if (abs(deltav) .gt. vlim*dx(i)/dt) write(6,*)
+< c     &            'z_lim_i',deltav,dx(i),dt,p(i-1,j,k),p(i,j,k),
+< c     &            i,j,k,ie,je,ke,d(i-1,j,k),d(i,j,k),e(i-1,j,k),
+< c     &            e(i,j,k)
+< c               deltav = sign(min(abs(deltav),vlim*dx(i)/dt), deltav)
+---
+>                if (abs(deltav) .gt. vlim*dx(i)/dt) write(6,*)
+>      &            'z_lim_i',deltav,dx(i),dt,p(i-1,j,k),p(i,j,k),
+>      &            i,j,k,ie,je,ke,d(i-1,j,k),d(i,j,k),e(i-1,j,k),
+>      &            e(i,j,k)
+>                deltav = sign(min(abs(deltav),vlim*dx(i)/dt), deltav)
+180,184c169,173
+< c               if (abs(deltav) .gt. vlim*dy(j)/dt) write(6,*)
+< c     &            'z_lim_j',deltav,dy(j),dt,p(i,j-1,k),p(i,j,k),
+< c     &            i,j,k,ie,je,ke,d(i-1,j,k),d(i,j,k),e(i,j-1,k),
+< c     &            e(i,j,k)
+< c                 deltav = sign(min(abs(deltav),vlim*dy(j)/dt), deltav)
+---
+>                if (abs(deltav) .gt. vlim*dy(j)/dt) write(6,*)
+>      &            'z_lim_j',deltav,dy(j),dt,p(i,j-1,k),p(i,j,k),
+>      &            i,j,k,ie,je,ke,d(i-1,j,k),d(i,j,k),e(i,j-1,k),
+>      &            e(i,j,k)
+>                  deltav = sign(min(abs(deltav),vlim*dy(j)/dt), deltav)
+192,196c181,185
+< c               if (abs(deltav) .gt. vlim*dz(k)/dt) write(6,*)
+< c     &            'z_lim_k',deltav,dz(k),dt,p(i,j,k-1),p(i,j,k),
+< c     &            i,j,k,ie,je,ke,d(i,j,k-1),d(i,j,k),e(i,j,k-1),
+< c     &            e(i,j,k)
+< c                 deltav = sign(min(abs(deltav),vlim*dz(k)/dt), deltav)
+---
+>                if (abs(deltav) .gt. vlim*dz(k)/dt) write(6,*)
+>      &            'z_lim_k',deltav,dz(k),dt,p(i,j,k-1),p(i,j,k),
+>      &            i,j,k,ie,je,ke,d(i,j,k-1),d(i,j,k),e(i,j,k-1),
+>      &            e(i,j,k)
+>                  deltav = sign(min(abs(deltav),vlim*dz(k)/dt), deltav)
+224,242d212
+<       nstep = 5
+<       dt1 = dt/real(nstep)
+<       C3 = -1.0
+<       C1a = C1
+<       if (bottom .eq. 1) C1a = C1*5.0
+< 
+< #ifdef UNUSED
+<       if (bottom .eq. 1) then
+<          nstep = 10
+<          j = jn/2
+<          k = kn/2
+<          do i = is-3, ie+3
+<             write(16,20) i,d(i,j,k),u(i,j,k),v(i,j,k),w(i,j,k)
+<          enddo
+<  20      format(i5,1x,1p,4(e10.3,1x))
+<       endif
+< #endif /* UNUSED */
+< c
+<       do n = 1, nstep
+275,285d244
+< 
+< #ifdef NEW_VISCOSITY            
+<             if (bottom .eq. 1) then
+<                u(is-3,j,k) = 2.0*u(is-2,j,k) - u(is-1,j,k)
+<                do i = is-3, ie+2
+<                   q(i) = C3*d(i,j,k)*(u(i+1,j,k)-u(i,j,k))*dx(i)/dt
+<                enddo
+<                u1 = 2.0*u(ie+3,j,k) - u(ie+2,j,k)
+<                q(ie+3) = C3*d(ie+3,j,k)*(u1-u(ie+3,j,k))*dx(ie)/dt
+<             endif
+< #endif
+290c249
+<                e(i,j,k) = e(i,j,k) + dt1*q(i)/d(i,j,k)*
+---
+>                e(i,j,k) = e(i,j,k) + dt*q(i)/d(i,j,k)*
+295c254
+<                u(i,j,k) = u(i,j,k) + dt1*(q(i-1)-q(i))/
+---
+>                u(i,j,k) = u(i,j,k) + dt*(q(i-1)-q(i))/
+334,344d292
+< #ifdef NEW_VISCOSITY            
+<                if (bottom .eq. 1) then 
+<                   v(i,js-3,k) = 2.0*v(i,js-2,k) - v(i,js-1,k)
+<                   do j = js-3, je+2
+<                      q(j) = C3*d(i,j,k)*(v(i,j+1,k)-v(i,j,k))*dy(j)/dt
+<                   enddo
+<                   u1 = 2.0*v(i,je+3,k) - v(i,je+2,k)
+<                   q(je+3) = C3*d(i,je+3,k)*(u1-v(i,je+3,k))*dy(je)/dt
+<                endif
+< #endif
+< c
+346c294
+<                   e(i,j,k) = e(i,j,k) + dt1*q(j)/d(i,j,k)*
+---
+>                   e(i,j,k) = e(i,j,k) + dt*q(j)/d(i,j,k)*
+351c299
+<                   v(i,j,k) = v(i,j,k) + dt1*(q(j-1)-q(j))/
+---
+>                   v(i,j,k) = v(i,j,k) + dt*(q(j-1)-q(j))/
+390,400d337
+< #ifdef NEW_VISCOSITY            
+<                if (bottom .eq. 1) then
+<                   w(i,j,ks-3) = 2.0*w(i,j,ks-2) - w(i,j,ks-1)
+<                   do k = ks-3, ke+2
+<                      q(k) = C3*d(i,j,k)*(w(i,j,k+1)-w(i,j,k))*dz(k)/dt
+<                   enddo
+<                   u1 = 2.0*w(i,j,ke+3) - w(i,j,ke+2)
+<                   q(ke+3) = C3*d(i,j,ke+3)*(u1-w(i,j,ke+3))*dz(ke)/dt
+<                endif
+< #endif
+< c
+402c339
+<                   e(i,j,k) = e(i,j,k) + dt1*q(k)/d(i,j,k)*
+---
+>                   e(i,j,k) = e(i,j,k) + dt*q(k)/d(i,j,k)*
+407c344
+<                   w(i,j,k) = w(i,j,k) + dt1*(q(k-1)-q(k))/
+---
+>                   w(i,j,k) = w(i,j,k) + dt*(q(k-1)-q(k))/
+414d350
+<       enddo
+416,427c352
+< #ifdef UNUSED
+<       if (bottom .eq. 1) then
+<          j = jn/2
+<          k = kn/2
+<          do i = is-3, ie+3
+<             write(16,20) i,u(i,j,k),v(i,j,k),w(i,j,k)
+<          enddo
+<       endif
+< #endif /* UNUSED */
+< c
+< #define NO_MOMENTUM_DIFFUSION
+< #ifdef MOMENTUM_DIFFUSION
+---
+> c     2a) Substep 2a -- cosmic-ray diffusion
+429c354
+< c     2a) Substep 2a -- momentum diffusion
+---
+>       if (icosmicray .gt. 0) then
+431,449c356,360
+<       do k = ksm2, kn
+<          do j = jsm2, jn
+<             dt1 = dt
+< c
+< c           convert velocity to momentum
+< c
+<             do i = is-2, ie+3
+<                mom(i) = u(i,j,k)*0.5*(d(i-1,j,k)+d(i,j,k))
+<             enddo
+< c
+<             do n=1, nmax
+<                do i = is-2, ie+2
+<                   momf(i) = max(mom(i)-mom(i+1),0.0) * pfparam / dt
+<                enddo
+< c
+<                dt2 = dt1
+<                do i = is-1, ie+2
+<                   dt2 = min(dt2, 0.1*abs(mom(i))/
+<      &                      (abs(momf(i-1)-momf(i))+tiny))
+---
+> c         write(6,*) "kappa_cr =",kappa_cr
+>          do k = ksm2, kn
+>             do j = jsm2, jn
+>                do i = is-3, ie+2
+>                   q(i) = kappa_cr*(ecr(i+1,j,k)-ecr(i,j,k))/dx(i+1)
+450a362
+>                q(ie+3) = q(ie+2)
+452,453c364,365
+<                do i = is-1, ie+2
+<                   mom(i) = mom(i) + dt2*(momf(i-1)-momf(i))
+---
+>                do i = is-2, ie+2
+>                   ecr(i,j,k) = ecr(i,j,k) + dt*(q(i)-q(i-1))/dx(i)
+456,462d367
+<                dt1 = dt1 - dt2
+<                if (dt1/dt .lt. 1.0e-5) goto 200
+<             enddo
+<             write(6,*) 'momentum flux iteration count exceeded 1'
+<             write(6,*) dt, dt1, dt2
+<             do i = is-1, ie+2
+<                write(15,20) i, d(i,j,k), u(i,j,k), mom(i), momf(i)
+464,473d368
+<  20         format(i5,1x,1p,4(e12.4,1x))
+<             stop
+<  200        continue
+< c
+< c           Convert momentum back to velocity
+< c
+<             do i = is-1, ie+2
+<                u(i,j,k) = mom(i)/(0.5*d(i-1,j,k)+d(i,j,k))
+<             enddo
+< c
+475d369
+<       enddo
+476a371,373
+>          if (rank .gt. 1) then
+>             do k = ksm2, kn
+>                do i = is-2, in
+478,496c375,376
+< c
+<       if (rank .gt. 1) then
+<          do k = ksm2, kn
+<             do i = is-2, in
+< c
+<                dt1 = dt
+<                do j = js-2, je+3
+<                   mom(j) = v(i,j,k)*0.5*(d(i,j-1,k)+d(i,j,k))
+<                enddo
+< c
+<                do n=1, nmax
+<                   do j = js-2, je+2
+<                      momf(j) = max(mom(j)-mom(j+1),0.0) * pfparam / dt
+<                   enddo
+< c
+<                   dt2 = dt1
+<                   do j = js-1, je+2
+<                      dt2 = min(dt2, 0.1*abs(mom(j))/
+<      &                         (abs(momf(j-1)-momf(j))+tiny))
+---
+>                   do j = js-3, je+2
+>                      q(j) = kappa_cr*(ecr(i,j+1,k)-ecr(i,j,k))/dy(j+1)
+497a378
+>                   q(je+3) = q(je+2)
+499,500c380,381
+<                   do j = js-1, je+2
+<                      mom(j) = mom(j) + dt2*(momf(j-1)-momf(j))
+---
+>                   do j = js-2, je+2
+>                      ecr(i,j,k) = ecr(i,j,k) + dt*(q(j)-q(j-1))/dy(j)
+503,509d383
+<                   dt1 = dt1 - dt2
+<                   if (dt1/dt .lt. 1.0e-5) goto 300
+<                enddo
+<                write(6,*) 'momentum flux iteration count exceeded 2'
+<                write(6,*) dt, dt1, dt2
+<                do j = js-1, je+2
+<                   write(15,20) j, d(i,j,k), u(i,j,k), mom(j), momf(j)
+511,517d384
+<                stop
+<  300           continue
+< c
+<                do j = js-1, je+2
+<                   v(i,j,k) = mom(j)/(0.5*d(i,j-1,k)+d(i,j,k))
+<                enddo
+< c     
+519,521c386
+<          enddo
+<       endif
+< c
+---
+>          endif
+522a388,390
+>          if (rank .gt. 2) then
+>             do j = jsm2, jn
+>                do i = is-2, in
+524,531c392,395
+<       if (rank .gt. 2) then
+<          do j = jsm2, jn
+<             do i = is-2, in
+< c
+<                dt1 = dt
+<                do k = ks-2, ke+3
+<                   mom(k) = v(i,j,k)*0.5*(d(i,j,k-1)+d(i,j,k))
+<                enddo
+---
+>                   do k = ks-3, ke+2
+>                      q(k) = kappa_cr*(ecr(i,j,k+1)-ecr(i,j,k))/dz(k+1)
+>                   enddo
+>                   q(ke+3) = q(ke+2)
+533d396
+<                do n=1, nmax
+535c398
+<                      momf(k) = max(mom(k)-mom(k+1),0.0) * pfparam / dt
+---
+>                      ecr(i,j,k) = ecr(i,j,k) + dt*(q(k)-q(k-1))/dz(k)
+538,542c401,403
+<                   dt2 = dt1
+<                   do k = ks-1, ke+2
+<                      dt2 = min(dt2, 0.1*abs(mom(k))/
+<      &                         (abs(momf(k-1)-momf(k))+tiny))
+<                   enddo
+---
+>                enddo
+>             enddo
+>          endif
+544,546d404
+<                   do k = ks-1, ke+2
+<                      mom(k) = mom(k) + dt2*(momf(k-1)-momf(k))
+<                   enddo
+548,549c406,418
+<                   dt1 = dt1 - dt2
+<                   if (dt1/dt .lt. 1.0e-5) goto 400
+---
+> c    3a) Cosmic-ray work term: v_Aflven dot grad P_cr
+> c        Note that we assume here pcr = ecr/(gamma_cr-1)
+> c        p is used a temp variable
+> c
+>       do k = ksm2, kep2
+>          do j = jsm2, jep2
+>             do i = is-2, ie+2
+>                p(i,j,k) = ((ecr(i+1,j,k) - ecr(i-1,j,k))/(2.0*dx(i)))**2
+>             enddo
+>             if (rank .gt. 1) then
+>                do i = is-2, ie+2
+>                   p(i,j,k) = p(i,j,k) + ((ecr(i,j+1,k) - ecr(i,j-1,k))/
+>      &                                   (2.0*dy(j)) )**2
+551,554c420,424
+<                write(6,*) 'momentum flux iteration count exceeded 3'
+<                write(6,*) dt, dt1, dt2
+<                do k = ks-1, ke+2
+<                   write(15,20) k, d(i,j,k), u(i,j,k), mom(k), momf(k)
+---
+>             endif
+>             if (rank .gt. 2) then
+>                do i = is-2, ie+2
+>                   p(i,j,k) = p(i,j,k) + ((ecr(i,j,k+1) - ecr(i,j,k-1))/
+>      &                                   (2.0*dz(k)) )**2
+556,557c426,429
+<                stop
+<  400           continue
+---
+>             endif
+> 
+>          enddo
+>       enddo
+559,562c431,440
+<                do k = ks-1, ke+2
+<                   v(i,j,k) = mom(k)/(0.5*d(i,j,k-1)+d(i,j,k))
+<                enddo
+< c     
+---
+>       do k = ksm2, kep2
+>          do j = jsm2, jep2
+>             do i = is-2, ie+2
+>                if (ecr(i,j,k)/(e(i,j,k)*d(i,j,k)) .gt. 0.1) then
+>                   edelta = dt * cr_coeff * sqrt(p(i,j,k)/d(i,j,k)) / 
+>      &                  (crgamma-1.0)
+>                   edelta = min(edelta, 0.5*ecr(i,j,k)) ! limit max edelta
+>                   ecr(i,j,k) = ecr(i,j,k) - edelta
+>                   e(i,j,k) = (e(i,j,k)*d(i,j,k) + edelta)/d(i,j,k)
+>                endif
+565c443
+<       endif
+---
+>       enddo
+567c445
+< #endif /* MOMENTUM_DIFFUSION */
+---
+>       endif   ! endif (icosmicray .gt. 0)
+620c498
+<                   do n=is,ie
+---
+>                   do n=i,in
+622c500
+<      &                          v(n,j,k),w(n,j,k)
+---
+>      &                          v(n,j,k),w(n,j,k),p(n,j,k),ecr(n,j,k)
+627a506,514
+> c           Update cosmic-ray energy, if present
+> c
+>             if (icosmicray .gt. 0) then
+>                do i = is-2, ie+1
+>                   alpha = 0.5*dt*(crgamma - 1.0)*div(i)
+>                   ecr(i,j,k) = ecr(i,j,k) * (1.0 - alpha)/(1.0 + alpha)
+>                enddo
+>             endif
+> c
+zeus_utilities.src
+zeus_xtransport.src
+zeus_ytransport.src
+zeus_ztransport.src
+zlagrange_sweep.src
+Makefile
+69d68
+< 	FastFourierTransformFFTW.o			\
+76a76
+> 	GalaxySimulationInitialize.o			\
+142a143
+> 	Grid_GalaxySimulationInitializeGrid.o		\
+181d181
+< 	Grid_SetIsolatedPotentialBoundary.o		\
+230d229
+< 	PrepareIsolatedGreensFunction.o			\
+340a340
+> 	star_maker5.o					\

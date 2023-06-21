@@ -1,0 +1,15 @@
+COMPILER_HOME = /usr/local/intel/compiler70/ia64
+HDF5_HOME = /usr/apps/hdf5/5-1.4.5-intel
+
+VMI          = /usr/local/vmi
+
+CCxx         = $(COMPILER_HOME)/bin/ecc
+CCxx_OPT     = -DHDF5_BE
+
+LDR          = $(COMPILER_HOME)/bin/ecc
+LDR_OPT      =
+
+LIB          = -L$(HDF5_HOME)/lib -lhdf5 -L/usr/lib -lz \
+               -L$(VMI)/mpich/lib/intel -lmpich -lvmi -lpthread -ldl
+
+OPTS         = -c -I$(HDF5_HOME)/include -I$(VMI)/mpich/include

@@ -1,0 +1,20 @@
+#======================================================================
+#
+# Make.perf for MPE
+#
+#    NOTE: currently includes jbPerf as well
+#    NOTE: requires MPI, but currently is not enforced
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-10-22  Created
+#
+#======================================================================
+
+TEXT_PERF = $(TEXT_PERF_MPE)
+
+DEFINES_PERF = $(DEFINES_PERF_MPE_ARCH)
+OBJS_PERF = 
+FLAGS_PERF = $(FLAGS_PERF_MPE_ARCH)
+LIBS_PERF = $(LIBS_PERF_MPE_ARCH) 
+

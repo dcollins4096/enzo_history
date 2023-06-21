@@ -1,0 +1,9 @@
+Changes introduced by Michael Kuhlen (mqk) in going from v0.2r5 to v0.3:
+
+- Port to use IDL's internal HDF5 routines
+
+- Added a pointer array to loaded grids. If a new slice or a new
+  dataset is requested, then grids that have already been read in and
+  are in the pointer array don't have to be read from disk again.
+
+- Numerous minor changes that I can't recall. :)

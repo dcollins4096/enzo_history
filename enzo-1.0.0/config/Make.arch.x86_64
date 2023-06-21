@@ -1,0 +1,126 @@
+#======================================================================
+#
+# Make.arch for AMD Opteron
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2004-01-21  Created
+#
+#======================================================================
+
+TEXT_ARCH = $(TEXT_ARCH_X86_64)
+
+#======================================================================
+# Pre-processor cpp
+#======================================================================
+
+CPP_ARCH      = /usr/bin/cpp
+CPPFLAGS_ARCH = -P -traditional
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DGNU
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+F90_ARCH   = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    = $(MPI_HOME)/bin/mpicc
+CXX_MPI_ARCH   = $(MPI_HOME)/bin/mpiCC
+FC_MPI_ARCH    = $(MPI_HOME)/bin/mpif77
+F90_MPI_ARCH   = $(MPI_HOME)/bin/mpif90
+LD_MPI_ARCH    = $(MPI_HOME)/bin/mpiCC
+
+CC_NOMPI_ARCH  = gcc
+CXX_NOMPI_ARCH = g++
+FC_NOMPI_ARCH  = g77
+F90_NOMPI_ARCH = g77
+LD_NOMPI_ARCH  = g++
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = -Wall
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -O2
+FLAGS_OPT_AGGRESSIVE_ARCH = -O3
+
+#======================================================================
+# Architecture-dependent compiler and linker flags 
+#======================================================================
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = 
+CXXFLAGS_ARCH =
+FFLAGS_ARCH   =  -fno-second-underscore
+F90FLAGS_ARCH = -fno-second-underscore
+LDFLAGS_ARCH  = 
+
+#----------------------------------------------------------------------
+# General link flags
+#----------------------------------------------------------------------
+
+LIBS_ARCH = 
+
+#----------------------------------------------------------------------
+# Precision-related compiler flags
+#----------------------------------------------------------------------
+
+FFLAGS_PRECISION_SINGLE_ARCH = -r4
+FFLAGS_PRECISION_DOUBLE_ARCH = -r8
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -lg2c
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+MPI_HOME =  /usr/local/mpich/1.2.5.2/pgi/x86_64
+FLAGS_MPI_ARCH =
+LIBS_MPI_ARCH = -lmpich
+
+#======================================================================
+# HDF5 libraries
+#======================================================================
+
+HDF4_DIR = 
+FLAGS_HDF4_ARCH = 
+LIBS_HDF4_ARCH = 
+
+HDF5_DIR = /usr/local
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5 $(LIBS_HDF4_ARCH)
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = 
+DEFINES_PERF_PAPI_ARCH = 
+FLAGS_PERF_PAPI_ARCH   = 
+LIBS_PERF_PAPI_ARCH    =

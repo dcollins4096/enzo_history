@@ -1,0 +1,11 @@
+#
+# macros for Cray YMP
+#
+CPP      = /usr/lang/cpp
+FC       = cft77
+OPTS     = -V
+OPTIMIZE = 
+CC       = cc -D cray2 
+LDR      = segldr
+LIB      = -ldf 
+DEBUG    =

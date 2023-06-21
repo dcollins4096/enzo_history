@@ -1,0 +1,261 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+c=======================================================================
+c//////////////////////////  FUNCTION PS_FUNC  \\\\\\\\\\\\\\\\\\\\\\\\\
+c
+      real function psfunc(k, ispectrum, omega0, hub, omega_nu,
+     &                  omega_lam, psindex, omegab0, z, gamma,
+     &                  psnorm, growth_factor, kcutoff)
+c
+c  written by: Greg Bryan
+c  date:       May, 1996
+c  modified1:
+c
+c  PURPOSE: Generalized power spectrum function
+c
+c  INPUT: 
+c    k        - wavenumber (in Mpc^-1)
+c   (also from cosmo_parm, including:
+c    ipower_spectrum - indicates which function to use)
+c
+c  OUTPUT:
+c    ps_func  - spectral density (Mpc^3)
+c
+c-----------------------------------------------------------------------
+c
+      implicit none
+c
+c     Arguments
+c
+      real k
+      integer ispectrum
+      real omega0, hub, omega_nu, omega_lam, psindex,
+     &     omegab0, z, gamma
+      real psnorm, growth_factor, kcutoff
+c
+c     1) CDM declarations
+c
+      real q, result, T0
+      parameter (T0 = 2.726)
+c
+c     2) CHDM declarations
+c
+      real pscold, ptotal, gamma_nu, x, x0
+      real d1, d2, d3, d4
+      parameter (d1=0.004321, d2=2.217e-6, d3=11.63, d4=3.317)
+c
+c     4) Read a spectrum declarations
+c
+      integer i, max_points, npoints
+      logical found, first_call
+      character filename*80, line*80
+      parameter (max_points=400)
+      real kvalue(max_points), power(max_points), dummy
+      data first_call/.true./
+      save npoints, kvalue, power, first_call
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\//////////////////////////////////
+c=======================================================================
+c
+c     Below the spectral cutoff (if present), set power to zero
+c
+      if (k .lt. kcutoff) then
+         psfunc = 0.0
+         return
+      endif
+c
+      if (ispectrum .eq. 1) then
+c
+c----------------------------------------------------------------------
+c  1)  CDM Power-Spectrum Bardeen et al 1986 augmented by:
+c       Peacock and Dodds 1994 (MNRAS 267, 1020), 
+c       Sugiyama 1995 (ApJS 100, 281)
+c
+c     Compute shape parameter
+c
+         gamma = omega0*hub*(T0/2.7)**(-2)*
+     &     exp(-omegab0*(1 + sqrt(2*hub)/omega0))
+c     &     exp(-2.0*omegab0)  ! old
+c
+         q = k/(gamma*hub)
+c
+c     Compute z=0 spectrum
+c
+         result = psnorm * k**psindex * 
+     &         (log(1.0+2.34*q)/(2.34*q))**2 *
+     &         (1.0 + 3.89*q + (16.1*q)**2 + (5.46*q)**3 + 
+     &          (6.71*q)**4)**(-0.5)
+c
+c     use growth factor to linearly scale to requested z
+c
+         psfunc = result * growth_factor**2
+         return
+c
+      elseif (ispectrum .eq. 2) then
+c
+c----------------------------------------------------------------------
+c  2) CHDM Power-Spectrum From Ma (1996) -- 1 massive neutrino
+c
+c     First, compute cold spectrum as above
+c     
+         gamma = omega0*hub*(T0/2.7)**(-2)*
+     &     exp(-omegab0*(1 + sqrt(2*hub)/omega0))
+c
+         q = k/(gamma*hub)
+         result = psnorm * k**psindex * 
+     &         (log(1.0+2.34*q)/(2.34*q))**2 *
+     &         (1.0 + 3.89*q + (16.1*q)**2 + (5.46*q)**3 + 
+     &          (6.71*q)**4)**(-0.5)
+         pscold = result * growth_factor**2
+c
+c     Now modify with Ma eq. 11 (does this assume EdS?)
+c
+         gamma_nu = sqrt(1.0/(1.0+z)) * omega_nu * hub**2
+         x  = k/gamma_nu
+         x0 = k/ (omega_nu * hub**2)
+         ptotal = pscold * ( (1.0 + d1*x**(d4/2.0) + d2*x**d4) /
+     &                      (1.0 + d3*x0**d4)       )**(omega_nu**1.05)
+c      
+         psfunc = ptotal
+         return
+c
+      elseif (ispectrum .eq. 3) then
+c
+c----------------------------------------------------------------------
+c  3) Power-law spectrum (scale-free)
+c
+         result = psnorm * k**psindex
+         psfunc = result * growth_factor**2
+         return
+c
+      elseif (ispectrum .eq. 4) then
+c
+c----------------------------------------------------------------------
+c  4) Read a power spectrum from a file
+c     Spectrum must power ordered by increasing k values
+c      (format: dummy, k, P(k) on each line, comment symbol is #)
+c
+c     This version ignores the normalization and z, etc.
+c
+c        If this is the first call call, prompt for name and read spectrum
+c
+         if (first_call) then
+c
+            write(6,*) 'Enter ps name:'
+            read(5,1000) filename
+ 1000       format(a80)
+c
+            open(1, file=filename, status='old')
+c
+c           Loop until done (ignore lines starting with #)
+c
+            npoints = 0
+            do while (.true.)
+               read(1, end=100, fmt=1000) line
+               if (line(1:1) .ne. '#') then
+                  npoints = npoints + 1
+                  read(line, *) dummy, kvalue(npoints), power(npoints)
+c                  write(6,*) npoints, kvalue(npoints), power(npoints)
+               endif
+            enddo
+ 100        continue
+c
+c           Close file and set first_call to false
+c
+            close(1)
+            first_call = .false.
+         endif
+c
+c        Search for given k value in spectrum
+c
+         found = .false.
+         i = 0
+         do while (.not. found .and. i .lt. npoints)
+            i = i + 1
+            if (k .lt. kvalue(i)) found = .true.
+         enddo
+c
+c        Linearly interpolate or set power to zero if outside spectrum
+c
+         if (i .eq. 1 .or. .not. found) then
+            result = 0.0
+         else
+            result = power(i-1) + (power(i)    - power(i-1)) *
+     &                           (k           - kvalue(i-1))/
+     &                           (kvalue(i)   - kvalue(i-1))
+         endif
+c
+         psfunc = result
+         return
+c
+      elseif (ispectrum .eq. 5) then
+c
+c----------------------------------------------------------------------
+c  5) CHDM Power-Spectrum From Ma (1996) -- 2 neutrinos, equal masses
+c      (I just doubled the free-streaming length)
+c
+c     First, compute cold spectrum as above
+c     
+         gamma = omega0*hub*(T0/2.7)**(-2)*
+     &     exp(-omegab0*(1 + sqrt(2*hub)/omega0))
+c
+         q = k/(gamma*hub)
+         result = psnorm * k**psindex * 
+     &         (log(1.0+2.34*q)/(2.34*q))**2 *
+     &         (1.0 + 3.89*q + (16.1*q)**2 + (5.46*q)**3 + 
+     &          (6.71*q)**4)**(-0.5)
+         pscold = result * growth_factor**2
+c
+c     Now modify with Ma eq. 11 (does this assume EdS?)
+c       (just half gamma_nu to reflect the doubled velocity)
+c
+         gamma_nu = sqrt(1.0/(1.0+z)) * omega_nu * hub**2 / 2.0
+         x  = k/gamma_nu
+         x0 = k/(omega_nu * hub**2 / 2.0)
+         ptotal = pscold * ( (1.0 + d1*x**(d4/2.0) + d2*x**d4) /
+     &                      (1.0 + d3*x0**d4)       )**(omega_nu**1.05)
+c      
+         psfunc = ptotal
+         return
+c
+      elseif (ispectrum .eq. 6) then
+c
+c----------------------------------------------------------------------
+c  6)  CDM-like power spectrum with a fixed shape parameter.
+c
+c     Compute shape parameter
+c
+c         gamma = 0.25   (now set in common block)
+c
+         q = k/(gamma*hub)
+c
+c     Compute z=0 spectrum
+c
+         result = psnorm * k**psindex * 
+     &         (log(1.0+2.34*q)/(2.34*q))**2 *
+     &         (1.0 + 3.89*q + (16.1*q)**2 + (5.46*q)**3 + 
+     &          (6.71*q)**4)**(-0.5)
+c
+c     use growth factor to linearly scale to requested z
+c
+         psfunc = result * growth_factor**2
+         return
+c
+c----------------------------------------------------------------------
+c
+      else
+         write(6,*) 'PSFUNC: unrecognized ispectrum:', ispectrum
+         stop
+      endif
+c
+      end

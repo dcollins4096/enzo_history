@@ -1,0 +1,159 @@
+/****************************************************************************
+*                                                                           *
+* Copyright 2004 James Bordner                                              *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+****************************************************************************/
+
+#ifndef JBPERF_DEF
+#define JBPERF_DEF
+
+#ifdef __cplusplus
+#define HEADER(body) extern "C" { body; } body
+#else
+#define HEADER(body) body;
+#endif
+
+#ifdef NO_GNU_CPP
+#  if defined(_IBM_)
+#    define FINC_FUN(foo)      jbperf_/**/foo
+#    define XINC_FUN(foo) x/**/jbperf_/**/foo
+#    define FINF_FUN(foo)      jbperf_    foo
+#    define XINF_FUN(foo) x    jbperf_    foo
+#  else 
+#    define FINC_FUN(foo)      jbperf_/**/foo/**/_
+#    define XINC_FUN(foo) x/**/jbperf_/**/foo/**/_
+#    define FINF_FUN(foo)      jbperf_    foo    
+#    define XINF_FUN(foo) x    jbperf_    foo    
+#  endif
+#else
+#  if defined(_IBM_)
+#    define FINC_FUN(foo)    jbperf_##foo
+#    define XINC_FUN(foo) x##jbperf_##foo
+#    define FINF_FUN(foo)    jbperf_  foo
+#    define XINF_FUN(foo) x  jbperf_  foo
+#  else 
+#    define FINC_FUN(foo)    jbperf_##foo##_
+#    define XINC_FUN(foo) x##jbperf_##foo##_
+#    define FINF_FUN(foo)    jbperf_  foo  
+#    define XINF_FUN(foo) x  jbperf_  foo  
+#  endif
+#endif
+
+#define MAX_PATH_LENGTH  100
+#define JBPERF_DIR "JBPERF"
+
+#define JB_MODE_NONE     0
+#define JB_MODE_NEXT     1
+#define JB_MODE_ADVANCE  2
+#define JB_MODE_CATEGORY 4
+#define JB_MODE_TRACE    8
+#define JB_MODE_NEWWRITE 16
+#define JB_MODE_ALL      31
+
+#define JB_STATE_NEW     0
+#define JB_STATE_STARTED 1
+#define JB_STATE_STOPPED 2
+
+#define IND_EVENT 0
+#define IND_VIRT  1
+#define IND_REAL  2
+#define IND_CALLS 3
+#define IND_START 4
+#define IND_LOG   5
+#define IND_PAPI  6
+#define IND_USER  7
+
+#define MAX_USER_EVENTS 7
+#define NUM_EVENTS (8+MAX_USER_EVENTS)
+
+
+#define IND_INCL   0
+#define IND_EXCL   NUM_EVENTS
+#define IND_BEGIN  2*NUM_EVENTS
+
+#define IND_ADJUST NUM_EVENTS
+#define IND_THIS   0
+
+#define MAX_F77_REGION_LENGTH 80
+
+#ifdef TRACE_JBPERF
+#  define _TRACE_JBPERF(X) \
+    printf ("TRACE_JBPERF %s:%d " X "()\n",__FILE__,__LINE__); \
+    fflush(stdout);
+#  define _TRACE_JBPERF1(X,A) \
+    printf ("TRACE_JBPERF %s:%d " X "(%s)\n",__FILE__,__LINE__,A); \
+    fflush(stdout);
+#else
+#  define _TRACE_JBPERF(X) ;
+#  define _TRACE_JBPERF1(X,A) ;
+#endif
+
+#ifdef TRACE_STATE
+#  define _TRACE_STATE \
+  printf ("TRACE_STATE: %s:%d %s %s\n",__FILE__,__LINE__,region.c_str(), \
+        state_[region] == JB_STATE_NEW ? "new" : \
+             (state_[region] == JB_STATE_STARTED ? "started" : \
+                (state_[region] == JB_STATE_STOPPED ? "stopped" : "illegal")));
+#else
+#  define _TRACE_STATE ;
+#endif
+
+#ifdef TRACE_PAPI
+#  define _TRACE_PAPI(DESCRIPTION) \
+    printf ("TRACE_PAPI %s:%d PAPI_" DESCRIPTION "()\n",__FILE__,__LINE__); \
+    fflush(stdout);
+#else
+#  define _TRACE_PAPI(DESCRIPTION) ;
+#endif
+
+#ifdef CHECK_PAPI
+#  define _CHECK_PAPI(RETVAL,DESCRIPTION,EXPECTED_VAL) \
+    if (RETVAL != EXPECTED_VAL) { \
+      fprintf (stderr,"JBPERF ERROR: %s:%d PAPI_%s() ERROR:%s\n", \
+   	     __FILE__,__LINE__,DESCRIPTION,PAPI_strerror(RETVAL)); \
+      fflush(stderr); \
+    }
+#else
+#  define _CHECK_PAPI(RETVAL,DESCRIPTION,EXPECTED_VAL) ;
+#endif
+
+#ifdef USE_PAPI
+#  define _CALL_PAPI(CALL,DESCRIPTION,EXPECTED,RETURNED) \
+  RETURNED = CALL; \
+  _TRACE_PAPI(DESCRIPTION); \
+  _CHECK_PAPI(RETURNED,DESCRIPTION,EXPECTED);
+#else
+#  define _CALL_PAPI(CALL,DESCRIPTION,EXPECTED,RETURNED) ;
+#endif
+
+#ifdef OVERHEAD
+
+#  define _OVERHEAD_START \
+	if (call_depth_++ == 0) { \
+	  overhead_ = get_real() - overhead_; \
+        }
+#  define _OVERHEAD_STOP \
+	if (--call_depth_ == 0) { \
+          overhead_ = get_real() - overhead_; \
+        }
+#  define _OVERHEAD_WRITE_START \
+	overhead_write_ = get_real() - overhead_write_;
+#  define _OVERHEAD_WRITE_STOP \
+	overhead_write_ = get_real() - overhead_write_;
+
+#else
+
+#  define _OVERHEAD_START ;
+#  define _OVERHEAD_STOP ;
+#  define _OVERHEAD_WRITE_START ;
+#  define _OVERHEAD_WRITE_STOP ;
+
+#endif
+
+#endif

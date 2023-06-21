@@ -1,0 +1,104 @@
+#======================================================================
+#
+# ENZO Makefile
+#
+#======================================================================
+#
+# Autoconf variable values:
+#
+#    top_srcdir             = @top_srcdir@
+#
+#---------------------------------------------------------------------
+#
+# Targets:
+#
+#    all:          make all Enzo executables
+#    install:      install all Enzo executables
+#    help:         help for make targets
+#    clean:        clean Enzo directories
+#    distclean:    clean Enzo directories and configuration
+#
+# Also, all configuration targets available in config/MAKE.CONFIG
+#
+#---------------------------------------------------------------------
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  added target_* variables
+#
+#======================================================================
+
+TOP_DIR = @top_srcdir@
+
+#======================================================================
+# Global targets
+#======================================================================
+
+# COMPS = config amr_mpi hdf5_tools inits ring uniglue
+
+COMPS = amr_mpi hdf5_tools inits ring uniglue
+
+#----------------------------------------------------------------------
+# Global make
+#----------------------------------------------------------------------
+
+.PHONY: all all-%
+all: $(patsubst %,all-%,$(COMPS))
+all-%:
+	-$(MAKE) -C $*
+
+#----------------------------------------------------------------------
+# Global make install
+#----------------------------------------------------------------------
+
+.PHONY: install install-%
+install: $(patsubst %,install-%,$(COMPS))
+install-%:
+	-$(MAKE) -C $* install
+
+#----------------------------------------------------------------------
+# Global make help
+#----------------------------------------------------------------------
+
+.PHONY: help
+help:
+	@echo ""
+	@echo "ENZO HELP"
+	@echo ""
+	@echo "Components: $(COMPS)"
+	@echo ""
+	@echo "   make all               Make all component executables"
+	@echo "   make install           Install all component executables"
+	@echo "   make help              Display this help message"
+	@echo "   make clean             Clean all component directories"
+	@echo "   make distclean         Really clean all component directories"
+	@echo ""
+	@echo "   make help-config       Help on global ENZO configuration"
+	@echo ""
+
+#----------------------------------------------------------------------
+# Global make clean
+#----------------------------------------------------------------------
+
+.PHONY: clean clean-%
+clean: $(patsubst %,clean-%,$(COMPS) config bin)
+	@rm -f *~
+clean-%:
+	-$(MAKE) -C $* clean
+
+#----------------------------------------------------------------------
+# Global make distclean
+#----------------------------------------------------------------------
+
+.PHONY: distclean distclean-%
+distclean: clean $(patsubst %,distclean-%,$(COMPS) config bin)
+distclean-%:
+	-$(MAKE) -C $* distclean
+
+#======================================================================
+# Include configuration targets
+#======================================================================
+
+include $(TOP_DIR)/config/MAKE.CONFIG
+
+

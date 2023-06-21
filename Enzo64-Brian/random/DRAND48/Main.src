@@ -1,0 +1,12 @@
+      program initialize_random_table
+
+      implicit none
+
+      integer :: n1, n2, n3, seed
+
+      read(*,*) n1, n2, n3, seed
+
+      call make_random_field(n1, n2, n3, seed)
+
+      end
+

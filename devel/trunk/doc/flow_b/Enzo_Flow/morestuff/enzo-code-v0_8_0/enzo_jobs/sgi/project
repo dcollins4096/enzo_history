@@ -1,0 +1,3 @@
+copy amr_mpi/exe/ProjectionParameters .
+
+mpirun -np 1 enzo5 -r -p 1 output_0008

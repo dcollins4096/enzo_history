@@ -1,0 +1,44 @@
+#======================================================================
+#
+# Make.mach for SDSC Blue Horizon
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_HORIZON)
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+#----------------------------------------------------------------------
+# Libraries if there IS NO distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_DIR_ARCH = 
+HDF5_DIR_ARCH = 
+
+#----------------------------------------------------------------------
+# Libraries if there IS a distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_DIR_OBJ32_ARCH = /usr/local/apps/hdf4
+HDF5_DIR_OBJ32_ARCH = /paci15/ucsd/ux452912/public/hdf5-32
+
+HDF4_DIR_OBJ64_ARCH = /usr/local/apps/apps64/hdf4
+HDF5_DIR_OBJ64_ARCH = /paci15/ucsd/ux452912/public/hdf5-64
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+HOME = /paci15/ucsd/ux452912
+PERF_PAPI_DIR_OBJ32_ARCH = $(HOME)/public/papi-32
+PERF_PAPI_DIR_OBJ64_ARCH = $(HOME)/public/papi-64
+
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI
+FLAGS_PERF_PAPI_ARCH = -I$(PERF_PAPI_DIR_OBJ)/include
+LIBS_PERF_PAPI_ARCH = -L$(PERF_PAPI_DIR_OBJ)/lib -lpapi -L/usr/pmapi/lib -lpmapi

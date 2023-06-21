@@ -1,0 +1,37 @@
+(last modified 4/19/98, Tom Abel)
+things to do and new features I'm planning to add
+
+minor things to change:
+- shading of isosurface starts up with a vector showing in the opposite direction
+- vel. vectors color bar stats up black 
+- setting and removal of peak buttons is very slow. this can be made
+faster by mapping in the background.
+- make zoom out work like zoom in
+
+major changes:
+- the data structure of the entire tool needs to be restructured
+completely. The use of common blocks is complete nonsense for widget
+applications. 
+
+new features I'm hoping to implement soon:
+- enhanced "insight" support (plotting 1D data, etc.)
+- a modified version of SLICER3 that can talk to INSIGHT, read AMR
+data, and visualize multiple data fields.
+- various options menus that controls widget layout,  startup
+values ( inital data_dir, drawing window size, inital colormap, etc.),
+physical units
+- unit conversions and physical parameters.
+- finding the mass enclosed within an iso-surface
+- various peak finding algorithms
+- pick options to examine data values 
+- 3D flow field from velocities
+- support multiple data formats to also use jaques for other hydro codes
+- adaptive volume renderer, getting the most out of the AMR data
+
+
+major new features that might be of interest
+- one-dimensional ploting of data values along lines of interest
+- combination of slices and iso-surfaces
+- seperate physics tool that computes absorption lines, spin
+parameters, emission spectra etc.
+

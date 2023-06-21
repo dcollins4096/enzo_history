@@ -1,0 +1,1 @@
+mpirun -prefix "[%g]" -np 16 ./enzo5 -d -r output_0011 > puke3

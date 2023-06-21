@@ -1,0 +1,14 @@
+#SDSC
+HDF4_INSTALL = /usr/local/apps/hdf4
+HDF5_INSTALL = /usr/local/apps/hdf5-1.4.3-sprspp
+
+CCxx         = mpCC_r
+CCxx_OPT     = -DHDF5_BE
+
+LDR          = mpCC_r
+LDR_OPT      = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+
+LIB          = $(HDF5_INSTALL)/lib/libhdf5.a $(HDF4_INSTALL)/lib/libz.a \
+               -lm
+
+OPTS         = -c -I$(HDF5_INSTALL)/include

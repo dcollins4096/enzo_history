@@ -1,0 +1,908 @@
+/***********************************************************************
+/
+/  EVOLVE LEVEL ROUTINES (CALLED BY EVOLVE LEVEL)
+/
+/  written by: Greg Bryan
+/  date:       June, 1999
+/  modified1:
+/
+/  PURPOSE:  This is a collection of routines called by EvolveLevel.
+/            These have been optimized for enhanced message passing
+/            performance by performing two passes -- one which generates
+/            sends and the second which receives them.
+/
+************************************************************************/
+ 
+#include <stdio.h>
+#include <mpi.h>
+
+#ifdef PPML
+# include "performance.h"
+#endif //PPML 
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#ifdef ISO_GRAV
+#include "GravityPotentialBoundary.h"
+#endif
+#include "Grid.h"
+#include "Hierarchy.h"
+#include "TopGridData.h"
+#include "LevelHierarchy.h"
+#ifdef PPML
+#include "DaveTools.h"
+#endif //PPML 
+/* function prototypes */
+ 
+int DepositParticleMassField(HierarchyEntry *Grid, FLOAT Time = -1.0);
+ 
+#ifdef SIB3
+int PrepareGravitatingMassField(HierarchyEntry *Grid, int grid1,
+				SiblingGridList SiblingList[],
+				TopGridData *MetaData, int level,
+                                FLOAT When);
+#else
+int PrepareGravitatingMassField(HierarchyEntry *Grid, TopGridData *MetaData,
+                                LevelHierarchyEntry *LevelArray[], int level,
+                                FLOAT When);
+#endif
+ 
+#ifdef ISO_GRAV
+int ComputePotentialFieldLevelZero(TopGridData *MetaData,
+				   HierarchyEntry *Grids[], int NumberOfGrids,
+				   GravityPotentialBoundary *PotentialBdry);
+#else
+int ComputePotentialFieldLevelZero(TopGridData *MetaData,
+				   HierarchyEntry *Grids[], int NumberOfGrids);
+#endif
+int GenerateGridArray(LevelHierarchyEntry *LevelArray[], int level,
+		      HierarchyEntry **Grids[]);
+ 
+ 
+ 
+extern int CopyPotentialFieldAverage;
+
+#ifdef PPML
+int PPML_Wrapper(HierarchyEntry **Grids, int NumberOfGrids,int CycleCount,
+		 int NumberOfSubgrids[],fluxes ***SubgridFluxesEstimate, int level,
+		 TopGridData *MetaData,ExternalBoundary *Exterior,LevelHierarchyEntry *Level
+#ifdef SIB2
+		 ,SiblingGridList SiblingList[]
+#endif //SIB2
+		 );
+
+int PPML_NoSolver(HierarchyEntry **Grids, int NumberOfGrids,int CycleCount,
+		 int NumberOfSubgrids[],fluxes ***SubgridFluxesEstimate, int level,
+		 TopGridData *MetaData,ExternalBoundary *Exterior,LevelHierarchyEntry *Level
+#ifdef SIB2
+		 ,SiblingGridList SiblingList[]
+#endif //SIB2
+		 );
+int SolveHyperbolicEquations(HierarchyEntry **Grids, int NumberOfGrids,int CycleCount, 
+			     int NumberOfSubgrids[],fluxes ***SubgridFluxesEstimate, int level,
+			     TopGridData *MetaData,ExternalBoundary *Exterior,LevelHierarchyEntry *Level
+#ifdef SIB2
+			     ,SiblingGridList SiblingList[]
+#endif //SIB2
+			     ){
+  /* Call hydro solver and save fluxes around subgrids. */
+
+  int grid1;
+
+
+  JBMEM_MESSAGE(MyProcessorNumber, "SolveHyper1");
+
+  switch ( HydroMethod ){
+  case PPM_DirectEuler:
+  case PPM_LagrangeRemap:
+  case Zeus_Hydro: 
+
+    for( grid1 = 0; grid1 < NumberOfGrids; grid1++){
+
+      if( MidWayDumpCheck( 30 ) == TRUE ){
+	char basename[30];
+	sprintf(basename, "data30%d%d.grid",CycleCount, level);
+	FILE *dummy = fopen(basename, "a");    
+	Grids[grid1]->GridData->WriteGrid(dummy, basename, grid1+1);
+	fclose(dummy);
+      }
+
+
+      if (Grids[grid1]->GridData->SolveHydroEquations(CycleCount,
+						      NumberOfSubgrids[grid1],
+						      SubgridFluxesEstimate[grid1], level) == FAIL) {
+	fprintf(stderr, "Error in grid->SolveHydroEquations.\n");
+	return FAIL;
+      }
+
+
+      if( MidWayDumpCheck( 39 ) == TRUE ){
+	char basename[30];
+	sprintf(basename, "data39%d%d.grid",CycleCount, level);
+	FILE *dummy = fopen(basename, "a");    
+	Grids[grid1]->GridData->WriteGrid(dummy, basename, grid1+1);
+	fclose(dummy);
+      }
+
+    }//grid1
+    break;
+  case MHD_Test:
+    if( PPML_NoSolver(Grids, NumberOfGrids, CycleCount,
+		     NumberOfSubgrids, SubgridFluxesEstimate, level,
+		     MetaData, Exterior, Level
+#ifdef SIB2
+		     ,SiblingList
+#endif //SIB2
+		     ) == FAIL ){
+      fprintf(stderr,"Error in Solve_PPML\n");
+    }
+    break;
+  case PPM_Local:
+    if( PPML_Wrapper(Grids, NumberOfGrids, CycleCount,
+		     NumberOfSubgrids, SubgridFluxesEstimate, level,
+		     MetaData, Exterior, Level
+#ifdef SIB2
+		     ,SiblingList
+#endif //SIB2
+		     ) == FAIL ){
+      fprintf(stderr,"Error in Solve_PPML\n");
+    }
+    break;
+  default:
+    fprintf(stderr,"No valid hydro method: Going to seg fault.\n");
+  }// Hydro method switch
+
+  JBMEM_MESSAGE(MyProcessorNumber, "SolveHyper Exit");
+  return SUCCESS;
+}  
+#endif //PPML 
+#define GRIDS_PER_LOOP 20000
+ 
+/* ======================================================================= */
+/* This routine sets all the boundary conditions for Grids by either
+   interpolating from their parents or copying from sibling grids. */
+ 
+#ifdef SIB2
+int SetBoundaryConditions(HierarchyEntry *Grids[], int NumberOfGrids,
+			  SiblingGridList SiblingList[],
+			  int level, TopGridData *MetaData,
+			  ExternalBoundary *Exterior, LevelHierarchyEntry *Level)
+#else
+int SetBoundaryConditions(HierarchyEntry *Grids[], int NumberOfGrids,
+                          int level, TopGridData *MetaData,
+                          ExternalBoundary *Exterior, LevelHierarchyEntry *Level)
+#endif
+{
+  int grid1, grid2;
+ 
+  /* -------------- FIRST PASS ----------------- */
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  CommunicationDirection = COMMUNICATION_SEND;
+ 
+  if (traceMPI) fprintf(tracePtr, "SBC send\n");
+ 
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+ 
+    /* a) Interpolate boundaries from the parent grid or set external
+       boundary conditions. */
+ 
+    if (level == 0) {
+      if (Grids[grid1]->GridData->SetExternalBoundaryValues(Exterior)
+	  == FAIL) {
+	fprintf(stderr, "Error in grid->SetExternalBoundaryValues.\n");
+	return FAIL;
+      }
+    }
+    else {
+      if ((Grids[grid1]->GridData->InterpolateBoundaryFromParent
+	   (Grids[grid1]->ParentGrid->GridData)) == FAIL) {
+	fprintf(stderr, "Error in grid->InterpolateBoundaryFromParent.\n");
+	return FAIL;
+      }
+    }
+ 
+    /* b) Copy any overlapping zones for sibling grids.  */
+ 
+#ifdef SIB2
+    for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(
+				     SiblingList[grid1].GridList[grid2],
+				     MetaData->LeftFaceBoundaryCondition,
+				     MetaData->RightFaceBoundaryCondition,
+				     &grid::CopyZonesFromGrid)
+	== FAIL) {
+      fprintf(stderr, "Error in grid->CopyZonesFromGrid.\n");
+    }
+#else
+    for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(Grids[grid2]->GridData,
+                                     MetaData->LeftFaceBoundaryCondition,
+                                     MetaData->RightFaceBoundaryCondition,
+                                     &grid::CopyZonesFromGrid)
+        == FAIL) {
+      fprintf(stderr, "Error in grid->CopyZonesFromGrid.\n");
+    }
+#endif
+ 
+    /* c) Apply external reflecting boundary conditions, if needed.  */
+
+    if (Grids[grid1]->GridData->CheckForExternalReflections(
+							   MetaData->LeftFaceBoundaryCondition,
+							   MetaData->RightFaceBoundaryCondition)
+        == FAIL) {
+      fprintf(stderr, "Error in grid->CheckForExternalReflections.\n");
+    }
+
+  } // end loop over grids
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+ 
+  /* -------------- SECOND PASS ----------------- */
+ 
+  CommunicationDirection = COMMUNICATION_RECEIVE;
+ 
+  if (traceMPI) fprintf(tracePtr, "SBC recv\n");
+ 
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+ 
+    /* a) Interpolate boundaries from the parent grid or set external
+       boundary conditions. */
+ 
+    if (level > 0)
+      if ((Grids[grid1]->GridData->InterpolateBoundaryFromParent
+	   (Grids[grid1]->ParentGrid->GridData)) == FAIL) {
+	fprintf(stderr, "Error in grid->InterpolateBoundaryFromParent.\n");
+	return FAIL;
+      }
+ 
+    /* b) Copy any overlapping zones for sibling grids.  */
+ 
+#ifdef SIB2
+    for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(
+				     SiblingList[grid1].GridList[grid2],
+				     MetaData->LeftFaceBoundaryCondition,
+				     MetaData->RightFaceBoundaryCondition,
+				     &grid::CopyZonesFromGrid)
+	== FAIL) {
+      fprintf(stderr, "Error in grid->CopyZonesFromGrid.\n");
+    }
+#else
+    for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(Grids[grid2]->GridData,
+                                     MetaData->LeftFaceBoundaryCondition,
+                                     MetaData->RightFaceBoundaryCondition,
+                                     &grid::CopyZonesFromGrid)
+        == FAIL) {
+      fprintf(stderr, "Error in grid->CopyZonesFromGrid.\n");
+    }
+#endif
+ 
+  } // end loop over grids
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
+ 
+  return SUCCESS;
+}
+ 
+ 
+/* ======================================================================= */
+/* This routine prepares the density field for all the grids on this level,
+   both particle and baryonic densities.  It also calculates the potential
+   field if this is level 0 (since this involves communication). */
+ 
+#ifdef SIB3
+#ifdef ISO_GRAV
+int PrepareDensityField(LevelHierarchyEntry *LevelArray[],
+			SiblingGridList SiblingList[],
+			int level, TopGridData *MetaData, 
+			GravityPotentialBoundary *PotentialBdry, FLOAT When)
+#else   // !ISO_GRAV
+int PrepareDensityField(LevelHierarchyEntry *LevelArray[],
+			SiblingGridList SiblingList[],
+			int level, TopGridData *MetaData, FLOAT When)
+#endif  // end ISO_GRAV
+#else   // !SIB3
+#ifdef ISO_GRAV
+int PrepareDensityField(LevelHierarchyEntry *LevelArray[],
+                        int level, TopGridData *MetaData, 
+                        GravityPotentialBoundary *PotentialBdry, FLOAT When)
+#else   // !ISO_GRAV
+int PrepareDensityField(LevelHierarchyEntry *LevelArray[],
+                        int level, TopGridData *MetaData, FLOAT When)
+#endif  // end ISO_GRAV
+#endif  // end SIB3
+{
+ 
+  int grid1, grid2;
+ 
+  /* Set the time for evaluation of the fields, etc. */
+ 
+  FLOAT EvaluateTime = LevelArray[level]->GridData->ReturnTime() +
+                   When*LevelArray[level]->GridData->ReturnTimeStep();
+ 
+  /* If level is above MaximumGravityRefinementLevel, then just update the
+     gravity at the MaximumGravityRefinementLevel. */
+ 
+  int reallevel = level;
+  level = min(level, MaximumGravityRefinementLevel);
+ 
+  /* Create an array (Grids) of all the grids. */
+ 
+  typedef HierarchyEntry* HierarchyEntryPointer;
+  HierarchyEntry **Grids;
+  int NumberOfGrids = GenerateGridArray(LevelArray, level, &Grids);
+ 
+  /* Grids: Deposit particles in their GravitatingMassFieldParticles. */
+ 
+  if (traceMPI) fprintf(tracePtr, "PrepareDensityField: Enter DepositParticleMassField (Send)\n");
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  CommunicationDirection = COMMUNICATION_SEND;
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    if (DepositParticleMassField(Grids[grid1], EvaluateTime) == FAIL) {
+      fprintf(stderr, "Error in DepositParticleMassField.\n");
+      return FAIL;
+    }
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (traceMPI) fprintf(tracePtr, "PrepareDensityField: Enter DepositParticleMassField (Receive)\n");
+ 
+  CommunicationDirection = COMMUNICATION_RECEIVE;
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    if (DepositParticleMassField(Grids[grid1], EvaluateTime) == FAIL) {
+      fprintf(stderr, "Error in DepositParticleMassField.\n");
+      return FAIL;
+    }
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+ 
+  /* Grids: compute the GravitatingMassField (baryons & particles). */
+ 
+  if (traceMPI) fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): PGMF1 (send)\n", MyProcessorNumber);
+ 
+  CommunicationDirection = COMMUNICATION_SEND;
+ 
+#ifdef SIB3
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    if (PrepareGravitatingMassField(Grids[grid1], grid1, SiblingList,
+				    MetaData, level, When) == FAIL) {
+      fprintf(stderr, "Error in PrepareGravitatingMassField.\n");
+      return FAIL;
+    }
+#else
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    if (PrepareGravitatingMassField(Grids[grid1], MetaData, LevelArray,
+                                    level, When) == FAIL) {
+      fprintf(stderr, "Error in PrepareGravitatingMassField.\n");
+      return FAIL;
+    }
+#endif
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (traceMPI) fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): PGMF2 (receive)\n", MyProcessorNumber);
+ 
+  CommunicationDirection = COMMUNICATION_RECEIVE;
+ 
+#ifdef SIB3
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    if (PrepareGravitatingMassField(Grids[grid1], grid1, SiblingList,
+				    MetaData, level, When) == FAIL) {
+      fprintf(stderr, "Error in PrepareGravitatingMassField.\n");
+      return FAIL;
+    }
+#else
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    if (PrepareGravitatingMassField(Grids[grid1], MetaData, LevelArray,
+                                    level, When) == FAIL) {
+      fprintf(stderr, "Error in PrepareGravitatingMassField.\n");
+      return FAIL;
+    }
+#endif
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+ 
+  /* Copy overlapping mass fields to ensure consistency and B.C.'s. */
+ 
+  //  if (level > 0)
+ 
+  if (traceMPI) fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): COMF1 (send)\n", MyProcessorNumber);
+ 
+  CommunicationDirection = COMMUNICATION_SEND;
+ 
+#ifdef SIB1
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(
+				   SiblingList[grid1].GridList[grid2],
+				   MetaData->LeftFaceBoundaryCondition,
+				   MetaData->RightFaceBoundaryCondition,
+				   &grid::CopyOverlappingMassField) == FAIL) {
+	fprintf(stderr, "Error in grid->CopyOverlappingMassField.\n");
+	return FAIL;
+      }
+#else
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(Grids[grid2]->GridData,
+                                   MetaData->LeftFaceBoundaryCondition,
+                                   MetaData->RightFaceBoundaryCondition,
+                                   &grid::CopyOverlappingMassField) == FAIL) {
+        fprintf(stderr, "Error in grid->CopyOverlappingMassField.\n");
+        return FAIL;
+      }
+#endif
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (traceMPI) fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): COMF2 (receive)\n", MyProcessorNumber);
+ 
+  CommunicationDirection = COMMUNICATION_RECEIVE;
+ 
+#ifdef SIB1
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(
+				   SiblingList[grid1].GridList[grid2],
+				   MetaData->LeftFaceBoundaryCondition,
+				   MetaData->RightFaceBoundaryCondition,
+				   &grid::CopyOverlappingMassField) == FAIL) {
+	fprintf(stderr, "Error in grid->CopyOverlappingMassField.\n");
+	return FAIL;
+      }
+#else
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+    for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
+      if (Grids[grid1]->GridData->CheckForOverlap(Grids[grid2]->GridData,
+                                   MetaData->LeftFaceBoundaryCondition,
+                                   MetaData->RightFaceBoundaryCondition,
+                                   &grid::CopyOverlappingMassField) == FAIL) {
+        fprintf(stderr, "Error in grid->CopyOverlappingMassField.\n");
+        return FAIL;
+      }
+#endif
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
+ 
+  /* Compute the potential for the top grid. */
+ 
+  if (level == 0) {
+    if (traceMPI) fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): CPFLZero (send-receive)\n", MyProcessorNumber);
+#ifdef ISO_GRAV
+    if (ComputePotentialFieldLevelZero(MetaData, Grids, NumberOfGrids, 
+				       PotentialBdry) == FAIL) {
+#else
+    if (ComputePotentialFieldLevelZero(MetaData, Grids, NumberOfGrids)
+	== FAIL) {
+#endif
+      fprintf(stderr, "Error in ComputePotentialFieldLevelZero.\n");
+      return FAIL;
+    }
+  }
+ 
+  /* Compute a first iteration of the potential and share BV's. */
+ 
+#define ITERATE_POTENTIAL
+#ifdef ITERATE_POTENTIAL
+      if (level > 0) {
+	CopyPotentialFieldAverage = 1;
+	for (int iterate = 0; iterate < MAX_POTENTIAL_ITERATIONS; iterate++) {
+ 
+	  if (iterate > 0)
+	    CopyPotentialFieldAverage = 2;
+ 
+	  int Dummy;
+	  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+	    if (Grids[grid1]->GridData->SolveForPotential(Dummy, level,
+							 EvaluateTime)
+		== FAIL) {
+	      fprintf(stderr, "Error in grid->SolveForPotential.\n");
+	      return FAIL;
+	    }
+            if (CopyGravPotential)
+              Grids[grid1]->GridData->CopyPotentialToBaryonField();
+          }
+ 
+          if (traceMPI) fprintf(tracePtr, "ITPOT send\n");
+ 
+          MPI_Barrier(MPI_COMM_WORLD);
+	  CommunicationDirection = COMMUNICATION_SEND;
+ 
+#ifdef SIB4
+	  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+ 
+            fprintf(stderr, "#SIBSend on cpu %"ISYM": %"ISYM"\n", MyProcessorNumber, SiblingList[grid1].NumberOfSiblings);
+ 
+            // for (grid2 = SiblingList[grid1].NumberOfSiblings-1; grid2 = 0; grid2--)
+	    for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
+	     if (Grids[grid1]->GridData->CheckForOverlap(
+				   SiblingList[grid1].GridList[grid2],
+				   MetaData->LeftFaceBoundaryCondition,
+				   MetaData->RightFaceBoundaryCondition,
+				   &grid::CopyPotentialField) == FAIL) {
+	       fprintf(stderr, "Error in grid->CopyPotentialField.\n");
+	       return FAIL;
+	     }
+ 
+            grid2 = grid1;
+             if (Grids[grid1]->GridData->CheckForOverlap(
+                                   Grids[grid2]->GridData,
+                                   MetaData->LeftFaceBoundaryCondition,
+                                   MetaData->RightFaceBoundaryCondition,
+                                   &grid::CopyPotentialField) == FAIL) {
+               fprintf(stderr, "Error in grid->CopyPotentialField.\n");
+               return FAIL;
+             }
+ 
+           }
+#else
+          for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+            for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
+             if (Grids[grid1]->GridData->CheckForOverlap(Grids[grid2]->GridData,
+                                   MetaData->LeftFaceBoundaryCondition,
+                                   MetaData->RightFaceBoundaryCondition,
+                                   &grid::CopyPotentialField) == FAIL) {
+               fprintf(stderr, "Error in grid->CopyPotentialField.\n");
+               return FAIL;
+             }
+#endif
+ 
+          MPI_Barrier(MPI_COMM_WORLD);
+          if (traceMPI) fprintf(tracePtr, "ITPOT recv\n");
+ 
+	  CommunicationDirection = COMMUNICATION_RECEIVE;
+ 
+#ifdef SIB4
+	  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+ 
+            fprintf(stderr, "#SIBRecv on cpu %"ISYM": %"ISYM"\n", MyProcessorNumber, SiblingList[grid1].NumberOfSiblings);
+ 
+            // for (grid2 = SiblingList[grid1].NumberOfSiblings-1; grid2 = 0; grid2--)
+	    for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
+	     if (Grids[grid1]->GridData->CheckForOverlap(
+				   SiblingList[grid1].GridList[grid2],
+				   MetaData->LeftFaceBoundaryCondition,
+				   MetaData->RightFaceBoundaryCondition,
+				   &grid::CopyPotentialField) == FAIL) {
+	       fprintf(stderr, "Error in grid->CopyPotentialField.\n");
+	       return FAIL;
+	     }
+ 
+            grid2 = grid1;
+             if (Grids[grid1]->GridData->CheckForOverlap(
+                                   Grids[grid2]->GridData,
+                                   MetaData->LeftFaceBoundaryCondition,
+                                   MetaData->RightFaceBoundaryCondition,
+                                   &grid::CopyPotentialField) == FAIL) {
+               fprintf(stderr, "Error in grid->CopyPotentialField.\n");
+               return FAIL;
+             }
+ 
+           }
+#else
+          for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+            for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
+             if (Grids[grid1]->GridData->CheckForOverlap(Grids[grid2]->GridData,
+                                   MetaData->LeftFaceBoundaryCondition,
+                                   MetaData->RightFaceBoundaryCondition,
+                                   &grid::CopyPotentialField) == FAIL) {
+               fprintf(stderr, "Error in grid->CopyPotentialField.\n");
+               return FAIL;
+             }
+#endif
+ 
+          MPI_Barrier(MPI_COMM_WORLD);
+	  CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
+ 
+ 
+	}
+	CopyPotentialFieldAverage = 0;
+      }
+#endif /* ITERATE_POTENTIAL */
+ 
+  /* if level > MaximumGravityRefinementLevel, then do final potential
+     solve (and acceleration interpolation) here rather than in the main
+     EvolveLevel since it involves communications. */
+ 
+  if (reallevel > MaximumGravityRefinementLevel) {
+ 
+    /* compute potential and acceleration on coarser level [LOCAL]
+       (but only if there is at least a subgrid -- it should be only
+        if there is a subgrrid on reallevel, but this is ok). */
+ 
+    for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
+      if (Grids[grid1]->NextGridNextLevel != NULL) {
+	Grids[grid1]->GridData->SolveForPotential(level,
+					       MaximumGravityRefinementLevel);
+        if (CopyGravPotential)
+          Grids[grid1]->GridData->CopyPotentialToBaryonField();
+        else
+  	  Grids[grid1]->GridData->ComputeAccelerationField(
+                           (HydroMethod == Zeus_Hydro) ? ZEUS_GRIDS : GRIDS,
+					       MaximumGravityRefinementLevel);
+      }
+ 
+    /* Interpolate potential for reallevel grids from coarser grids. */
+ 
+    if (!CopyGravPotential) {
+ 
+      int Dummy;
+      LevelHierarchyEntry *Temp = LevelArray[reallevel];
+ 
+      MPI_Barrier(MPI_COMM_WORLD);
+      CommunicationDirection = COMMUNICATION_SEND;
+      while (Temp != NULL) {
+        HierarchyEntry *Temp3 = Temp->GridHierarchyEntry;
+        for (Dummy = reallevel; Dummy > MaximumGravityRefinementLevel; Dummy--)
+  	  Temp3 = Temp3->ParentGrid;
+        if (Temp->GridData->InterpolateAccelerations(Temp3->GridData) == FAIL) {
+	  fprintf(stderr, "Error in grid->InterpolateAccelerations.\n");
+	  return FAIL;
+        }
+        Temp = Temp->NextGridThisLevel;
+      }
+ 
+      MPI_Barrier(MPI_COMM_WORLD);
+      CommunicationDirection = COMMUNICATION_RECEIVE;
+      Temp = LevelArray[reallevel];
+      while (Temp != NULL) {
+        HierarchyEntry *Temp3 = Temp->GridHierarchyEntry;
+        for (Dummy = reallevel; Dummy > MaximumGravityRefinementLevel; Dummy--)
+	  Temp3 = Temp3->ParentGrid;
+        if (Temp->GridData->InterpolateAccelerations(Temp3->GridData) == FAIL) {
+	  fprintf(stderr, "Error in grid->InterpolateAccelerations.\n");
+	  return FAIL;
+        }
+        Temp = Temp->NextGridThisLevel;
+      }
+ 
+      MPI_Barrier(MPI_COMM_WORLD);
+      CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
+    } // end:  if (!CopyGravPotential)
+ 
+  } // end: if (reallevel > MaximumGravityRefinementLevel)
+ 
+  return SUCCESS;
+}
+ 
+ 
+/* ======================================================================= */
+/* This routines does the flux correction and project for all grids on this
+   level from the list of subgrids. */
+ 
+#ifdef FLUX_FIX
+int UpdateFromFinerGrids(int level, HierarchyEntry *Grids[], int NumberOfGrids,
+			 int NumberOfSubgrids[],
+			 fluxes **SubgridFluxesEstimate[],
+			 LevelHierarchyEntry* SUBlingList[],
+			 TopGridData *MetaData)
+#else
+int UpdateFromFinerGrids(int level, HierarchyEntry *Grids[], int NumberOfGrids,
+			 int NumberOfSubgrids[],
+			 fluxes **SubgridFluxesEstimate[])
+#endif
+ 
+{
+ 
+  int grid1, subgrid;
+  HierarchyEntry *NextGrid;
+ 
+#ifdef FLUX_FIX
+  int SUBlingGrid;
+  LevelHierarchyEntry *NextEntry;
+#endif
+ 
+  /* Define a temporary flux holder for the refined fluxes. */
+ 
+  fluxes SubgridFluxesRefined;
+ 
+  /* For each grid,
+     (a) project the subgrid's solution into this grid (step #18)
+     (b) correct for the difference between this grid's fluxes and the
+         subgrid's fluxes. (step #19) */
+ 
+  /* -------------- FIRST PASS ----------------- */
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  CommunicationDirection = COMMUNICATION_SEND;
+ 
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+ 
+    /* Loop over subgrids for this grid. */
+ 
+    NextGrid = Grids[grid1]->NextGridNextLevel;
+    subgrid = 0;
+    while (NextGrid != NULL && FluxCorrection) {
+ 
+      /* Project subgrid's refined fluxes to the level of this grid. */
+ 
+      if (NextGrid->GridData->GetProjectedBoundaryFluxes(
+		      Grids[grid1]->GridData, SubgridFluxesRefined) == FAIL) {
+	fprintf(stderr, "Error in grid->GetProjectedBoundaryFluxes.\n");
+	return FAIL;
+      }
+ 
+      NextGrid = NextGrid->NextGridThisLevel;
+      subgrid++;
+    }
+ 
+#ifdef FLUX_FIX
+    NextEntry = SUBlingList[grid1];
+ 
+    while (NextEntry != NULL && FluxCorrection) {
+      /* make sure this isn't a "proper" subgrid */
+      if( !(NextEntry->GridHierarchyEntry->ParentGrid == Grids[grid1]) ){
+        /* Project subgrid's refined fluxes to the level of this grid. */
+        if (NextEntry->GridData->
+            GetProjectedBoundaryFluxes( Grids[grid1]->GridData,
+                                        SubgridFluxesRefined ) == FAIL) {
+          fprintf(stderr, "Error in grid->GetProjectedBoundaryFluxes.\n");
+          return FAIL;
+        }
+      }
+      NextEntry = NextEntry->NextGridThisLevel;
+    }
+#endif
+ 
+    /* Loop over subgrids for this grid: replace solution. */
+ 
+    NextGrid = Grids[grid1]->NextGridNextLevel;
+    while (NextGrid != NULL) {
+ 
+      /* Project the subgrid solution into this grid. */
+ 
+      if (NextGrid->GridData->ProjectSolutionToParentGrid
+	                                   (*Grids[grid1]->GridData) == FAIL) {
+	fprintf(stderr, "Error in grid->ProjectSolutionToParentGrid.\n");
+	return FAIL;
+      }
+ 
+      NextGrid = NextGrid->NextGridThisLevel;
+    }
+ 
+  } // end of loop over subgrids
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+ 
+  /* -------------- SECOND PASS ----------------- */
+ 
+  CommunicationDirection = COMMUNICATION_RECEIVE;
+ 
+  for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
+ 
+    /* Loop over subgrids for this grid. */
+    /* May have to do it this way to ensure that the fluxes are
+       matched up to the correct grids. */
+ 
+    NextGrid = Grids[grid1]->NextGridNextLevel;
+    subgrid = 0;
+    while (NextGrid != NULL && FluxCorrection) {
+ 
+      /* Project subgrid's refined fluxes to the level of this grid. */
+ 
+      if (NextGrid->GridData->GetProjectedBoundaryFluxes(
+		      Grids[grid1]->GridData, SubgridFluxesRefined) == FAIL) {
+	fprintf(stderr, "Error in grid->GetProjectedBoundaryFluxes.\n");
+	return FAIL;
+      }
+	
+      /* Correct this grid for the refined fluxes (step #19)
+	 (this also deletes the fields in SubgridFluxesRefined). */
+ 
+#ifdef FLUX_FIX
+      if (Grids[grid1]->GridData->CorrectForRefinedFluxes
+          (SubgridFluxesEstimate[grid1][subgrid], &SubgridFluxesRefined,
+           SubgridFluxesEstimate[grid1][NumberOfSubgrids[grid1] - 1],
+           FALSE, MetaData)
+          == FAIL) {
+        fprintf(stderr, "Error in grid->CorrectForRefinedFluxes.\n");
+        return FAIL;
+      }
+#else
+      if (Grids[grid1]->GridData->CorrectForRefinedFluxes
+	  (SubgridFluxesEstimate[grid1][subgrid], &SubgridFluxesRefined,
+	   SubgridFluxesEstimate[grid1][NumberOfSubgrids[grid1] - 1]     )
+	  == FAIL) {
+	fprintf(stderr, "Error in grid->CorrectForRefinedFluxes.\n");
+	return FAIL;
+      }
+#endif
+ 
+      NextGrid = NextGrid->NextGridThisLevel;
+      subgrid++;
+    }
+ 
+#ifdef FLUX_FIX /* Do flux corrections from Sublings */
+ 
+    NextEntry = SUBlingList[grid1];
+ 
+    while (NextEntry != NULL && FluxCorrection) {
+      /* make sure this isn't a "proper" subgrid */
+      if( NextEntry->GridHierarchyEntry->ParentGrid != Grids[grid1] ){
+ 
+        /* Project subgrid's refined fluxes to the level of this grid. */
+        if (NextEntry->GridData->
+            GetProjectedBoundaryFluxes( Grids[grid1]->GridData,
+                                        SubgridFluxesRefined ) == FAIL) {
+          fprintf(stderr, "Error in grid->GetProjectedBoundaryFluxes.\n");
+          return FAIL;
+        }
+ 
+        /* Correct this grid for the refined fluxes (step #19)
+           (this also deletes the fields in SubgridFluxesRefined). */
+ 
+        if (Grids[grid1]->GridData->CorrectForRefinedFluxes
+            (SubgridFluxesEstimate[grid1][NumberOfSubgrids[grid1] - 1],
+             &SubgridFluxesRefined,
+             SubgridFluxesEstimate[grid1][NumberOfSubgrids[grid1] - 1],
+             TRUE, MetaData) == FAIL) {
+          fprintf(stderr, "Error in grid->CorrectForRefinedFluxes.\n");
+          return FAIL;
+        }
+      }
+      NextEntry = NextEntry->NextGridThisLevel;
+    }
+#endif
+ 
+    /* Loop over subgrids for this grid: replace solution. */
+ 
+    NextGrid = Grids[grid1]->NextGridNextLevel;
+ 
+    while (NextGrid != NULL) {
+ 
+      /* Project the subgrid solution into this grid. */
+ 
+      if (NextGrid->GridData->ProjectSolutionToParentGrid
+	                                   (*Grids[grid1]->GridData) == FAIL) {
+	fprintf(stderr, "Error in grid->ProjectSolutionToParentGrid.\n");
+	return FAIL;
+      }
+ 
+      NextGrid = NextGrid->NextGridThisLevel;
+    }
+ 
+  } // end of loop over subgrids
+ 
+  MPI_Barrier(MPI_COMM_WORLD);
+  CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
+ 
+  return SUCCESS;
+}
+ 
+ 
+ 
+/* ======================================================================= */
+/* This routine simply converts a linked list of grids into an array of
+   pointers. */
+ 
+int GenerateGridArray(LevelHierarchyEntry *LevelArray[], int level,
+		      HierarchyEntry **Grids[])
+{
+ 
+  /* Count the number of grids on this level. */
+ 
+  int NumberOfGrids = 0, counter = 0;
+  LevelHierarchyEntry *Temp = LevelArray[level];
+  while (Temp != NULL) {
+    NumberOfGrids++;
+    Temp             = Temp->NextGridThisLevel;
+  }
+ 
+  /* Create a list of pointers and number of subgrids (and fill it out). */
+ 
+  typedef HierarchyEntry* HierarchyEntryPointer;
+  *Grids = new HierarchyEntryPointer[NumberOfGrids];
+  Temp = LevelArray[level];
+  while (Temp != NULL) {
+    (*Grids)[counter++] = Temp->GridHierarchyEntry;
+    Temp              = Temp->NextGridThisLevel;
+  }
+ 
+  return NumberOfGrids;
+}
+ 

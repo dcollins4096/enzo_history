@@ -1,0 +1,30 @@
+#
+# macros for DEC Alpha
+#
+CPP           = cpp
+DEFINES       = -D${PRECISION}
+OPTIONS       = 
+
+## Fortran compiler
+FC            = f77
+FC_OPTIMIZE   = -O
+
+## C Compiler
+CC            = cc
+CC_OPTIMIZE   = 
+
+## C++ Compiler
+CCxx	      = c++
+CCxx_OPTIMIZE = -O -D ALPHA
+
+## Linker/loader
+HDF_DIR      = ${HOME}/hdf
+MPI_DIR      = 
+LDR           = c++
+LDR_OPTIMIZE  =  -O
+LIB           = -L${HDF_DIR}/lib -lmfhdf -ldf -lz ${HDF_DIR}/lib/libjpeg.a \
+                 -lfor -lmpi -lelan 
+INCLUDE       = -I/usr/local/include
+
+OPTS          = -c -I${HDF_DIR}/include -DUSE_MPI
+DEBUG         = 

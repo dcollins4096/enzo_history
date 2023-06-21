@@ -1,0 +1,14 @@
+/***************************************************************************
+ *                                                                         *
+ * Copyright 2006 Brian O'Shea                                             *
+ * Copyright 2006 Laboratory for Computational Astrophysics                *
+ * Copyright 2006 Regents of the University of California                  *
+ *                                                                         *
+ * This software is released under the terms of the "University of         *
+ * California/BSD License" in the accompanying LICENSE file.               *
+ *                                                                         *
+ ***************************************************************************/
+
+See the file EP_Main.C for compilation information.  You will have to 
+modify the makefile.  After compilation, type 'enzoproj -h' for instructions
+on how to use the code.

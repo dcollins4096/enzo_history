@@ -1,0 +1,7 @@
+#define ENZO_VERSION_MAJOR    1
+#define ENZO_VERSION_MINOR    0
+#define ENZO_VERSION_REVISION 2
+
+#define ENZO_VERSION_PRE      0
+#define ENZO_VERSION_PATCH    1
+

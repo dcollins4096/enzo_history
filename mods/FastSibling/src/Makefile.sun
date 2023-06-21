@@ -1,0 +1,29 @@
+#
+# macros for sun
+#
+CPP          = /usr/lib/cpp
+
+## Fortran compiler
+FC           = f77
+FC_OPTIMIZE  = -O
+DEFINES      = -D$(PRECISION)
+
+## C Compiler
+CC           = cc
+CC_OPTIMIZE  = 
+
+## C++ Compiler
+CCxx	     = CC
+CCxx_OPTIMIZE = -g
+
+## Linker/loader
+LDR          = CC
+LDR_OPTIMIZE = -O -g
+HDF_DIR      = ${HOME}/codes/hdf
+
+LIB          = -L${HDF_DIR}/lib -lF77 -lM77 -lsunmath -lm \
+	       -lmfhdf -ldf -ludport -lz -ljpeg -lsz -lnsl
+
+OPTS         = -c -I${HDF_DIR}/include -DSUN -D NO_USE_MPI
+DEBUG        = 
+

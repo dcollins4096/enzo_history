@@ -1,0 +1,33 @@
+GetStarInfo:
+
+This thoroughly uncommented and undocumented code (sorry guys)
+is run on an enzo hdf5 hierarchy which has star formation and
+feedback turned on.  It also assumes that you are running enzo
+with the CosmologySimulationUseMetallicityField parameter set
+to 1.  Basically all it does is read in the enzo hierarchy and 
+write out a file called starinfo.dat, which is a large text
+file containing lots of information about the star particles.
+This information is in columnar format.  The columns are:
+
+1.  x position		(in code units)
+2.  y position
+3.  z position
+4.  x velocity		(in code units)
+5.  y velocity
+6.  z velocity
+7.  particle mass	(in code units of mass - not density)
+8.  particle creation time	(code units)
+9.  particle dynamical time	(code units)
+10. particle metal fraction	(code units - pure mass fraction)
+
+Usage:
+
+getstarinfo <hierarchy name>
+
+example:
+
+getstarinfo RedshiftOutput0009
+
+inputs:  Enzo hierarchy
+outputs:  starinfo.dat
+

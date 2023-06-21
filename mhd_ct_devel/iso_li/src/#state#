@@ -1,0 +1,10 @@
+M CommunicationLoadBalanceGrids.C
+M DEPEND
+cvs ci -m "added more wall times, turned completely off by defaults" DaveTools.C EvolveHierarchy.C EvolveLevel.C main.C
+M Grid_MHD_Diagnose.C
+M Grid_SolveMHDEquations.C
+M Make.jbopt.dc
+
+
+M mhd_harten.src
+M mhd_harten_cosmology.src

@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending
+END
+using_the_interpreter.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/using_the_interpreter.rst
+END
+creating_datatypes.rst
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/creating_datatypes.rst
+END
+writing_scripts.rst
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/writing_scripts.rst
+END
+plugin_file.rst
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/plugin_file.rst
+END
+analyzing_in_parallel.rst
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/analyzing_in_parallel.rst
+END
+creating_derived_fields.rst
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/creating_derived_fields.rst
+END
+creating_derived_quantities.rst
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/creating_derived_quantities.rst
+END
+index.rst
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/yt/!svn/ver/666/branches/yt-1.0/doc/source/extending/index.rst
+END

@@ -1,0 +1,70 @@
+#
+# macros for ia64
+#
+
+#GLOBUS
+GLOBUS_LOCATION=/usr/local/apps/globus-2.4.3-intel-r4
+GSI_INSTALL_TYPE=vendorcc64dbg
+AUTH_INCLUDE += $(GLOBUS_LOCATION)/include/$(GSI_INSTALL_TYPE)
+LIB_GSI_AUTH = \
+        -L$(GLOBUS_LOCATION)/lib \
+        -lglobus_gss_assist_$(GSI_INSTALL_TYPE) \
+        -lglobus_gssapi_gsi_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_credential_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_proxy_core_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_callback_$(GSI_INSTALL_TYPE) \
+        -lglobus_oldgaa_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_sysconfig_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_cert_utils_$(GSI_INSTALL_TYPE) \
+        -lglobus_openssl_error_$(GSI_INSTALL_TYPE) \
+        -lglobus_openssl_$(GSI_INSTALL_TYPE) \
+        -lglobus_proxy_ssl_$(GSI_INSTALL_TYPE) \
+        -lssl_$(GSI_INSTALL_TYPE) \
+        -lcrypto_$(GSI_INSTALL_TYPE) \
+        -lglobus_common_$(GSI_INSTALL_TYPE)
+
+#SRB
+SRBI=/gpfs/srb/SRB3_2_1e
+
+SRBCOPTS = -DPORTNAME_linux -DADDR_64BIT -L$(SRBI)/obj -lSrbClient -I$(SRBI)/src/include -I$(SRBI)/src/catalog/include
+
+# -I$(SRBI)/utilities/include $(LIB_GSI_AUTH)
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(HOME)/hdf5/5-1.4.3-ia64
+endif
+
+ifeq ($(INTEL_INSTALL),$(null))
+INTEL_INSTALL = /usr/local/apps/intel/compiler70/ia64
+endif
+
+ifeq ($(MPI_INSTALL),$(null))
+MPI_INSTALL = /usr/local/apps/mpich-1.2.5..10-pre3
+endif
+
+CPP          = /usr/bin/cpp
+DEFINES      = -I$(MPI_INSTALL)/include -D${PRECISION} -DIA64 -DUSE_MPI
+
+## Fortran compiler
+FC           = $(MPI_INSTALL)/bin/mpif90
+FC_OPT       = -O3 -ftz
+
+## C Compiler
+CC           = $(MPI_INSTALL)/bin/mpicc
+CC_OPT       = -O2 -ftz -DIA64 $(SRBCOPTS)
+
+## C++ Compiler
+CCxx         = $(MPI_INSTALL)/bin/mpiCC
+CCxx_OPT     = -O2 -ftz -DIA64 -DUSE_MPI
+
+## Linker/loader
+LDR          = $(MPI_INSTALL)/bin/mpiCC -Wl,-noinhibit-exec
+LDR_OPT      =
+LIB          = $(SRBCOPTS) \
+               -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib -lz -ljpeg \
+               -L$(INTEL_INSTALL)/lib -lF90 -lIEPCF90 -lPEPCF90 -lintrins
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I$(MPI_INSTALL)/include
+
+OPTS         = -c -ftz -DIA64 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

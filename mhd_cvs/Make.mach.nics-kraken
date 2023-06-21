@@ -1,0 +1,154 @@
+#=======================================================================
+#
+# FILE:        Make.mach.nics-kraken
+#
+# DESCRIPTION: Makefile settings for NICS' Kraken
+#
+# AUTHOR:      Alexei Kritsuk
+#
+# DATE:        2008-05-31
+#
+#=======================================================================
+
+MACH_TEXT  = NICS Kraken
+MACH_VALID = 1
+MACH_FILE  = Make.mach.nics-kraken
+
+#-----------------------------------------------------------------------
+# Commands to run test executables
+#-----------------------------------------------------------------------
+
+TEST_CMD_SERIAL = pbsyod -size 1 -small_pages
+TEST_CMD_MPI = pbsyod -size 4 -small_pages
+
+#-----------------------------------------------------------------------
+# Install paths (local variables)
+#-----------------------------------------------------------------------
+
+LOCAL_MPI_INSTALL    = 
+LOCAL_HDF5_INSTALL   = /sw/xt/pkgs/hdf5/1.6.7/cnl2.0_pgi7.0.7
+
+LOCAL_HDF4_INSTALL   = $(HDF4_HOME)
+LOCAL_SPRNG_INSTALL  = /sw/xt/pkgs/sprng/2.0b/cnl2.0_pgi7.0.7
+LOCAL_PNG_INSTALL    = 
+LOCAL_HYPRE_INSTALL  = 
+LOCAL_JBPERF_INSTALL = 
+
+#-----------------------------------------------------------------------
+# Compiler settings
+#-----------------------------------------------------------------------
+
+MACH_CPP       = /lib/cpp 
+
+# With MPI
+
+MACH_CC_MPI    = cc
+MACH_CXX_MPI   = CC -DMPICH_IGNORE_CXX_SEEK
+MACH_FC_MPI    = ftn
+MACH_F90_MPI   = ftn
+MACH_LD_MPI    = CC
+
+# Without MPI
+
+MACH_CC_NOMPI  = cc
+MACH_CXX_NOMPI = CC
+MACH_FC_NOMPI  = ftn
+MACH_F90_NOMPI = ftn
+MACH_LD_NOMPI  = CC
+
+#-----------------------------------------------------------------------
+# Machine-dependent defines
+#-----------------------------------------------------------------------
+
+#MACH_DEFINES   = -DXT3 -DNO_IO_LOG -DSYSCALL -DENZO_ANALYSIS
+#MACH_DEFINES   = -DXT3 -DNO_IO_LOG -DSYSCALL -DHAVE_SPRNG
+MACH_DEFINES   = -DXT3 -DNO_IO_LOG -DSYSCALL -DSFGEN_PERF -DHAVE_SPRNG -DUSE_STOCHASTIC_FORCING -DHAOXU_NOMULTI -DHAOXU -DATHENA -DDC_COSMOLOGY_FLUX  -DNEW_DIVB  -DHAOXU_NOMULTI
+
+
+
+
+
+#-----------------------------------------------------------------------
+# Compiler flag settings
+#-----------------------------------------------------------------------
+
+MACH_CPPFLAGS = -P -traditional
+MACH_CFLAGS   = 
+MACH_CXXFLAGS = -Msafeptr -w
+MACH_FFLAGS   = 
+MACH_F90FLAGS = 
+MACH_LDFLAGS  = -Wl,-static 
+
+#-----------------------------------------------------------------------
+# Precision-related flags
+#-----------------------------------------------------------------------
+
+MACH_FFLAGS_INTEGER_32 = -i4
+MACH_FFLAGS_INTEGER_64 = -i8
+MACH_FFLAGS_REAL_32    = -r4
+MACH_FFLAGS_REAL_64    = -r8
+
+#-----------------------------------------------------------------------
+# Optimization flags
+#-----------------------------------------------------------------------
+
+MACH_OPT_WARN        = 
+MACH_OPT_DEBUG       = -g
+#MACH_OPT_CRASHES        = -fastsse
+#MACH_OPT_HIGH        = -O2 -Mprof=func
+#MACH_OPT_HIGH        = -O2 -Mbounds -gopt
+MACH_OPT_HIGH        = -O2
+# DO NOT USE AGGRESSIVE OPTIMIZATION ON XT3 IF SF ANALYSIS IS ON !!!
+#MACH_OPT_AGGRESSIVE  = -O3 -Mfptrap -Mflushz -Mdaz -Mnontemporal -Mfprelaxed -Mvect=altcode,assoc,prefetch -Kieee
+MACH_OPT_AGGRESSIVE  = -O3 -Mfptrap -Mflushz -Mdaz -Mnontemporal -Mfprelaxed -Mvect=altcode,assoc,prefetch -Kieee
+
+#-----------------------------------------------------------------------
+# Includes
+#-----------------------------------------------------------------------
+
+LOCAL_INCLUDES_MPI    = 
+LOCAL_INCLUDES_HDF5   = -I$(LOCAL_HDF5_INSTALL)/include
+LOCAL_INCLUDES_IOBUF  = -I$(IOBUF_INC)
+LOCAL_INCLUDES_HYPRE  = 
+LOCAL_INCLUDES_JBPERF = 
+LOCAL_INCLUDES_SPRNG  = -I$(LOCAL_SPRNG_INSTALL)/include
+LOCAL_INCLUDES_PNG    =
+
+MACH_INCLUDES         = $(LOCAL_INCLUDES_HDF5) $(LOCAL_INCLUDES_SPRNG)
+#MACH_INCLUDES         = $(LOCAL_INCLUDES_HDF5)
+
+MACH_INCLUDES_MPI     = $(LOCAL_INCLUDES_MPI)
+MACH_INCLUDES_HYPRE   = $(LOCAL_INCLUDES_HYPRE)
+MACH_INCLUDES_JBPERF  = $(LOCAL_INCLUDES_JBPERF)
+MACH_INCLUDES_PNG     = $(LOCAL_INCLUDES_PNG)
+
+#-----------------------------------------------------------------------
+# Libraries
+#-----------------------------------------------------------------------
+#
+# make sure to "load module iobuf" before compiling, only then IOBUF environment
+# variables will be properly set
+#
+
+LOCAL_LIBS_MPI    = 
+LOCAL_LIBS_HDF5   = -L$(LOCAL_HDF5_INSTALL)/lib -lhdf5
+LOCAL_LIBS_HDF4   = -L$(LOCAL_HDF4_INSTALL)/lib -lmfhdf -ldf -ljpeg
+LOCAL_LIBS_HYPRE  = 
+LOCAL_LIBS_JBPERF = 
+LOCAL_LIBS_SPRNG  = -L$(LOCAL_SPRNG_INSTALL)/lib -lsprng
+#LOCAL_LIBS_SPRNG  =
+LOCAL_LIBS_PNG    = 
+
+LOCAL_LIBS_MACH   =  $(LOCAL_LIBS_SPRNG) \
+                    -L/sw/xt/pkgs/szip/2.1/sles9.2_pgi7.0.7/lib -lsz \
+                    -L/usr/local/lib -lz \
+                    -L/opt/acml/4.0.1a/pgi64/lib -lacml -lm \
+                    -L/opt/pgi/$(PGI_VERS_STR)/linux86-64/7.1/lib \
+                    -lpgf90 -lpgf90_rpm1 -lpgf902 -lpgf90rtl -lpgftnrtl 
+#                    -L/usr/local/packages/gmp-4.1.4/lib -lgmp
+
+MACH_LIBS         = $(LOCAL_LIBS_HDF5) $(LOCAL_LIBS_MACH)
+MACH_LIBS_MPI     = $(LOCAL_LIBS_MPI)
+MACH_LIBS_HYPRE   = $(LOCAL_LIBS_HYPRE)
+MACH_LIBS_JBPERF  = $(LOCAL_LIBS_JBPERF)
+MACH_LIBS_PNG     = $(LOCAL_LIBS_PNG)

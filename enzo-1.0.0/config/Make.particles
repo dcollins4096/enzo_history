@@ -1,0 +1,13 @@
+#======================================================================
+#
+# Make.particles for double precision particle positions
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_PARTICLES = $(TEXT_PARTICLES_DOUBLE)
+
+DEFINES_PARTICLES = -Dp8

@@ -1,0 +1,48 @@
+void start_trace()
+{
+  trace_level = 0;
+
+  if (MyProcessorNumber == ROOT_PROCESSOR) {
+      trace_fptr = fopen( "Flow_trace", "w" );
+  }
+}
+
+
+void stop_trace()
+{
+    if (MyProcessorNumber == ROOT_PROCESSOR) {
+      fclose(trace_fptr);
+    }
+}
+
+void print_trace( const char *name, int tr_level )
+{
+
+char line[132];
+const char pad[2]=".";
+int ll;
+
+// printf("%s\n",name);
+// printf("%d\n",strlen(name));
+// printf("%d\n",level);
+
+if (MyProcessorNumber == ROOT_PROCESSOR) {
+
+if (strlen(name)+tr_level < 132)
+{
+
+  line[0]=NULL;
+
+  for (ll=0; ll<tr_level; ll++)
+  {
+    strcat(line,pad);
+  }
+
+  strcat(line,name);
+
+  fprintf(trace_fptr,"%s\n",line);
+}
+
+}
+
+}

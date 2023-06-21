@@ -1,0 +1,342 @@
+#======================================================================
+#
+# ENZO global configuration "make" include file
+#
+#======================================================================
+#
+# Input: $(TOP_DIR)
+#
+#======================================================================
+#
+# INCLUDES configuration files "config/Make.*"
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13 Created
+#
+#======================================================================
+
+CPU     = @target_cpu@
+
+
+include $(TOP_DIR)/config/Make.text
+
+include $(TOP_DIR)/config/Make.arch
+include $(TOP_DIR)/config/Make.mach
+include $(TOP_DIR)/config/Make.mpi
+include $(TOP_DIR)/config/Make.perf
+include $(TOP_DIR)/config/Make.io
+include $(TOP_DIR)/config/Make.precision
+include $(TOP_DIR)/config/Make.particles
+include $(TOP_DIR)/config/Make.opt
+include $(TOP_DIR)/config/Make.obj
+include $(TOP_DIR)/config/Make.endian
+include $(TOP_DIR)/config/Make.jbopt
+
+include $(TOP_DIR)/config/Make.configure
+
+#======================================================================
+# Set default configuration
+#======================================================================
+
+CONFIG_DIR = $(TOP_DIR)/config
+
+.PHONY: default
+default:
+	@$(MAKE) -s arch-$(CPU)
+	@$(MAKE) -s mach-none
+	@$(MAKE) -s mpi-on
+	@$(MAKE) -s perf-off
+	@$(MAKE) -s io-hdf5
+	@$(MAKE) -s precision-double
+	@$(MAKE) -s particles-double
+	@$(MAKE) -s opt-high
+	@$(MAKE) -s obj-64
+	@$(MAKE) -s endian-big
+	@$(MAKE) -s jbopt-on
+
+#======================================================================
+# Show the current configuration
+#======================================================================
+
+.PHONY: show-config
+show-config:
+	@$(MAKE) -s show-arch
+	@$(MAKE) -s show-mach
+	@$(MAKE) -s show-mpi
+	@$(MAKE) -s show-perf
+	@$(MAKE) -s show-io
+	@$(MAKE) -s show-precision
+	@$(MAKE) -s show-particles
+	@$(MAKE) -s show-opt
+	@$(MAKE) -s show-obj
+	@$(MAKE) -s show-endian
+	@$(MAKE) -s show-jbopt
+
+#======================================================================
+# Help for configuration
+#======================================================================
+
+.PHONY: help-config
+help-config:
+	@echo ""
+	@echo "ENZO HELP: config/MAKE.CONFIG"
+	@echo ""
+	@echo "'D' denotes default setting"
+	@echo ""
+	@echo " General configuration"
+	@echo ""
+	@echo "   make default           Set to default configuration (*)"
+	@echo "   make help-config       Help on configuration"
+	@echo "   make show-config       Display current configuration"
+	@echo "   make show-flags        Display compiler flags for current configuration"
+	@echo ""
+	@echo " Architecture selection (automatic)"
+	@echo ""
+	@echo "   make arch-alphaev68    $(TEXT_ARCH_ALPHAEV68)"
+	@echo "   make arch-i686         $(TEXT_ARCH_I686)"
+	@echo "   make arch-ia64         $(TEXT_ARCH_IA64)"
+	@echo "   make arch-mips         $(TEXT_ARCH_MIPS)"
+	@echo "   make arch-powerpc      $(TEXT_ARCH_POWERPC)"
+	@echo "   make arch-sparc        $(TEXT_ARCH_SPARC)"
+	@echo ""
+	@echo " Specific machine selection"
+	@echo ""
+	@echo " D make mach-none         $(TEXT_MACH_NONE)"
+	@echo "   make mach-copper       $(TEXT_MACH_COPPER)"
+	@echo "   make mach-cosmos       $(TEXT_MACH_COSMOS)"
+	@echo "   make mach-diapason     $(TEXT_MACH_DIAPASON)"
+	@echo "   make mach-horizon      $(TEXT_MACH_HORIZON)"
+	@echo "   make mach-titan-pablo  $(TEXT_MACH_TITAN_PABLO)"
+	@echo ""
+	@echo " MPI library"
+	@echo ""
+	@echo "   make mpi-off           $(TEXT_MPI_OFF)"
+	@echo " D make mpi-on            $(TEXT_MPI_ON)"
+	@echo ""
+	@echo " jbPerf/jbMem support"
+	@echo ""
+	@echo " D make perf-off          $(TEXT_PERF_OFF)"
+	@echo "   make perf-jbperf       $(TEXT_PERF_JBPERF)"
+	@echo "   make perf-jbmem        $(TEXT_PERF_JBMEM)"
+	@echo "   make perf-papi         $(TEXT_PERF_PAPI)"
+	@echo ""
+	@echo " I/O library"
+	@echo ""
+	@echo "   make io-hdf4           $(TEXT_IO_HDF4)"
+	@echo " D make io-hdf5           $(TEXT_IO_HDF5)"
+	@echo ""
+	@echo " Global precision"
+	@echo ""
+	@echo " D make precision-double  $(TEXT_PRECISION_DOUBLE)"
+	@echo "   make precision-single  $(TEXT_PRECISION_SINGLE)"
+	@echo ""
+	@echo " Particles precision"
+	@echo ""
+	@echo " D make particles-double  $(TEXT_PARTICLES_DOUBLE)"
+	@echo "   make particles-quad    $(TEXT_PARTICLES_QUAD)"
+	@echo "   make particles-single  $(TEXT_PARTICLES_SINGLE)"
+	@echo ""
+	@echo " Object files type"
+	@echo ""
+	@echo "   make obj-32            $(TEXT_OBJ_32)"
+	@echo " D make obj-64            $(TEXT_OBJ_64)"
+	@echo ""
+	@echo " Optimization level"
+	@echo ""
+	@echo "   make opt-warn          $(TEXT_OPT_WARN)"
+	@echo "   make opt-check         $(TEXT_OPT_CHECK)"
+	@echo "   make opt-debug         $(TEXT_OPT_DEBUG)"
+	@echo " D make opt-high          $(TEXT_OPT_HIGH)"
+	@echo "   make opt-aggressive    $(TEXT_OPT_AGGRESSIVE)"
+	@echo ""
+	@echo " Endian mode"
+	@echo ""
+	@echo " D make endian-big        $(TEXT_ENDIAN_BIG)"
+	@echo "   make endian-little     $(TEXT_ENDIAN_LITTLE)"
+	@echo ""
+	@echo " Code optimizations"
+	@echo ""
+	@echo "   make jbopt-off         $(TEXT_JBOPT_OFF)"
+	@echo " D make jbopt-on          $(TEXT_JBOPT_ON)"
+	@echo "   make jbopt-beta        $(TEXT_JBOPT_BETA)"
+	@echo ""
+
+#======================================================================
+# Write compiler flags
+#======================================================================
+
+.PHONY: show-flags
+show-flags:
+	@echo "CPP = $(CPP)"
+	@echo "CC  = $(CC)"
+	@echo "CXX = $(CXX)"
+	@echo "FC  = $(FC)"
+	@echo "LD  = $(LD)"
+	@echo ""
+	@echo "DEFINES = $(DEFINES)"
+	@echo ""
+	@echo "CPPFLAGS = $(CPPFLAGS)"
+	@echo "CFLAGS   = $(CFLAGS)"
+	@echo "CXXFLAGS = $(CXXFLAGS)"
+	@echo "FFLAGS   = $(FFLAGS)"
+	@echo "LDFLAGS  = $(LDFLAGS)"
+	@echo ""
+	@echo "LIBS     = $(LIBS)"
+
+
+#======================================================================
+# Set various configuration settings
+#======================================================================
+
+#----------------------------------------------------------------------
+# Set the architecture
+#----------------------------------------------------------------------
+
+ARCH_FILE = $(CONFIG_DIR)/Make.arch
+
+.PHONY: arch-% show-arch
+arch-%: $(CONFIG_DIR)/Make.arch.%
+	@rm -f $(ARCH_FILE)
+	@ln -s Make.arch.$* $(ARCH_FILE)
+	@$(MAKE) -s show-arch
+show-arch:
+	@echo "   Architecture:        $(TEXT_ARCH)"
+
+#----------------------------------------------------------------------
+# Set the machine
+#----------------------------------------------------------------------
+
+MACH_FILE = $(CONFIG_DIR)/Make.mach
+
+.PHONY: mach-% show-mach
+mach-%: $(CONFIG_DIR)/Make.mach.%
+	@rm -f $(MACH_FILE)
+	@ln -s Make.mach.$* $(MACH_FILE)
+	@$(MAKE) -s show-mach
+show-mach:
+	@echo "   Machine:             $(TEXT_MACH)"
+
+#----------------------------------------------------------------------
+# Set the MPI library
+#----------------------------------------------------------------------
+
+MPI_FILE = $(CONFIG_DIR)/Make.mpi
+
+.PHONY: mpi-% show-mpi
+mpi-%: $(CONFIG_DIR)/Make.mpi.%
+	@rm -f $(MPI_FILE)
+	@ln -s Make.mpi.$* $(MPI_FILE)
+	@$(MAKE) -s show-mpi
+show-mpi:
+	@echo "   MPI:                 $(TEXT_MPI)"
+
+#----------------------------------------------------------------------
+# Set the jbPerf/PAPI library
+#----------------------------------------------------------------------
+
+PERF_FILE = $(CONFIG_DIR)/Make.perf
+
+.PHONY: perf-% show-perf
+perf-%: $(CONFIG_DIR)/Make.perf.%
+	@rm -f $(PERF_FILE)
+	@ln -s Make.perf.$* $(PERF_FILE)
+	@$(MAKE) -s show-perf
+show-perf:
+	@echo "   jbPerf/jbMem:        $(TEXT_PERF)"
+
+#----------------------------------------------------------------------
+# Set the IO library
+#----------------------------------------------------------------------
+
+IO_FILE = $(CONFIG_DIR)/Make.io
+
+.PHONY: io-% show-io
+io-%: $(CONFIG_DIR)/Make.io.%
+	@rm -f $(IO_FILE)
+	@ln -s Make.io.$* $(IO_FILE)
+	@$(MAKE) -s show-io
+show-io:
+	@echo "   I/O:                 $(TEXT_IO)"
+
+#----------------------------------------------------------------------
+# Set the global precision
+#----------------------------------------------------------------------
+
+PRECISION_FILE = $(CONFIG_DIR)/Make.precision
+
+.PHONY: precision-% show-precision
+precision-%: $(CONFIG_DIR)/Make.precision.%
+	@rm -f $(PRECISION_FILE)
+	@ln -s Make.precision.$* $(PRECISION_FILE)
+	@$(MAKE) -s show-precision
+show-precision:
+	@echo "   Global precision:    $(TEXT_PRECISION)"
+
+#----------------------------------------------------------------------
+# Set the particle precision
+#----------------------------------------------------------------------
+
+PARTICLES_FILE = $(CONFIG_DIR)/Make.particles
+
+.PHONY: particles-% show-particles
+particles-%: $(CONFIG_DIR)/Make.particles.%
+	@rm -f $(PARTICLES_FILE)
+	@ln -s Make.particles.$* $(PARTICLES_FILE)
+	@$(MAKE) -s show-particles
+show-particles:
+	@echo "   Particles precision: $(TEXT_PARTICLES)"
+
+#----------------------------------------------------------------------
+# Set the optimization level
+#----------------------------------------------------------------------
+
+OPT_FILE = $(CONFIG_DIR)/Make.opt
+
+.PHONY: opt-% show-opt
+opt-%: $(CONFIG_DIR)/Make.opt.%
+	@rm -f $(OPT_FILE)
+	@ln -s Make.opt.$* $(OPT_FILE)
+	@$(MAKE) -s show-opt
+show-opt:
+	@echo "   Optimization level:  $(TEXT_OPT)"
+
+#----------------------------------------------------------------------
+# Set the object file type
+#----------------------------------------------------------------------
+
+OBJ_FILE = $(CONFIG_DIR)/Make.obj
+
+.PHONY: obj-% show-obj
+obj-%: $(CONFIG_DIR)/Make.obj.%
+	@rm -f $(OBJ_FILE)
+	@ln -s Make.obj.$* $(OBJ_FILE)
+	@$(MAKE) -s show-obj
+show-obj:
+	@echo "   Object file type:    $(TEXT_OBJ)"
+
+#----------------------------------------------------------------------
+# Set endian mode
+#----------------------------------------------------------------------
+
+ENDIAN_FILE = $(CONFIG_DIR)/Make.endian
+
+.PHONY: endian-% show-endian
+endian-%: $(CONFIG_DIR)/Make.endian.%
+	@rm -f $(CONFIG_DIR)/Make.endian
+	@ln -s Make.endian.$* $(ENDIAN_FILE)
+	@$(MAKE) -s show-endian
+show-endian:
+	@echo "   Bit order:           $(TEXT_ENDIAN)"
+
+#----------------------------------------------------------------------
+
+JBOPT_FILE = $(CONFIG_DIR)/Make.jbopt
+
+.PHONY: jbopt-% show-jbopt
+jbopt-%: $(CONFIG_DIR)/Make.jbopt.%
+	@rm -f $(JBOPT_FILE)
+	@ln -s Make.jbopt.$* $(JBOPT_FILE)
+	@$(MAKE) -s show-jbopt
+show-jbopt:
+	@echo "   Code optimizations:  $(TEXT_JBOPT)"

@@ -1,0 +1,176 @@
+!=======================================================================
+!
+! Copyright 2006 Daniel R. Reynolds
+! Copyright 2006 Laboratory for Computational Astrophysics
+! Copyright 2006 Regents of the University of California
+!
+! This software is released under the terms of the "Enzo Public License"
+! in the accompanying LICENSE file.
+!
+!=======================================================================
+subroutine gFLDProblem_LocEgRHS(Egrhs, Ega, Tempa, n_HIa, rhoa,  &
+     nea, Kappaa, a, adot, Nchem, Model, intSigE, Nx, Ny, Nz,    &
+     NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, ier)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       August, 2006
+!  modified1:
+!
+!  PURPOSE: Computes the spatially-local components of the gray 
+!           radiation energy equation nonlinear rhs for the 
+!           Gray FLD problem.
+!
+!  INPUTS:
+!     Ega        - Gray radiation energy density array
+!     Tempa      - fluid temperature array
+!     n_HIa      - Hydrogen I number density array
+!     rhoa       - fluid density array
+!     nea        - electron density array
+!     Kappaa     - combined opacity array
+!     a          - cosmological expansion parameter
+!     adot       - da/dt
+!     Nchem      - number of chemical species
+!     Model      - flag denoting physical model to use
+!     intSigE    - int_{nu0}^{inf} sigmaE(nu) dnu
+!     Nx,Ny,Nz   - active mesh size in each direction
+!     NG*l/NG*r  - left/right ghost cells in each direction
+!
+!     Note: the vector inputs are of size (Nx + NGxl + NGxr) in 
+!     the x-direction, others are similar.
+!
+!  OUTPUT ARGUMENTS: 
+!     Egrhs      - local nonlinear rhs for the Gray radiation 
+!                  energy density  equation
+!     ier        - success/failure flag (1->success, 0->failure)
+!
+!  EXTERNALS: 
+!
+!  LOCALS:
+!
+!=======================================================================
+#include "fortran.def"
+  implicit none
+
+!--------------
+! argument declarations
+  integer, intent(in) :: Nchem, Model
+  integer, intent(in) :: Nx, NGxl, NGxr
+  integer, intent(in) :: Ny, NGyl, NGyr
+  integer, intent(in) :: Nz, NGzl, NGzr
+  integer, intent(out) :: ier
+  REALSUB, intent(in) :: a, adot
+  REALSUBR, intent(in) :: intSigE
+  REALSUBR, intent(in),                                         &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr) &
+       :: Ega, Tempa, n_HIa, rhoa, nea, Kappaa
+  REALSUBR, intent(out) ::                                      &
+       Egrhs(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)
+  
+!--------------
+! locals
+  integer :: i, j, k
+  REALSUBR :: pi, c, afac, Eg, Temp, nHI, nHII, rho, ne
+  REALSUBR :: HFrac, mp, alpha, beta, kappa, eta
+
+!=======================================================================
+
+!!$  write(*,*) 'Entering gFLDProblem::LocEgRHS routine'
+
+  ! initialize output to have all zero values, flag to success
+  Egrhs = 0.d0
+  ier = 1
+  
+  ! check that we are in Hydrogen-only case 
+  ! (we have no formula for multispecies emissivity yet)
+  if ((Nchem < 1) .or. (Nchem > 1)) then
+     write(0,*) 'LocEgRHS error: emissivity works for pure hydrogen only'
+     ier = 0
+     return
+  endif
+
+  ! initialize constants
+  pi    = 4.D0*datan(1.D0)
+  c     = 2.99792458d10   ! speed of light (cm/s)
+  afac  = adot/a          ! adot/a
+  mp    = 1.67262171d-24  ! mass of a proton [g]
+  alpha = -0.4910454d0    ! exponent in emissivity fitting
+  beta  = 2.17748887d-24  ! scaling in emissivity fitting
+  HFrac = 1.d0            ! Hydrogen fraction of total baryon field
+
+
+  ! compute local components of radiation energy equation depending on physics
+  select case (Model)
+
+  !   fully-decoupled test case
+  case (10)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcuts, converting densities from comoving to proper
+              Eg = Ega(i,j,k)
+              kappa = Kappaa(i,j,k)
+              Temp = Tempa(i,j,k)
+              
+              ! compute local radiation right-hand side
+              Egrhs(i,j,k) = (4.d0*afac + c*kappa)*Eg
+              
+           enddo
+        enddo
+     enddo
+
+  !   cosmological case with emissivity
+  case (2)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcuts, converting densities from comoving to proper
+              Eg = Ega(i,j,k)
+              kappa = Kappaa(i,j,k)
+              Temp = Tempa(i,j,k)
+              rho = rhoa(i,j,k)/a/a/a
+              nHI = n_HIa(i,j,k)/a/a/a/mp
+              ne = nea(i,j,k)/a/a/a
+              
+              ! compute number density of HII from fluid density 
+              nHII = rho*HFrac/mp - nHI
+              
+              ! compute emissivity using power law approximation
+              eta = nHII*ne*beta*Temp**alpha
+              
+              ! compute local radiation right-hand side
+              Egrhs(i,j,k) = (4.d0*afac + c*kappa)*Eg - 4.d0*pi*eta
+              
+           enddo
+        enddo
+     enddo
+
+  !   cosmological case without emissivity
+  case default
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcuts
+              Eg = Ega(i,j,k)
+              kappa = Kappaa(i,j,k)
+              
+              ! compute local radiation right-hand side
+              Egrhs(i,j,k) = (4.d0*afac + c*kappa)*Eg
+              
+           enddo
+        enddo
+     enddo
+
+  end select
+  
+  return
+end subroutine gFLDProblem_LocEgRHS
+!=======================================================================

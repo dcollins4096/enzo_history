@@ -1,0 +1,172 @@
+      subroutine arraydumpf(a,nx,ny,nz,number)
+      implicit none
+      
+      integer nx,ny,nz,number
+      real*8 a(nx,ny,nz)
+      integer i,j,k
+
+      return
+
+      write(number,*) "--------------"
+!      write(*,*) "Hello. " , nx, ny, nz, number
+!      write(*,*) " "
+      do j=1,ny
+         write(number, *) " z = ", j -1
+         do i=1,nx
+            do k=1,nz
+               write(number,110, ADVANCE="NO") a(i,j,k)
+            enddo
+            write(number, *) " "
+         enddo
+         write(number, *) " "
+      enddo
+
+!      write(*,*) "End"
+      
+ 110  format(f10.1)
+      end
+      
+      subroutine arraydump(a,nx,ny,nz,longaxis,label)
+      
+      implicit none
+      
+      integer nx, ny, nz, longaxis, label
+      real*8 a(nx,ny,nz)
+      
+      integer i,j,k
+      
+      write(*,*) " ------------- "
+      
+      
+      if( longaxis .eq. 1 ) then
+         
+         do k=1,nz
+            write(*,*) " z = ", k
+            do j=1,ny
+               write(*,"('DEBUG', i2, i4)", ADVANCE="NO") label, j
+               
+               do i=1,nx
+                  write(*,110, ADVANCE = "NO") a(i,j,k)
+               enddo
+               
+               write(*,*) " "
+               
+            enddo
+            
+            write(*,*) " "
+            
+         enddo
+         
+      endif
+      if( longaxis .eq. 0 ) then
+         
+         do k=1,nz
+            write(*,*) " z = ", k
+            
+            do i=1,nx
+               write(*,"('DEBUG', i2, i4)", ADVANCE="NO") label, i
+               
+               do j=1,ny		    
+                  write(*,110, ADVANCE = "NO") a(i,j,k)
+               enddo
+               
+               write(*,*) " "
+               
+            enddo
+            
+            write(*,*) " "
+            
+         enddo
+         
+      endif
+      if( longaxis .eq. 2 ) then
+         
+         do i=1,nx
+            write(*,*) " z = ", i
+            
+            do k=1,nz
+               
+               write(*,"('DEBUG', i2, i4)", ADVANCE="NO") label, k
+               
+               do j=1,ny		    
+                  write(*,110, ADVANCE = "NO") a(i,j,k)
+               enddo
+               
+               write(*,*) " "
+               
+            enddo
+            
+            write(*,*) " "
+            
+         enddo
+         
+      endif	
+      
+!      call flush(0)
+      
+ 110  FORMAT(f8.2)
+      end
+      
+      subroutine arraydump2d(a,nx,ny,label)
+      
+      implicit none
+      
+      integer nx, ny, label
+      real*8 a(nx,ny)
+      
+      integer i,j
+      
+      do i=1,nx
+         
+         write(*,"('DEBUG', i2, i4)", ADVANCE="NO") label, i
+         
+         do j=1,ny
+            write(*,110, ADVANCE = "NO") a(i,j)
+         enddo
+         
+         write(*,*) " "
+         
+      enddo
+      
+ 110  FORMAT(f8.2)
+      
+!      call flush(0)
+      
+      end
+      
+      subroutine arraydumpf2(a,nx,ny,nz,label)
+      
+      implicit none
+      
+      integer nx, ny, nz, longaxis, label
+      real*8 a(nx,ny,nz)
+      
+      integer i,j,k
+      character filename*15
+      write(filename,"('file.',i1,'.1')") label
+      open( unit = 666, FILE=filename, STATUS='UNKNOWN',ACTION="WRITE")
+      
+      write(666,*) " ------------- "
+      
+      
+      do k=1,nz
+         write(666,*) " z = ", k
+         do j=1,ny
+            write(666,"('DEBUG', i2, i4)", ADVANCE="NO") label, j
+            
+            do i=1,nx
+               write(666,110, ADVANCE = "NO") a(i,j,k)
+            enddo
+            
+            write(666,*) " "
+            
+         enddo
+         
+         write(666,*) " "
+         
+      enddo
+ 110  FORMAT(f8.2)
+      
+      close(unit=666)
+      
+      end

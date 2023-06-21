@@ -1,0 +1,37 @@
+#
+# macros for SGI R10000
+#
+CPP           = /lib/cpp
+DEFINES       = -DIRIS4
+OPTIONS       = -DSGI_MATH
+
+## Fortran compiler
+FC            = f77
+FC_OPTIMIZE   = -O2 -OPT:roundoff=3 -g3 -64
+#FC_OPTIMIZE   = -OPT:IEEE_comparisons=ON -g -64
+FC_PARALLEL   = 
+
+## C Compiler
+CC            = cc
+CC_OPTIMIZE   = -g -mp -64
+#CC_OPTIMIZE   = -g -pca keep -WK,-mc=0 -64
+
+## C++ Compiler
+CCxx	      = CC
+CCxx_OPTIMIZE = -O2 -fullwarn -64 -g3 -prelink
+
+## Linker/loader
+LDR           = cc
+LDR_OPTIMIZE  = -g3 -O2 -64 -prelink
+LIB           = -L/afs/ncsa/packages/hdf/IRIX_6.4/lib \
+		-lftn -ldf -lz -lcomplib.sgimath \
+		-lm -lC
+PARALLEL_LIB  = -L/afs/ncsa/packages/hdf/IRIX_6.4/lib \
+	        -lftn -ldf -ljpeg -lz -lcomplib.sgimath \
+		-lm -lC -mp
+#	        -L/usr/lib64/mips4 -lmp
+INCLUDE       = -I/afs/ncsa/packages/hdf/IRIX_6.4/include
+#INCLUDE       = -I${HOME}/include
+
+OPTS          = -c -DIRIS4 ${OPTIONS} ${INCLUDE}
+DEBUG         = 

@@ -1,0 +1,14 @@
+#======================================================================
+#
+# Make.opt for highest optimization and no runtime error checking
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-06-21  Created
+#
+#======================================================================
+
+TEXT_OPT = $(TEXT_OPT_AGGRESSIVE)
+
+FLAGS_OPT = $(FLAGS_OPT_AGGRESSIVE_ARCH)
+DEFINES_OPT =  -DNDEBUG

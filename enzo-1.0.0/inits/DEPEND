@@ -1,0 +1,36 @@
+CosmologyReadParameters.o:  CosmologyParameters.h
+EvaluatePowerSpectrum.o:  global_data.h
+EvaluatePowerSpectrum.o: CosmologyParameters.h PowerSpectrumParameters.h
+FastFourierTransform.o: 
+FastFourierTransformPrepareFourn.o: 
+FastFourierTransformSGIMATH.o: 
+FastFourierTransformSGIMATHComplex.o:  global_data.h
+FastFourierTransformVECLIB.o: 
+fcol.o: 
+GenerateField.o: global_data.h PowerSpectrumParameters.h
+GenerateField.o: CosmologyParameters.h
+GenerateRealizationHDF4.o:  global_data.h
+GenerateRealizationHDF4.o: CosmologyParameters.h Parameters.h
+GenerateRealizationHDF5.o:  global_data.h
+GenerateRealizationHDF5.o: CosmologyParameters.h Parameters.h
+InitializePowerSpectrum.o:  global_data.h
+InitializePowerSpectrum.o: CosmologyParameters.h PowerSpectrumParameters.h
+InterpretCommandLine.o:  global_data.h
+KEEP_HDF5_WriteField.o:  extern_hdf5.h
+main.o:  global_data.h CosmologyParameters.h
+main.o: PowerSpectrumParameters.h Parameters.h
+ReadParameterFile.o: global_data.h Parameters.h
+ReadPowerSpectrumParameters.o: 
+ReadPowerSpectrumParameters.o: PowerSpectrumParameters.h
+SetParameterDefaults.o: global_data.h Parameters.h
+WriteFieldFlexIO.o: 
+WriteFieldHDF4.o: 
+WriteFieldHDF5.o:  extern_hdf5.h
+cosmo_functions.o: cosmo.h
+make_field_kpreserving.o: fortran.def
+make_field.o: fortran.def
+cosmo_functions.o: cosmo.h
+make_field_kpreserving.o: fortran.def
+make_field.o: fortran.def
+prefort.src: error.def
+fortfft.o: fortfft.src

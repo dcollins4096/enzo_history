@@ -1,0 +1,200 @@
+#include "fortran.def"
+c=======================================================================
+c////////////////////////  SUBROUTINE STAR_MAKER \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine star_maker3(nx, ny, nz,
+     &                      d, u, v, w,
+     &                      dt, r, dx, t, z, procnum, 
+     &                      d1, x1, v1, t1,
+     &                      nmax, xstart, ystart, zstart, ibuff, 
+     &                      imethod, massthresh, level, np,
+     &                      xp, yp, zp, up, vp, wp, mp, tcp, tdp,
+     &                      npold, xpold, ypold, zpold, 
+     &                      upold, vpold, wpold, mpold, tcpold)
+c
+c  CREATES AND ADDS TO SINK PARTICLES
+c
+c  written by: Greg Bryan
+c  date:       November, 2002
+c  modified1:
+c
+c  INPUTS:
+c    d     - density field
+c    u,v,w - velocity fields
+c    r     - refinement field (non-zero if zone is further refined)
+c    dt    - current timestep
+c    dx    - zone size (code units)
+c    t     - current time
+c    z     - current redshift
+c    d1,x1,v1,t1 - factors to convert d,dx,v,t to physical units
+c    nx,ny,nz - dimensions of field arrays
+c    ibuff    - number of buffer zones at each end of grid
+c    imethod  - Hydro method (0/1 -- PPM DE/LR, 2 - ZEUS)
+c    massthresh - maximum allowed mass in a cell
+c    level - current level of refinement
+c    procnum - processor number (for output)
+c    npold - number of sink particles already on grid
+c    xp-zpold - current sink particle positions
+c    up-wpold - current sink particle velocities
+c    mpold - curernt sink particle masses
+c    tcp   - star particle creation time (0 for dm particles)
+c    tdp   - star particle dynamic time (not used here)
+c    nmax     - particle array size specified by calling routine
+c    x/y/z start - starting position of grid origin
+c
+c  OUTPUTS:
+c    np   - number of particles created
+c    xp,yp,zp - positions of created particles
+c    up,vp,wp - velocities of created particles
+c    mp       - mass of new particles
+c
+c
+c-----------------------------------------------------------------------
+       implicit none
+c-----------------------------------------------------------------------
+c
+c  Arguments
+c
+      integer nx, ny, nz, ibuff, nmax, np, level, imethod
+      integer procnum, npold
+      real    d(nx,ny,nz), r(nx,ny,nz)
+      real    u(nx,ny,nz), v(nx,ny,nz), w(nx,ny,nz)
+      real    dt, dx, z
+      real    d1, x1, v1, t1, massthresh
+      REALSUB xstart, ystart, zstart, t
+      REALSUB xp(nmax), yp(nmax), zp(nmax)
+      real    up(nmax), vp(nmax), wp(nmax)
+      real    mp(nmax), tcp(nmax), tdp(nmax)
+      REALSUB xpold(npold), ypold(npold), zpold(npold)
+      real    upold(npold), vpold(npold), wpold(npold)
+      real    mpold(npold), tcpold(npold)
+c
+c  Locals:
+c
+      integer  i, j, k, ii, inew, n
+      real     densthresh, adddens, dist, ugrid, vgrid, wgrid
+      REALSUB  xpos, ypos, zpos
+c
+c     convert mass threshold to density
+c
+      densthresh = massthresh/(dx**3)
+c
+c     Set new particle index to zero
+c
+      ii = 0
+c
+c     Loop over grid looking for a cell with mass larger than massthresh
+c
+      do k=1+ibuff,nz-ibuff
+       do j=1+ibuff,ny-ibuff
+        do i=1+ibuff,nx-ibuff
+c
+c          finest level of refinement and density greater than threshold?
+c
+           if (r(i,j,k) .eq. 0.0 .and. 
+     &         d(i,j,k) .gt. densthresh) then
+c
+c             Calculate x,y,z position of cell
+c
+              xpos = xstart + (float(i)-0.5)*dx
+              ypos = ystart + (float(j)-0.5)*dx
+              zpos = zstart + (float(k)-0.5)*dx
+c              
+c             Calculate the change in density
+c
+              adddens = (d(i,j,k)-densthresh)
+c
+c             Remove mass from grid
+c
+              d(i,j,k) = densthresh
+c
+c             Get velocity at grid center
+c
+              if (imethod .eq. 2) then
+                 ugrid = 0.5*(u(i,j,k) + u(i+1,j,k))
+                 vgrid = 0.5*(v(i,j,k) + v(i,j+1,k))
+                 wgrid = 0.5*(w(i,j,k) + w(i,j,k+1))
+              else
+                 ugrid = u(i,j,k)
+                 vgrid = v(i,j,k)
+                 wgrid = w(i,j,k)
+              endif
+c
+c             Look for a nearby sink particle to add the mass to.
+c
+              inew = 1
+              do n=1, npold
+                 if (tcpold(n) .gt. 0) then    ! tcpold > 0 for sink particles
+                    dist = sqrt((xpos-xpold(n))**2 +
+     &                          (ypos-ypold(n))**2 +
+     &                          (zpos-zpold(n))**2)
+c
+c                   If sink is within 5 cells then add to it
+c                     
+                    if (dist .lt. 5.0*dx .and. inew .eq. 1) then
+c
+c                      Add momentum and then mass
+c
+                       upold(n) = (upold(n)*mpold(n) + ugrid*adddens)/
+     &                            (mpold(n) + adddens)
+                       vpold(n) = (vpold(n)*mpold(n) + vgrid*adddens)/
+     &                            (mpold(n) + adddens)
+                       wpold(n) = (wpold(n)*mpold(n) + wgrid*adddens)/
+     &                            (mpold(n) + adddens)
+                       mpold(n) = mpold(n) + adddens
+c
+c                      record that a new particle is not needed
+c
+                       inew = 0
+c
+                    endif
+                 endif
+              enddo
+c 
+c             Create a new sink particle if necessary
+c
+              if (inew .eq. 1) then
+c
+c                increment counter by one and set mass
+c
+                 ii = ii + 1
+                 mp(ii)  = adddens
+c
+c                Set positions
+c
+                 xp(ii) = xpos
+                 yp(ii) = ypos
+                 zp(ii) = zpos
+c
+c                Set velocity
+c
+                 up(ii) = ugrid
+                 vp(ii) = vgrid
+                 wp(ii) = wgrid
+c
+c                Set creation time
+c
+                 tcp(ii) = t
+                 tdp(ii) = 0 ! dynamical time, not used here
+c
+c                Do not generate more star particles than available
+c
+                 if (ii .eq. nmax) goto 20
+              endif
+c
+           endif   ! end: if (d(i,j,k) > densthresh)
+c
+        enddo
+       enddo
+      enddo
+c
+ 20   continue
+c	
+      if (ii .ge. nmax) then
+         write(6,*) 'star_maker3: reached max new particle count'
+         stop
+      endif
+      np = ii
+c
+      return
+      end

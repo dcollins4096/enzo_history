@@ -1,0 +1,25 @@
+#BSUB -M 32000M
+#BSUB -n 128
+#BSUB -W 1:00
+#BSUB -P pqk
+#BSUB -N
+#BSUB -J ring512
+#BSUB -o /u/ncsa/harkness/r512_128.log
+#
+set -x
+#export MP_SET_NUMTHREADS=$BSUB_NUMTHREADS
+
+export MPI_TYPE_MAX=16384
+
+cd $SCR
+pwd
+
+#msscmd -b "tar cvf g512.tar GridDensity GridVelocities ParticlePositions ParticleVelocities PowerSpectrum.out"
+
+cp /scratch-modi4/harkness/x512/ParticlePositions .
+cp /scratch-modi4/harkness/x512/ParticleVelocities .
+cp /scratch-modi4/harkness/x512/ring .
+
+mpirun -prefix "<%g>" -np 128 ./ring ParticlePositions ParticleVelocities
+
+ls -lt

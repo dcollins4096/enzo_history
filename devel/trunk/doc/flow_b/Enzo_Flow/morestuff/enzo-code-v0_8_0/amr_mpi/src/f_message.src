@@ -1,0 +1,79 @@
+c=======================================================================
+c/////////////////////  SUBROUTINE F_ERROR  \\\\\\\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine f_error (sourcefile, linenumber)
+c
+c     PRINT ERROR MESSAGE AND EXIT PROGRAM
+c=======================================================================
+
+
+      implicit none
+
+      CHARACTER sourcefile*(*)
+      INTEGER linenumber
+
+#ifdef USE_MPI
+      include 'mpif.h'
+#endif
+
+#ifdef USE_MPI
+      integer error_code
+      integer ierr
+#endif
+      integer id
+
+#ifdef USE_MPI
+      call mpi_comm_rank( MPI_COMM_WORLD, id, ierr )
+#else
+      id = 0
+#endif
+
+      write(*,'("==================")')
+      write(*,'("=== ENZO ERROR ===   ",A,":",I4,"   node ",I5)') 
+     $     sourcefile,linenumber,id
+      write(*,'("==================")')
+      
+#ifdef USE_MPI
+      error_code = -1
+      call mpi_abort( MPI_COMM_WORLD, error_code, ierr)
+#else
+      stop
+#endif
+
+      return
+      end
+
+c=======================================================================
+c/////////////////////  SUBROUTINE F_WARNING  \\\\\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine f_warning (sourcefile, linenumber)
+c
+c     PRINT WARNING MESSAGE AND CONTINUE
+c=======================================================================
+
+
+      implicit none
+
+      CHARACTER sourcefile*(*)
+      INTEGER linenumber
+
+#ifdef USE_MPI
+      include 'mpif.h'
+#endif
+
+#ifdef USE_MPI
+      integer ierr
+#endif
+      integer id
+
+#ifdef USE_MPI
+      call mpi_comm_rank( MPI_COMM_WORLD, id, ierr )
+#else
+      id = 0
+#endif
+
+      write(*,'("--- ENZO WARNING ---   ",A,":",I4,"   node ",I5)') 
+     $     sourcefile,linenumber,id
+
+      return
+      end

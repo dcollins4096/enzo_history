@@ -1,0 +1,58 @@
+** Pascal Paschos ; Enzo mods Feb06****
+***************************************
+
+The new set of knobs are as follows:
+
+AdjustUVBackground:
+------------------
+
+Controls whether the presence of an external correction on the
+UV-background is desired or not. It affects only the HM type
+UV-backgrounds. The latter have been slightly restructured.
+
+1) HMII (QSO spectral slope a=1.5)
+2) HMII (QSO spectral slope a=1.8)
+3) HMIII (QSO spectral slope a=1.57) 
+   - modified for matching observed data at both z=2 & z=3.
+4) HMIII + XRB 
+12) HMIII
+
+The default value is 1, which multiplies CoolData.piHeII by 1.8
+irrespective of whether the other parameters are defined or
+not. Setting this parameter to 0 uses the theoretical backgrounds
+only. Setting this parameter to 2 allows the other parameters
+(explained below) to alter the rates.
+
+Again, this knob only affects background 1-4 & 12. The old background
+under option 3 is not needed anymore, because it was option 2
+multiplied by 1.8. Therefore, if one selects RadiatioFieldType=2 and
+the default value of 1 for AdjustUVBackground then you recover the old
+option 3. Therefore, we replaced that with a more useful background
+which modifies the HMIII to match data at z=2 & z=3. However, CAUTION:
+Option (3) only matches the data with specific choices for the other
+parameters. Therefore, it is advised that if one is going to use that
+option then to set AdjustUVBackground = 2 and use the following values
+for:
+
+SetUVBAmplitude        = 0.924
+SetHeIIHeatingScale    = 1.807
+
+SetUVBAmplitude:
+---------------
+
+Controls the amplitude of the HM-type backgrounds (1-4 & 12). It is a
+multiplier on every rate (ionization and heating).  The default value
+is 1.0.
+
+SetHeIIHeatingScale:
+-------------------
+
+Controls the (in physical terms) slope at the HeII absorption edge and
+therefore affects the heating due to HeII ionization.  Default value
+is 1.8. Note that the total modifier of the HeII heating rate,
+CoolData.piHeII is equal to the product SetUVBAmplitude *
+SetHeIIHeatingScale
+
+The new parameter file should include the desired three values,
+otherwise the code will run on default values.
+

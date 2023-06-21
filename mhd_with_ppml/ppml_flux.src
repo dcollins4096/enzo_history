@@ -1,0 +1,1377 @@
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ POTOK-X //////////////////////////////
+c//////////////////////////////////////////////////////////////////////
+c
+c     compute flux and interface vector in x direction
+c
+      subroutine ppml_flux(nx,dx,dt,qvl,qvr,qp,udy,udz,f, source, a1,a2,
+     +     c0,omloc,kstep, riemann, reconstruction, 
+     +     DirectionalSplitting)
+      implicit none
+
+c     --- parameters. 
+c     --- index counters
+      integer i,j,k,L,m
+c     --- problem parameters
+      integer nx
+      real dx, dt, dtx
+c     --- Variables that just get passed on through to the next solver:
+      real a1,a2
+      real c0,omloc
+      integer kstep
+c     --- for rarefaction detector
+      real bl, br
+
+c     --- uh...
+      real dxi, fl1, fr1, ul_v, ur_v
+
+
+      real qd(7),qp(nx,7),px(7),qc(nx,7)
+      real pl(7),pr(7),qvl(nx,7),qvr(nx,7) 	  
+      real vm(7),ql(7,7),qr(7,7),uv(7),vl(7)
+      real sl(7),qul(nx,7),qur(nx,7),tl(7)
+      real tr(7),fr(7),f(nx,7),ur(7),qv(7)
+      real udy(nx,7),udz(nx,7),ay(7,7),az(7,7),av(7)
+
+c     external source terms. dcc.
+      real source(nx,7)
+
+c     dcc new switches.  Integers chosent to be consistent with Athena option set.
+c     Riemann (Solver) : 11, hlld only
+c                        12, roe + hlld for rarefactions (has bug)
+c                         3, first order flux for 2.5d, 1.5d problems. 
+c     reconstruction: 0 = piecewise constant
+c                     3 = PPML.  
+c                     4 = Plain PPM. (The interface evolution isn't done; computed
+c                         instead as in Colella Woodward 1984, eq. 1.6)
+c     DirectionalSplitting = 0: Inital unsplit evolution
+c                            1: Directionally split evolution. (Experimental)
+      integer riemann, reconstruction, DirectionalSplitting
+
+
+c     dcc switch for 2.5d. dF/dz = 0 for all F, so the flux is quite simple.
+      if ( Riemann .eq. 3 ) then
+         do i=1,Nx
+c     copy input conserved line (qp) to point (qd)
+            do m=1,7
+               QD(m) = QP(i,m) 
+            enddo
+c     convert conserved (qd) to primitive (qc)
+            call prim(qd,qc)
+c     convert primitive (qc) to flux (fr)
+            call fluxx(qc, fr, a2)
+
+c     copy flux (fr)  point to flux line (f)
+            do m=1,7
+               f(i,m) = fr(m)
+            enddo
+         enddo
+         return
+      endif
+
+
+      DTX=DT/DX
+c     plain ppm reconstruction
+      if( reconstruction .eq. 4 ) then
+         call ppml_ppm(nx,7, qvl, qvr, qp)
+      endif ! reconstruction = r
+
+c     The characteristic tracing for the interface states.
+      if( reconstruction .eq. 3 .or. reconstruction .eq. 4) then
+	
+      do i=1,Nx
+         do m=1,7  
+            QD(m)=QP(i,m)      
+         enddo 
+         CALL VECTEGX(QD,PX,a2)    !px - eigenvalues, qd - vector 
+         do m=1,7  
+            QC(i,m)=PX(m)      
+         enddo 
+      enddo 
+
+      do I=1,NX
+       
+	 IF(QC(I,7).GT.0.)THEN                  
+        
+            DXI=QC(I,7)*DTX
+
+            do M=1,7  
+               QD(M)=QP(I,M)      
+               PL(M)=QVL(I,M)      
+               PR(M)=QVR(I,M)      
+            enddo 
+            
+            CALL FPML(DXI,PL,PR,QD,VM) !qd - vector, vm - q average (4.2.22)
+            
+            CALL VECTLRX(VM,QL,QR,UV,a2)  ! ql - left eigenvalue, 
+                                       ! qr - right eigenvalue in state vm
+            CALL MATR_AY(VM,AY,a2) ! ay - Jacobian matrix in state vm 
+                                ! (point 1, Fig.4, preprint #4) 
+            CALL MATR_AZ(VM,AZ,a2) ! az - Jacobian matrix in state vm 
+                                ! (point 1, Fig.4, preprint #4) 
+        
+C     CALL VECTLR(QD,QL,QR,UV)
+
+	    do L=1,7
+               VL(L)=0.
+            enddo
+            
+            do M=1,7
+               AV(M)=0.
+               if( DirectionalSplitting .eq. 0 ) then 
+                  do L=1,7
+                     AV(M)=AV(M)+AY(M,L)*UDy(I,L)+AZ(M,L)*UDz(I,L) !av - right side (4.2.17)
+                  enddo
+               endif !splitting
+               AV(M)=AV(M)*DTX/2.
+            enddo
+            
+            do M=1,7  
+               
+               IF(QC(I,M).GT.0.)THEN                  
+
+		  DXI=QC(I,M)*DTX
+
+                  CALL FPML(DXI,PL,PR,QD,QV) !qv - state for each charact. with lambda > 0 
+
+                  SL(M)=0.   
+                  do L=1,7
+c     SL(M)=SL(M)+QL(M,L)*(VM(L)-QV(L)) ! without source
+C     SL(M)=SL(M)+QL(M,L)*(QD(L)-QV(L)) ! basis in the centre cell
+                     SL(M)=SL(M)+QL(M,L)*(VM(L)-QV(L)+AV(L)
+     +                    +Source(i,L)) !sl -amplitude of wave (parenthesis in (4.2.25))
+                  enddo
+
+                  do L=1,7
+                     VL(L)=VL(L)+QR(L,M)*SL(M) !(4.2.25) (see Colella , Muller JCP, 2002)
+                  enddo
+                  
+               ENDIF
+               
+            enddo
+            
+            do M=1,7 
+               QUL(I,M)=VM(M)-VL(M) !continue (4.2.25)
+C     QUL(I,M)=QD(M)-VL(M)
+            enddo
+      
+         ELSE
+            
+            do M=1,7 
+               QUL(I,M)=QVR(I,M) !left state for interface
+            enddo
+            
+         ENDIF 
+         
+      enddo
+
+c
+c     procedure for eigenvector with lambda < 0 right state for interface 
+c
+
+      do I=1,NX-1
+       
+	 J=I+1
+	 
+	 IF(QC(J,1).LT.0.)THEN                  
+        
+            DXI=-QC(J,1)*DTX
+
+            do M=1,7  
+               QD(M)=QP(J,M)      
+               PL(M)=QVL(J,M)      
+               PR(M)=QVR(J,M)      
+            enddo 
+	  
+            CALL FPMR(DXI,PL,PR,QD,VM) 
+            
+            CALL VECTLRX(VM,QL,QR,UV,a2)
+            CALL MATR_AY(VM,AY,a2)
+            CALL MATR_AZ(VM,AZ,a2)
+
+C     CALL VECTLR(QD,QL,QR,UV)
+
+ 	    do L=1,7
+               VL(L)=0.
+            enddo
+
+            do M=1,7
+               AV(M)=0.
+               if( DirectionalSplitting .eq. 0 ) then 
+                  do L=1,7
+                     AV(M)=AV(M)+AY(M,L)*UDy(J,L)+AZ(M,L)*UDz(J,L)
+                  enddo
+               endif !dcc
+               AV(M)=AV(M)*DTX/2.
+            enddo
+            
+            do M=1,7  
+               
+               IF(QC(J,M).LT.0.)THEN                  
+                  
+                  DXI=-QC(J,M)*DTX
+                  
+                  CALL FPMR(DXI,PL,PR,QD,QV) 
+                  
+                  SL(M)=0.   
+                  do L=1,7
+C     SL(M)=SL(M)+QL(M,L)*(VM(L)-QV(L))
+C     SL(M)=SL(M)+QL(M,L)*(QD(L)-QV(L))
+                     SL(M)=SL(M)+QL(M,L)*(VM(L)-QV(L)+AV(L)
+     +                    + Source(i,L) )
+                  enddo
+        
+                  do L=1,7
+                     VL(L)=VL(L)+QR(L,M)*SL(M)
+                  enddo
+	  
+               ENDIF
+
+            enddo
+            
+            do M=1,7
+               QUR(I,M)=VM(M)-VL(M)
+C     QUR(I,M)=QD(M)-VL(M)
+            enddo
+            
+         ELSE
+            
+            do M=1,7 
+               QUR(I,M)=QVL(J,M) !right state
+            enddo
+            
+         ENDIF 
+         
+      enddo
+      
+      else if( reconstruction .eq. 0 ) then
+
+      do i=1,nx-1
+         do m=1,7
+            QUL(i,m) = qp(i,m)
+            QUR(i,m) = qp(i+1,m)
+         enddo
+      enddo
+
+      endif !reconstruction
+
+
+c
+c     Riemann Solver.
+c
+
+      do I=1,Nx-1
+         
+         do M=1,7
+            TL(M)=QUL(I,M)
+            TR(M)=QUR(I,M)
+         enddo
+         
+         if( (tl(1).lt.0.or.tr(1).lt.0) .or. riemann .eq. 11)then
+
+            tl(1)=amax1(tl(1),1.e-5) !density floor
+            tr(1)=amax1(tr(1),1.e-5)
+
+c     CALL rmnx_mst(TL,TR,FR,ur,a2,c0,omloc,kstep)  !musta scheme
+
+            call cons(tl,px)
+            call cons(tr,vl)
+
+            CALL HLLDx(px,vl,FR,ur,a1) !HLLD method
+
+         else if( riemann .eq. 12 ) then
+
+            CALL rmnx(TL,TR,FR,ur,a2) !roe method
+
+            call blbrx(tl,tr,bl,br,a1) !Janhunen method 2000, JCP
+            
+            if(bl.lt.0.and.br.gt.0.)then
+               
+               fl1=tl(1)*tl(2)
+               fr1=tr(1)*tr(2)
+               ul_v=tl(1)+(fr(1)-fl1)/bl
+               ur_v=tr(1)+(fr(1)-fr1)/br
+          
+               if(ul_v.lt.0.or.ur_v.lt.0.) then
+                  call cons(tl,px)
+                  call cons(tr,vl)
+                  CALL HLLDx(px,vl,FR,ur,a1) ! HLLD iz. case Mignone JCP, 2007    
+               endif
+               
+            endif
+            
+            if(ur(1).lt.1.e-7) then
+               call cons(tl,px)
+               call cons(tr,vl)
+               CALL HLLDx(px,vl,FR,ur,a1)      
+            endif
+  
+c     if(ur(1).lt.1.e-7) CALL rmnx_mst(TL,TR,FR,ur,a2,c0,omloc,kstep) !musta scheme
+            
+         endif 
+
+	 
+	 do M=1,7  
+            F(I,M)=FR(M)        !flux through interface
+         enddo 
+         
+      enddo
+
+c     dcc: added switch for simpler reconstruction
+      if( reconstruction .eq. 3 ) then
+c
+c     comp. interface state
+c	
+      do I=1,NX-1
+         
+	 IF(QC(I,7).GT.0.)THEN                  
+            
+            DXI=1.-QC(I,7)*DTX
+            
+            do M=1,7  
+               QD(M)=QP(I,M)      
+               PL(M)=QVL(I,M)      
+               PR(M)=QVR(I,M)      
+            enddo 
+        
+            CALL FQML(DXI,PL,PR,QD,VM) 
+
+C     CALL VECTLR(QD,QL,QR,UV)
+        
+            CALL VECTLRX(qd,QL,QR,UV,a2)
+            CALL MATR_AY(qd,AY,a2)
+            CALL MATR_AZ(qd,AZ,a2)
+
+	    do L=1,7
+               VL(L)=0.
+            enddo
+  
+            do M=1,7
+               AV(M)=0.
+               if( DirectionalSplitting .eq. 0 ) then 
+                  do L=1,7
+                     AV(M)=AV(M)+AY(M,L)*UDy(I,L)+AZ(M,L)*UDz(I,L)
+                  enddo
+               endif
+               AV(M)=AV(M)*DTX/2.
+            enddo
+            
+            do M=1,7  
+               
+               IF(QC(I,M).GT.0.)THEN                  
+                  
+		  DXI=1.-QC(I,M)*DTX
+                  
+                  CALL FQML(DXI,PL,PR,QD,QV) 
+                  
+                  SL(M)=0.   
+                  do L=1,7
+C     SL(M)=SL(M)+QL(M,L)*(QD(L)-QV(L))
+C     SL(M)=SL(M)+QL(M,L)*(VM(L)-QV(L))
+                     SL(M)=SL(M)+QL(M,L)*(QD(L)-QV(L)+AV(L)
+     +                    + Source(i,L) )
+                  enddo
+        
+                  do L=1,7
+                     VL(L)=VL(L)+QR(L,M)*SL(M)
+                  enddo
+                  
+               ENDIF
+               
+            enddo
+            
+            do M=1,7 
+C     QUL(I,M)=QD(M)-VL(M)
+               QUL(I,M)=QD(M)-VL(M)
+            enddo
+      
+         ELSE
+          
+            do M=1,7 
+               QUL(I,M)=QVR(I,M)
+            enddo
+            
+         ENDIF 
+
+      enddo
+
+      do I=1,NX-1
+       
+	 J=I+1
+	 
+	 IF(QC(J,1).LT.0.)THEN                  
+        
+            DXI=-QC(J,1)*DTX
+
+            do M=1,7  
+               QD(M)=QP(J,M)      
+               PL(M)=QVL(J,M)      
+               PR(M)=QVR(J,M)      
+            enddo 
+	  
+            CALL FQML(DXI,PL,PR,QD,VM) 
+
+C	  CALL VECTLR(QD,QL,QR,UV)
+        
+            CALL VECTLRX(QD,QL,QR,UV,a2)
+            CALL MATR_AY(QD,AY,a2)
+            CALL MATR_AZ(QD,AZ,a2)
+
+	    do L=1,7
+               VL(L)=0.
+            enddo
+
+            do M=1,7
+               AV(M)=0.
+               if( DirectionalSplitting .eq. 0 ) then 
+                  do L=1,7
+                     AV(M)=AV(M)+AY(M,L)*UDy(J,L)+AZ(M,L)*UDz(J,L)
+                  enddo
+               endif
+               AV(M)=AV(M)*DTX/2.
+            enddo
+
+            do M=1,7  
+         
+               IF(QC(J,M).LT.0.)THEN                  
+
+                  DXI=-QC(J,M)*DTX
+
+                  CALL FQML(DXI,PL,PR,QD,QV) 
+
+                  SL(M)=0.   
+	    do L=1,7
+C     SL(M)=SL(M)+QL(M,L)*(QD(L)-QV(L))
+C     SL(M)=SL(M)+QL(M,L)*(VM(L)-QV(L))
+               SL(M)=SL(M)+QL(M,L)*(qd(L)-QV(L)+AV(L)
+     +                    + Source(i,L) )
+            enddo
+            
+	    do L=1,7
+               VL(L)=VL(L)+QR(L,M)*SL(M)
+            enddo
+	  
+         ENDIF
+
+      enddo
+         
+      do M=1,7 
+C     QUR(I,M)=QD(M)-VL(M)
+         QUR(I,M)=qd(M)-VL(M)
+      enddo
+      
+      ELSE
+         
+         do M=1,7 
+            QUR(I,M)=QVL(J,M)
+         enddo
+         
+      ENDIF 
+      
+      enddo
+      
+      do i=1,Nx-1
+         
+	 do m=1,7
+            tl(m)=QUL(I,M)
+            tr(m)=QUR(I,M)
+         enddo
+	
+         if( (tl(1).lt.0.or.tr(1).lt.0) .or. riemann .eq. 11)then
+            
+            tl(1)=amax1(tl(1),1.e-5)  
+            tr(1)=amax1(tr(1),1.e-5)
+            
+c     CALL rmnx_mst(TL,TR,FR,ur,a2,c0,omloc,kstep)
+            
+            call cons(tl,px)
+            call cons(tr,vl)
+            
+            CALL HLLDx(px,vl,FR,ur,a1)
+            
+         else if( riemann .eq. 12 ) then
+            
+            CALL rmnx(TL,TR,FR,ur,a2)      
+            
+            call blbrx(tl,tr,bl,br,a1)
+            
+            if(bl.lt.0.and.br.gt.0.)then
+           
+               fl1=tl(1)*tl(2)
+               fr1=tr(1)*tr(2)
+               ul_v=tl(1)+(fr(1)-fl1)/bl
+               ur_v=tr(1)+(fr(1)-fr1)/br
+               
+               if(ul_v.lt.0.or.ur_v.lt.0.) then
+                  call cons(tl,px)
+                  call cons(tr,vl)
+                  CALL HLLDx(px,vl,FR,ur,a1)
+               endif
+            endif
+
+
+            if(ur(1).lt.1.e-7) then
+               call cons(tl,px)
+               call cons(tr,vl)
+               CALL HLLDx(px,vl,FR,ur,a1) 
+            endif
+  
+c     if(ur(1).lt.1.e-7) CALL rmnx_mst(TL,TR,FR,ur,a2,c0,omloc,kstep)
+
+         endif 
+         
+         call prim(ur,px)
+
+         do m=1,7  
+            Qvr(i,m)=px(m)      
+         enddo 
+
+      enddo
+      
+      do i=2,Nx
+	 do m=1,7  
+            Qvl(i,m)=Qvr(i-1,m)      
+         enddo 
+      enddo
+      
+c     dcc
+      endif !reconstruction
+      return
+      end
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\ END POTOK-X //////////////////////////////
+
+
+c
+c     conversion conserv ------> primitive
+c
+	SUBROUTINE PRIM(QU,QP)
+c     --- dcc
+        implicit none
+c     ---/dcc
+	REAL QU(7),QP(7)
+
+	QP(1)=QU(1)
+	QP(2)=QU(2)/QU(1)
+	QP(3)=QU(3)/QU(1)
+	QP(4)=QU(4)/QU(1)
+	QP(5)=QU(5)
+	QP(6)=QU(6)
+	QP(7)=QU(7)
+
+	RETURN
+	END
+
+
+
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+c\\\\\\\\\\\\\\\\\\\\\\\\\\ FLUX VECTOR - X ///////////////////////////
+c//////////////////////////////////////////////////////////////////////
+c
+c     compute flux vector in x direction 
+c
+c     qu - primitive vector
+c     f  - flux vector
+
+      SUBROUTINE FLUXx(QU,F,a2)
+c     --- dcc
+      implicit none
+      real a2
+      real BKV,PXX
+
+c     --- /dcc
+      REAL QU(7),F(7)
+
+c      common/aspd/a1,a2  
+
+      BKV=QU(5)**2+QU(6)**2+QU(7)**2
+
+      PXX=a2*qu(1)+BKV/2.
+
+      F(1)=qu(1)*qu(2)
+      F(2)=qu(1)*qu(2)**2+PXX-QU(5)**2
+      F(3)=qu(1)*qu(2)*QU(3)-QU(5)*QU(6)
+      F(4)=qu(1)*qu(2)*QU(4)-QU(5)*QU(7)
+      F(5)=0.
+      F(6)=qu(2)*QU(6)-QU(3)*QU(5)
+      F(7)=qu(2)*QU(7)-QU(4)*QU(5)
+
+      RETURN
+      END
+
+c\\\\\\\\\\\\\\\\\\\\\\ END FLUX VECTOR - X ///////////////////////////
+
+
+c
+c     conversion primitive  ------> conserv 
+c
+
+	SUBROUTINE CONS(QP,QU)
+c     --- dcc
+        implicit none
+c     --- /dcc
+	REAL QU(7),QP(7)
+
+	QU(1)=QP(1)
+	QU(2)=QP(2)*QP(1)
+	QU(3)=QP(3)*QP(1)
+	QU(4)=QP(4)*QP(1)
+	QU(5)=QP(5)
+	QU(6)=QP(6)
+	QU(7)=QP(7)
+
+	RETURN
+	END
+
+c
+c     Harten's correction for entropy condition
+c
+
+      FUNCTION FF(mh,X)
+
+      FF=ABS(X)
+c     dcc kludge This is the new version.
+      if( 0 .eq. 0 ) then
+         IF(MH.NE.4) THEN
+            IF(MH.EQ.1.OR.MH.EQ.7) EPS=0.1 ! fast mode
+            IF(MH.EQ.2.OR.MH.EQ.6) EPS=0.1 ! alfven mode
+            IF(MH.EQ.3.OR.MH.EQ.5) EPS=0.1 ! slow mode
+            IF(FF.LT.2.*EPS) THEN
+               FF=X**2/(4.*EPS)+EPS
+            ENDIF
+         ENDIF
+c     dcc kludge: this is the way it originally was.
+      else
+         IF(MH.NE.4) THEN
+            IF(MH.EQ.1.OR.MH.EQ.7) EPS=0.1
+            IF(MH.EQ.2.OR.MH.EQ.6) EPS=0.2
+            IF(MH.EQ.3.OR.MH.EQ.5) EPS=0.1 
+            IF(FF.LT.2.*EPS) THEN
+               FF=X**2/(4.*EPS)+EPS
+            ENDIF
+         ENDIF
+c     dcc kludge
+      endif
+      RETURN
+      END
+
+
+c
+c     Janhunen's procedures for a strong rarefaction wave case (2000, JCP)
+c
+      subroutine blbrx(qvl,qvr,bl,br,a1)
+c     --- dcc
+      implicit none
+      real bl, br,bpl,bpr,ds,va,vf,vx
+      real a1
+
+c     --- /dcc
+	real qvl(7),qvr(7)
+	
+c      common/aspd/a1,a2  
+
+      bpl=qvl(5)**2+qvl(6)**2+qvl(7)**2
+      bpr=qvr(5)**2+qvr(6)**2+qvr(7)**2
+	
+	va=amax1(bpl,bpr)/amin1(qvl(1),qvr(1))
+
+      bpl=qvl(5)**2
+      bpr=qvr(5)**2
+
+	vx=amax1(bpl,bpr)/amin1(qvl(1),qvr(1))
+ 
+      ds=(a1-va)**2+4.*a1*(va-vx)
+	
+	if(ds.lt.0.) ds=0.  
+
+      vf=sqrt((a1+va+sqrt(ds))/2.) 
+
+      bl=amin1(qvl(2),qvr(2))-vf 
+      br=amax1(qvl(2),qvr(2))+vf 
+
+      return
+	end 
+
+c---------------------
+c
+c     parabola for average vector on left side interface
+c
+ 	 
+      SUBROUTINE FPML(Y,QL,QR,QP,QC) 
+c     --- dcc
+      implicit none
+      real Y, DQ,Q6
+      integer m
+c     --- /dcc      
+	REAL QL(7),QR(7),QP(7),QC(7)
+
+	do M=1,7
+       DQ=QR(M)-QL(M)
+	 Q6=6.0*(QP(M)-(QR(M)+QL(M))/2.)
+	 QC(M)=QR(M)-Y/2.*(DQ-(1.-2./3.*Y)*Q6)
+      enddo
+
+	RETURN
+	END
+c
+c     parabolic interpolation (no averaging.)
+c
+	
+      SUBROUTINE FQML(Y,QL,QR,QP,QC) 
+c     --- dcc
+      implicit none
+      real Y, DQ,Q6
+      integer m
+c     --- /dcc      
+	REAL QL(7),QR(7),QP(7),QC(7)
+
+	do M=1,7
+       DQ=QR(M)-QL(M)
+	 Q6=6.0*(QP(M)-(QR(M)+QL(M))/2.)
+	 QC(M)=QL(M)+Y*(DQ+(1.-Y)*Q6)
+      enddo
+
+	RETURN
+	END
+
+
+c
+c     parabola for average vector on right side interface
+c             (page 7, Fig. 2 , preprint #4)
+c
+
+      SUBROUTINE FPMR(Y,QL,QR,QP,QC) 
+c     --- dcc
+      implicit none
+      real Y, DQ,Q6
+      integer m
+c     --- /dcc
+	REAL QL(7),QR(7),QP(7),QC(7)
+
+	do M=1,7
+       DQ=QR(M)-QL(M)
+	 Q6=6.0*(QP(M)-(QR(M)+QL(M))/2.)
+	 QC(M)=QL(M)+Y/2.*(DQ+(1.-2./3.*Y)*Q6)
+      enddo
+
+	RETURN
+	END
+
+c
+
+c
+c     Jacobian matrix
+c
+      SUBROUTINE MATR_AX(QU,QL,a2)
+c     --- dcc
+      implicit none
+      real a2
+c     --- /dcc
+      REAL QU(7),QL(7,7)  	
+c      common/aspd/a1,a2  
+
+      QL(1,1)=QU(2)
+      QL(1,2)=QU(1)
+      QL(1,3)=0.
+      QL(1,4)=0.
+      QL(1,5)=0.
+      QL(1,6)=0.
+      QL(1,7)=0.
+	
+      QL(2,1)=a2/QU(1)
+      QL(2,2)=QU(2)
+      QL(2,3)=0.
+      QL(2,4)=0.
+      QL(2,5)=0.
+      QL(2,6)=QU(6)/QU(1)
+      QL(2,7)=QU(7)/QU(1)
+
+      QL(3,1)=0.
+      QL(3,2)=0.
+      QL(3,3)=QU(2)
+      QL(3,4)=0.
+      QL(3,5)=0.
+      QL(3,6)=-QU(5)/QU(1)
+      QL(3,7)=0.
+
+      QL(4,1)=0.
+      QL(4,2)=0.
+      QL(4,3)=0.
+      QL(4,4)=QU(2)
+      QL(4,5)=0.
+      QL(4,6)=0.
+      QL(4,7)=-QU(5)/QU(1)
+
+      QL(5,1)=0.
+      QL(5,2)=0.
+      QL(5,3)=0.
+      QL(5,4)=0.
+      QL(5,5)=QU(2)
+      QL(5,6)=0.
+      QL(5,7)=0.
+
+      QL(6,1)=0.
+      QL(6,2)=QU(6)
+      QL(6,3)=-QU(5)
+      QL(6,4)=0.
+      QL(6,5)=0.
+      QL(6,6)=QU(2)
+      QL(6,7)=0.
+
+      QL(7,1)=0.
+      QL(7,2)=QU(7)
+      QL(7,3)=0.
+      QL(7,4)=-QU(5)
+      QL(7,5)=0.
+      QL(7,6)=0.
+      QL(7,7)=QU(2)
+
+	RETURN
+	END
+
+      SUBROUTINE MATR_AY(QU,QL,a2)
+c     --- dcc
+      implicit none
+      real a2
+c     --- /dcc
+      REAL QU(7),QL(7,7)  	
+
+c      common/aspd/a1,a2  
+      QL(1,1)=QU(3)
+      QL(1,2)=0.
+      QL(1,3)=QU(1)
+      QL(1,4)=0.
+      QL(1,5)=0.
+      QL(1,6)=0.
+      QL(1,7)=0.
+	
+      QL(2,1)=0.
+      QL(2,2)=QU(3)
+      QL(2,3)=0.
+      QL(2,4)=0.
+      QL(2,5)=-QU(6)/QU(1)
+      QL(2,6)=0.
+      QL(2,7)=0.
+
+      QL(3,1)=a2/QU(1)
+      QL(3,2)=0.
+      QL(3,3)=QU(3)
+      QL(3,4)=0.
+      QL(3,5)=QU(5)/QU(1)
+      QL(3,6)=0.
+      QL(3,7)=QU(7)/QU(1)
+
+      QL(4,1)=0.
+      QL(4,2)=0.
+      QL(4,3)=0.
+      QL(4,4)=QU(3)
+      QL(4,5)=0.
+      QL(4,6)=0.
+      QL(4,7)=-QU(6)/QU(1)
+
+      QL(5,1)=0.
+      QL(5,2)=-QU(6)
+      QL(5,3)=QU(5)
+      QL(5,4)=0.
+      QL(5,5)=QU(3)
+      QL(5,6)=0.
+      QL(5,7)=0.
+
+      QL(6,1)=0.
+      QL(6,2)=0.
+      QL(6,3)=0.
+      QL(6,4)=0.
+      QL(6,5)=0.
+      QL(6,6)=QU(3)
+      QL(6,7)=0.
+
+      QL(7,1)=0.
+      QL(7,2)=0.
+      QL(7,3)=QU(7)
+      QL(7,4)=-QU(6)
+      QL(7,5)=0.
+      QL(7,6)=0.
+      QL(7,7)=QU(3)
+
+	RETURN
+	END
+
+      SUBROUTINE MATR_AZ(QU,QL,a2)
+c     --- dcc
+      implicit none
+      real a2
+c     --- /dcc
+      REAL QU(7),QL(7,7)  	
+c      common/aspd/a1,a2  
+
+      QL(1,1)=QU(4)
+      QL(1,2)=0.
+      QL(1,3)=0.
+      QL(1,4)=QU(1)
+      QL(1,5)=0.
+      QL(1,6)=0.
+      QL(1,7)=0.
+	
+      QL(2,1)=0.
+      QL(2,2)=QU(4)
+      QL(2,3)=0.
+      QL(2,4)=0.
+      QL(2,5)=-QU(7)/QU(1)
+      QL(2,6)=0.
+      QL(2,7)=0.
+
+      QL(3,1)=0.
+      QL(3,2)=0.
+      QL(3,3)=QU(4)
+      QL(3,4)=0.
+      QL(3,5)=0.
+      QL(3,6)=-QU(7)/QU(1)
+      QL(3,7)=0.
+
+      QL(4,1)=a2/QU(1)
+      QL(4,2)=0.
+      QL(4,3)=0.
+      QL(4,4)=QU(4)
+      QL(4,5)=QU(5)/QU(1)
+      QL(4,6)=QU(6)/QU(1)
+      QL(4,7)=0.
+
+      QL(5,1)=0.
+      QL(5,2)=-QU(7)
+      QL(5,3)=0.
+      QL(5,4)=QU(5)
+      QL(5,5)=QU(4)
+      QL(5,6)=0.
+      QL(5,7)=0.
+
+      QL(6,1)=0.
+      QL(6,2)=0.
+      QL(6,3)=-QU(7)
+      QL(6,4)=QU(6)
+      QL(6,5)=0.
+      QL(6,6)=QU(4)
+      QL(6,7)=0.
+
+      QL(7,1)=0.
+      QL(7,2)=0.
+      QL(7,3)=0.
+      QL(7,4)=0.
+      QL(7,5)=0.
+      QL(7,6)=0.
+      QL(7,7)=QU(4)
+
+	RETURN
+	END
+
+c
+
+
+c
+c     HLLD method for isotermal case (Mignone 2007, JCP, also LANL preprint)
+c
+
+	Subroutine HLLDx(UL,UR,F,U,a1) !SL and SR from min/max
+c     --- dcc
+      implicit none
+      real a,ds
+      real a1
+c     --- /dcc	
+	Real U(7),F(7),UL(7),UR(7)
+
+	Integer i
+	Real Uhll(7),Fhll(7)
+	Real FL(7),FR(7)
+	Real SL,SR,SL_rot,SR_rot
+	Real cf,ca  ! fast and Alfven velocities
+	Real rho,Bx,By,Bz,BB
+	Real u_L,v_L,w_L,u_R,v_R,w_R
+	Real ptL, ptR
+	Real u_ast
+	Real UL_ast(7),UR_ast(7)
+
+	!temporary
+	Real f2,f3,X,g3,g4,g5,g6
+	Real S1L, S1R, S2L, S2R
+
+c        common/aspd/a1,a2  
+
+	a=a1
+	
+	u_L=UL(2)/UL(1)
+	v_L=UL(3)/UL(1)
+	w_L=UL(4)/UL(1)
+
+	u_R=UR(2)/UR(1)
+	v_R=UR(3)/UR(1)
+	w_R=UR(4)/UR(1)
+	
+	Bx=(Ul(5)+Ur(5))/2.
+
+	By=UL(6)
+	Bz=UL(7)
+		
+	BB=Bx*Bx+By*By+Bz*Bz
+	ca=abs(Bx)/sqrt(UL(1))
+	f2=a*a+BB/UL(1)
+	ds=f2*f2-4*a*a*ca*ca
+	if(ds.lt.0) ds=0
+	cf=sqrt(0.5*(f2+sqrt(ds)))
+	ptL=a*a*UL(1)+BB/2.
+
+	S1L=u_L-cf
+	S1R=u_L+cf
+      
+	By=UR(6)
+	Bz=UR(7)
+		
+	BB=Bx*Bx+By*By+Bz*Bz
+	ca=abs(Bx)/sqrt(UR(1))
+	f2=a*a+BB/UR(1)
+	ds=f2*f2-4*a*a*ca*ca
+	if(ds.lt.0) ds=0
+	cf=sqrt(0.5*(f2+sqrt(ds)))
+	
+	ptR=a*a*UR(1)+BB/2.
+
+	S2L=u_R-cf
+	S2R=u_R+cf
+
+	SL=min(S1L,S2L)
+	SR=max(S1R,S2R)
+
+	if (SL.ge.0.) then
+           F(1)=UL(2)
+           F(2)=UL(2)*u_L+ptL-Ul(5)*Ul(5)
+           F(3)=UL(3)*u_L-Ul(5)*Ul(6)
+           F(4)=UL(4)*u_L-Ul(5)*Ul(7)
+           F(5)=0.
+           F(6)=UL(6)*u_L-Ul(5)*v_L
+           F(7)=UL(7)*u_L-Ul(5)*w_L
+
+           U(1)=UL(1)
+           U(2)=UL(2)
+           U(3)=UL(3)
+           U(4)=UL(4)
+           U(5)=UL(5)
+           U(6)=UL(6)
+           U(7)=UL(7)
+
+           goto 8888
+	endif
+
+	if (SR.le.0.) then
+           F(1)=UR(2)
+           F(2)=UR(2)*u_R+ptR-Ur(5)*Ur(5)
+           F(3)=UR(3)*u_R-Ur(5)*Ur(6)
+           F(4)=UR(4)*u_R-Ur(5)*Ur(7)
+           F(5)=0.
+           F(6)=UR(6)*u_R-Ur(5)*v_R
+           F(7)=UR(7)*u_R-Ur(5)*w_R
+
+           U(1)=UR(1)
+           U(2)=UR(2)
+           U(3)=UR(3)
+           U(4)=UR(4)
+           U(5)=UR(5)
+           U(6)=UR(6)
+           U(7)=UR(7)
+
+           goto 8888
+	endif
+
+	Fl(1)=UL(2)
+	Fl(2)=UL(2)*u_L+ptL-Ul(5)*Ul(5)
+	Fl(3)=UL(3)*u_L-Ul(5)*Ul(6)
+	Fl(4)=UL(4)*u_L-Ul(5)*Ul(7)
+	Fl(5)=0.
+	Fl(6)=UL(6)*u_L-Ul(5)*v_L
+	Fl(7)=UL(7)*u_L-Ul(5)*w_L
+
+	Fr(1)=UR(2)
+	Fr(2)=UR(2)*u_R+ptR-Ur(5)*Ur(5)
+	Fr(3)=UR(3)*u_R-Ur(5)*Ur(6)
+	Fr(4)=UR(4)*u_R-Ur(5)*Ur(7)
+	Fr(5)=0.
+	Fr(6)=UR(6)*u_R-Ur(5)*v_R
+	Fr(7)=UR(7)*u_R-Ur(5)*w_R
+
+	do i=1,7
+           Uhll(i)=(SR*UR(i)-SL*UL(i)-FR(i)+FL(i))/(SR-SL)
+           Fhll(i)=(SR*FL(i)-SL*FR(i)+SL*SR*(UR(i)-UL(i)))/(SR-SL)
+	enddo
+
+	u_ast=Fhll(1)/Uhll(1)
+	ca=abs(Bx)/sqrt(Uhll(1))
+	
+	SL_rot=u_ast-ca
+	SR_rot=u_ast+ca
+
+	UL_ast(1)=Uhll(1)
+	UL_ast(2)=Uhll(2)
+	
+	f3=(SL-SL_rot)*(SL-SR_rot)
+
+	if (f3.ne.0.) then
+           UL_ast(3)=Uhll(1)*v_L-Bx*UL(6)*(u_ast-u_L)/f3
+           UL_ast(4)=Uhll(1)*w_L-Bx*UL(7)*(u_ast-u_L)/f3
+           Ul_ast(5)=bx
+           UL_ast(6)=UL(6)*(UL(1)*((SL-u_L)**2)-Bx*Bx)/Uhll(1)/f3
+           UL_ast(7)=UL(7)*(UL(1)*((SL-u_L)**2)-Bx*Bx)/Uhll(1)/f3
+	else
+           UL_ast(3)=UL(3)
+           UL_ast(4)=UL(4)
+           Ul_ast(5)=bx
+           UL_ast(6)=UL(6)
+           UL_ast(7)=UL(7)
+	endif
+
+	if ((SL.lt.0.).and.(0.le.SL_rot)) then
+           do i=1,7
+              F(i)=FL(i)+SL*(UL_ast(i)-UL(i))
+              U(i)=UL_ast(i)
+           enddo
+           goto 8888
+	endif
+
+	UR_ast(1)=Uhll(1)
+	UR_ast(2)=Uhll(2)
+	
+	f3=(SR-SL_rot)*(SR-SR_rot)
+
+	if (f3.ne.0.) then
+           UR_ast(3)=Uhll(1)*v_R-Bx*UR(6)*(u_ast-u_R)/f3
+           UR_ast(4)=Uhll(1)*w_R-Bx*UR(7)*(u_ast-u_R)/f3
+           UR_ast(5)=bx
+           UR_ast(6)=UR(6)*(UR(1)*((SR-u_R)**2)-Bx*Bx)/Uhll(1)/f3
+           UR_ast(7)=UR(7)*(UR(1)*((SR-u_R)**2)-Bx*Bx)/Uhll(1)/f3
+	else
+           UR_ast(3)=UR(3)
+           UR_ast(4)=UR(4)
+           UR_ast(5)=bx
+           UR_ast(6)=UR(6)
+           UR_ast(7)=UR(7)
+	endif
+
+	if ((SR_rot.lt.0.).and.(0.le.SR)) then
+           do i=1,7
+              F(i)=FR(i)+SR*(UR_ast(i)-UR(i))
+              U(i)=UR_ast(i)
+           enddo
+           goto 8888
+	endif
+
+	X=sqrt(Uhll(1))*sign(1.0,Bx)
+
+	g3=(UL_ast(3)+UR_ast(3)+X*(UR_ast(6)-UL_ast(6)))/2.
+	g4=(UL_ast(4)+UR_ast(4)+X*(UR_ast(7)-UL_ast(7)))/2.
+	g5=(UL_ast(6)+UR_ast(6)+(UR_ast(3)-UL_ast(3))/X)/2.
+	g6=(UL_ast(7)+UR_ast(7)+(UR_ast(4)-UL_ast(4))/X)/2.
+
+
+	F(1)=Fhll(1)
+	F(2)=Fhll(2)
+	F(3)=g3*u_ast-Bx*g5
+	F(4)=g4*u_ast-Bx*g6
+	F(5)=0.
+	F(6)=g5*u_ast-Bx*g3/uhll(1)
+	F(7)=g6*u_ast-Bx*g4/uhll(1)
+	
+	U(1)=Uhll(1)
+	U(2)=Uhll(2)
+	U(3)=g3
+	U(4)=g4
+        U(5)=bx	
+	U(6)=g5
+	U(7)=g6
+
+	if (.not.((SL_rot.le.0.).and.(0.le.SR_rot))) then
+           print*,"HLLDx: SL_rot: " , SL_rot, " SR_rot: ", SR_rot
+c           pause
+	endif
+
+8888	continue 
+
+c      print*,'hlld finished'
+c	pause
+
+        End Subroutine HLLDx
+
+c---------------------
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ ROE-X ////////////////////////////////
+c//////////////////////////////////////////////////////////////////////
+c
+c     Roe Riemann solver in x direction for a vector
+c
+
+      subroutine rmnx(qvl,qvr,f,ul, a2)
+      implicit none 
+c     --- parameters
+
+      integer i,j,k,m,m1,L
+      real s
+      real FF
+      real a2
+      EXTERNAL FF
+      real qul(7),qur(7),f(7),ul(7),uvu(7)
+      real fl(7),fr(7),qsr(7),slp(7),au(7),slpu(7)
+      real v(7),ed(7),uv(7),qvl(7),qvr(7),slu(7)
+      real ql(7,7),qr(7,7),qlu(7,7),qru(7,7)
+
+      call CONS(qvl,qul)
+      call CONS(qvr,qur)
+
+      CALL FLUXx(qvl,FL,a2)
+      CALL FLUXx(qvr,FR,a2)
+
+      call AVERX(qvl,qvr,qsr)
+
+      CALL VECTLRx(qsr,QL,QR,UV,a2)
+      CALL DUDW(qsr,QLu)
+
+      do M=1,7
+         do M1=1,7
+            s=0.
+            do L=1,7
+               s=s+Qlu(m,l)*Qr(l,m1)
+            enddo
+            qru(m,m1)=s
+         enddo
+      enddo
+
+      do M=1,7
+         s=0.
+         do L=1,7
+            s=s+Ql(m,l)*(Qvr(l)-Qvl(l))
+         enddo
+         slp(m)=s
+      enddo
+
+      do M=1,7
+         au(m)=-FF(M,UV(M))*SLP(M)
+      enddo
+
+      do M=1,7
+         s=0.
+         do L=1,7
+            s=s+qru(m,l)*au(L)
+         enddo
+         ed(m)=s
+      enddo
+
+      do M=1,7
+         f(m)=(fl(m)+fr(m)+ed(m))/2.
+      enddo
+      
+      do m=1,7
+         s=0. 
+	 do l=1,7
+            s=s-sign(1.,uv(l))*qru(m,l)*slp(l)
+	 enddo
+         slu(m)=s
+      enddo
+
+      do m=1,7
+         ul(m)=(qul(m)+qur(m)+slu(m))/2.
+      enddo
+
+
+      return
+      end
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\ END ROE-X ////////////////////////////////
+
+c     averaging procedure in the Roe method (Wesseling)
+c
+      subroutine averx(qul,qur,qsr)
+c     --- dcc
+      implicit none
+      real rr,rl,rs
+c     --- /dcc
+      real qul(7),qur(7),qsr(7)
+
+      rl=sqrt(qul(1))
+      rr=sqrt(qur(1))
+	rs=rl+rr
+	
+	qsr(1)=rl*rr
+	qsr(2)=(rl*qul(2)+rr*qur(2))/rs
+	qsr(3)=(rl*qul(3)+rr*qur(3))/rs
+	qsr(4)=(rl*qul(4)+rr*qur(4))/rs
+	qsr(5)=(qul(5)+qur(5))/2.
+	qsr(6)=(qul(6)/rl+qur(6)/rr)/rs*qsr(1)
+	qsr(7)=(qul(7)/rl+qur(7)/rr)/rs*qsr(1)
+
+	return
+	end
+
+
+c     matrix transformation between (2.2.6)
+c
+      SUBROUTINE DUDW(Qu,QL)
+c     --- dcc
+      implicit none
+c     --- /dcc
+      REAL QU(7),QL(7,7)  	
+	
+      QL(1,1)=1.
+      QL(1,2)=0.
+      QL(1,3)=0.
+      QL(1,4)=0.
+      QL(1,5)=0.
+      QL(1,6)=0.
+      QL(1,7)=0.
+	
+      QL(2,1)=QU(2)
+      QL(2,2)=QU(1)
+      QL(2,3)=0.
+      QL(2,4)=0.
+      QL(2,5)=0.
+      QL(2,6)=0.
+      QL(2,7)=0.
+
+      QL(3,1)=QU(3)
+      QL(3,2)=0.
+      QL(3,3)=QU(1)
+      QL(3,4)=0.
+      QL(3,5)=0.
+      QL(3,6)=0.
+      QL(3,7)=0.
+
+      QL(4,1)=QU(4)
+      QL(4,2)=0.
+      QL(4,3)=0.
+      QL(4,4)=QU(1)
+      QL(4,5)=0.
+      QL(4,6)=0.
+      QL(4,7)=0.
+
+      QL(5,1)=0.
+      QL(5,2)=0.
+      QL(5,3)=0.
+      QL(5,4)=0.
+      QL(5,5)=1.
+      QL(5,6)=0.
+      QL(5,7)=0.
+
+      QL(6,1)=0.
+      QL(6,2)=0.
+      QL(6,3)=0.
+      QL(6,4)=0.
+      QL(6,5)=0.
+      QL(6,6)=1.
+      QL(6,7)=0.
+
+      QL(7,1)=0.
+      QL(7,2)=0.
+      QL(7,3)=0.
+      QL(7,4)=0.
+      QL(7,5)=0.
+      QL(7,6)=0.
+      QL(7,7)=1.
+
+	RETURN
+	END

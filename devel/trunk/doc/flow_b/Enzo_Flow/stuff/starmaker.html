@@ -1,0 +1,32 @@
+<html>
+<head><title>star_maker2</title></head>
+<body>
+<center><h1>star_maker2 (f77 routine)</h1></center>
+
+<h2>Functionality</h2>
+<p>This function makes stars and adds stellar feedback to the simulation.</p> 
+
+<h2>Inputs/Outputs</h2>
+<p>This file contains two routines, star_maker2 and star_feedback2.  They are both called by <a href="Grid_StarParticleHandler.html">Grid::StarParticleHandler</a>.  
+<p>star_maker 2 and star_feedback2 call no further subroutines.</p>
+<p>This routine takes as inputs the standard grid information, as well as a null list of star particles.</p>
+<p>This routine creates star particles - particles which are treated as dark matter (ie, n-body particles) for the duration of the simulation.</p>
+
+
+<h2>Notes</h2>
+<p>There are three sets of star_maker and star_feedback routines: (names).  star_maker2 and star_feedback2 are the "standard" routines for AMR runs.  star_maker1 and _feedback1 are experimental AMR routines, and star_maker3 and star_feedback3 are for unigrid runs, and should NEVER be used with AMR runs.</p>
+
+
+
+<h2>Source Code</h2>
+<center><hr size=4 width ="90%"></center>
+<pre>
+<!--#include file="star_maker2.src"-->
+</pre>
+<center><hr size=4 width ="90%"></center>
+
+<center><p><b>Last modified by <a href="mailto:bwoshea@cosmos.ucsd.edu">bwo</a><br>
+on 12 September 2003</b></p></center>
+</body>
+</html>
+

@@ -1,0 +1,32 @@
+#
+# macros for sgi (r4400 compiler)
+#
+CPP           = /lib/cpp
+DEFINES       = -DIRIS4
+OPTIONS      = -DSGI_MATH
+
+## Fortran compiler
+FC            = f77 -g
+#FC_OPTIMIZE   = -O2 -g3
+
+## C Compiler
+CC            = cc -g
+#CC_OPTIMIZE   = -g -pca keep -WK,-mc=0
+
+## C++ Compiler
+CCxx	      = CC -g -prelink
+#CCxx_OPTIMIZE = -O2 -g3 +w
+
+## Linker/loader
+LDR           = CC -g -prelink 
+#LDR_OPTIMIZE  = -O2 -g3 +w -p
+LIB           = -lcomplib.sgimath -L/afs/ncsa/packages/hdf/IRIX_5.2/lib -lF77 -lU77 -lI77 \
+	        -ldf -ljpeg -lz -lmalloc -lm -lisam
+#LIB           = -L/usr/ncsa/lib -lcomplib.sgimath -lF77 -lU77 -lI77 \
+#	        -lfpe -lisam -ldf -lmalloc_cv -lm -lC
+#INCLUDE       = -I/usr/ncsa/include 
+INCLUDE       = -I${HOME}/include
+
+OPTS          = -c -DIRIS4 ${OPTIONS} ${INCLUDE}
+DEBUG         =
+

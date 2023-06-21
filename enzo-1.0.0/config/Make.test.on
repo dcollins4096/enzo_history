@@ -1,0 +1,13 @@
+#======================================================================
+#
+# Make.test for including all tested optimizations
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-07-31  Created
+#
+#======================================================================
+
+TEXT_TEST = $(TEXT_TEST_ON)
+
+DEFINES_TEST = -DENZO_TEST

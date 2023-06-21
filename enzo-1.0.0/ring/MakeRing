@@ -1,0 +1,104 @@
+#=======================================================================
+#  MAKEFILE FOR RING I/O
+#=======================================================================
+
+PRECISION    = r4
+ENDIAN       = HDF5_BE
+
+SYSTEM := $(shell uname -s)
+UNAMEM := $(shell uname -m)
+CPP_FLAG := -P
+
+null :=
+hdf4 := hdf4
+hdf5 := hdf5
+
+ifeq ($(ENZO_SYS),$(null))
+
+ifeq ($(SYSTEM),IRIX64)
+ENZO_SYS = o2k
+endif
+
+ifeq ($(SYSTEM),OSF1)
+ENZO_SYS = cpq
+endif
+
+ifeq ($(SYSTEM),AIX)
+  ifeq ($(OBJECT_MODE),$(null))
+  ENZO_SYS = sp2
+  endif
+  ifeq ($(OBJECT_MODE),64)
+  ENZO_SYS = sp2_64
+  endif
+endif
+
+ifeq ($(SYSTEM),SunOS)
+ENZO_SYS = sun
+endif
+
+ifeq ($(SYSTEM),Linux)
+  ifeq ($(UNAMEM),ia64)
+  ENZO_SYS = ia64
+  endif
+  ifeq ($(UNAMEM),i686)
+  ENZO_SYS = i686
+  endif
+  CPP_FLAG = -E
+endif
+
+endif
+
+ifeq ($(ENZO_HDF),$(null))
+ENZO_HDF := hdf5
+endif
+
+#-------------------  object files  ------------------------------------
+
+OBJ = ring.o
+EXENAME = ring
+
+#-------------------  macro definitions -------------------------------
+
+.SUFFIXES:
+.SUFFIXES: .src .c .f .o .C
+
+HEADER  = macros_and_parameters.h extern_hdf5.h
+EXEDIR  =
+
+#------------------ include machine-dependent macros -----------------
+
+INCLUDE_MAKEFILE = Make.${ENZO_SYS}
+include ${INCLUDE_MAKEFILE}
+
+#--------------------  implicit rules ---------------------------------
+
+.src.o:
+	${CPP} ${DEFINES} ${CPP_FLAG} $< > $*.f
+	${FC} ${FC_OPT} ${DEBUG} ${OPTS} $*.f 
+.C.o:
+	${CCxx} ${CCxx_OPT} -D ${PRECISION} -D ${ENDIAN} ${DEBUG} ${OPTS} $*.C
+.c.o:
+	${CC} ${CC_OPT} -D ${PRECISION} -D ${ENDIAN} ${DEBUG} ${OPTS} -c $<
+
+#-------------------------  main target  -------------------------------
+
+${EXENAME}: ${OBJ}
+	${LDR} ${LDR_OPT} ${DEBUG} -o ${EXEDIR}${EXENAME} ${OBJ} ${LIB}
+
+#---------------------  special compilation rules ---------------------
+
+
+#----------------------------- help ------------------------------------
+
+help:
+	@echo Type 'make' to generate executable
+	@echo Type 'make clean' to remove object files, etc
+
+#----------------------------- clean ------------------------------------
+
+clean:
+	rm -f *.o *.f ${EXEDIR}${EXENAME}
+
+#-----------------------------------------------------------------------
+
+${OBJ}: ${HEADER}

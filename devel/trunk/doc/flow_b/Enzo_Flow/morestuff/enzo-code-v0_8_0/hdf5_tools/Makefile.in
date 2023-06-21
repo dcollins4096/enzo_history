@@ -1,0 +1,75 @@
+#======================================================================
+#
+# ENZO Makefile: hdf5_tools/Makefile.in
+#
+#======================================================================
+#
+# Autoconf variable values:
+#
+#    top_srcdir    = @top_srcdir@
+#
+#---------------------------------------------------------------------
+#
+# Targets:
+#
+#    all:          make executables
+#    install:      install executables in top-level bin
+#    help:         help for make targets
+#    clean:        clean directory
+#    distclean:    clean directory and reset configuration
+#
+# Also, all configuration targets available in config/MAKE.CONFIG
+#
+#---------------------------------------------------------------------
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-16  jb  created
+#
+#======================================================================
+
+TOP_DIR = @top_srcdir@
+
+EXES = newname dumper logger differ diffx
+
+all: $(patsubst %,%.exe,$(EXES))
+
+#======================================================================
+# Include configuration targets
+#======================================================================
+
+include $(TOP_DIR)/config/MAKE.CONFIG
+
+#======================================================================
+# MAIN TARGETS
+#======================================================================
+
+.SUFFIXES: .exe .C
+
+.C.exe:
+	$(CXX) -o $*.exe $(DEFINES) $(CXXFLAGS) $*.C $(LDFLAGS) $(LIBS)
+
+#======================================================================
+# install, clean, and help targets
+#======================================================================
+
+.PHONY: install install-%
+install: $(patsubst %,install-%,$(EXES))
+
+install-%:
+	@mv $*.exe $(TOP_DIR)/bin/$*
+
+#----------------------------------------------------------------------
+
+.PHONY: clean distclean
+clean:
+	@rm -f *.o *.f *~ work.pc
+distclean: clean
+
+#======================================================================
+# Dependencies
+#======================================================================
+
+dumper.o: extern_hdf5.h
+logger.o: extern_hdf5.h
+newname.o: extern_hdf5.h

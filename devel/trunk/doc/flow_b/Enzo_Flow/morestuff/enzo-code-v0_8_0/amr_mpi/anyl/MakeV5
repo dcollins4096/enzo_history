@@ -1,0 +1,167 @@
+#=======================================================================
+#  MAKEFILE FOR AMR ANALYSIS
+#    written by: Greg Bryan
+#    date:       November, 1994
+#    modified1:  
+#
+#
+# MACHINE_NAME is one of: sun tcs sp2 o2k
+# PRECISION is one of p4 (single), p8 (double) or p16 (quad) for
+#           precision of position
+# XPR is r4 (32 bits) or r8 (64 bits) for float and real and must be
+#           <= precision of position
+# FORTPR defines how Fortran real precision is specified to the compiler
+#          e.g. SGI -r8; IBM -qrealsize=8
+
+MACHINE_NAME = o2k
+PRECISION    = p8
+XPR          = r8
+FORTPR       = -r8 -r8const -d8
+ENDIAN       = HDF5_BE
+
+#-------------------  object files  ------------------------------------
+
+ENZO_ANYL_OBJ =	HDF5_AnalyzeCluster.o			\
+		AnalyzeClusterComputeClumpingFactor.o	\
+		AnalyzeClusterReadParameterFile.o	\
+	 	Grid_AddToDiskProfile.o			\
+		Grid_AddToRadialProfile.o		\
+		Grid_CollectParticleInfo.o		\
+		Grid_FindMaximumBaryonDensity.o		\
+		Grid_FindMeanVelocity.o			
+
+SB_ANYL_OBJ =	AnalyzeSBCluster.o			\
+		Grid_AddToRadialProfile.o		\
+		Grid_FindMaximumBaryonDensity.o		\
+		Grid_FindMeanVelocity.o			
+
+ENZOTOJAD_OBJ = ConvertNativeFormatToJADFormat.o	\
+		Grid_WriteGridJADFormat.o		
+
+FINDINIT_OBJ = 	HDF5_FindClusterInitialExtent.o		\
+		Grid_FindMatchingParticles.o		\
+		Grid_FindParticlesWithinSphere.o		
+
+FINDPEAKS_OBJ = FindDensityPeaks.o			\
+		Grid_FindDensityPeaks.o
+
+ENZOHOP_OBJ   = HopAnalysis.o				\
+		hop_hop.o				\
+		hop_kd.o				\
+		hop_regroup.o				\
+		hop_slice.o				\
+		hop_smooth.o
+
+DUMPGRIDS_OBJ = DumpGridData.o				\
+		Grid_DumpGridData.o
+
+FINDHIREZ_OBJ = HDF5_FindHighResolutionRegions.o	\
+		Grid_FindMatchingParticles.o		\
+		Grid_ReturnParticleIndexList.o		
+
+ENZOSTATS_OBJ = EnzoGlobalStatistics.o			\
+		Grid_ComputeGlobalStatistics.o
+
+#-------------------  macro definitions -------------------------------
+
+.SUFFIXES:
+.SUFFIXES: .src .c .f .o .C
+EXEDIR  = 
+
+AMR_DIR = ../src
+
+JAD_INC = -I/afs/ncsa/packages/ieeeio/IRIX64_6.5/include
+JAD_LIB = -L/afs/ncsa/packages/ieeeio/IRIX64_6.5/lib -lhlio -lieeeio
+
+SHELL   = csh
+
+#------------------ include machine-dependent macros -----------------
+
+INCLUDE_MAKEFILE = MakeV5.${MACHINE_NAME}
+include ${AMR_DIR}/${INCLUDE_MAKEFILE}
+
+#--------------------  implicit rules ---------------------------------
+
+.src.o:
+	${CPP} ${DEFINES} -D${XPR} -P $< > $*.f
+	${FC} -I${AMR_DIR} ${FFLAGS} ${FC_OPT} ${FORT_PR} ${DEBUG} ${OPTS} $*.f 
+.C.o:
+	${CCxx} -I${AMR_DIR} ${CCxxFLAGS} ${CCxx_OPT} -D ${PRECISION} -D ${XPR} -D ${ENDIAN} ${DEBUG} ${OPTS} $*.C
+.c.o:
+	${CC} -I${AMR_DIR} ${CFLAGS} ${CC_OPT} -D ${PRECISION} -D ${XPR} -D ${ENDIAN} ${DEBUG} ${OPTS} -c $<
+
+#----------------------------- help ------------------------------------
+
+help:
+	@echo Type 'make enzo_anyl' for single profile analyzer
+	@echo Type 'make sb_anyl'   for Santa Barbara profile analyzer
+	@echo Type 'make enzotojad' for enzo to JAD format converter
+	@echo Type 'make findinit'  for cluster initial extent finder
+	@echo Type 'make findpeaks' for cluster peak finder
+	@echo Type 'make enzohop'   for hop analysis
+	@echo Type 'make dumpgrids' for grid and star particle output
+	@echo Type 'make findhirez' for high resolution regions
+	@echo Type 'make enzostats' for global statistics
+	@echo Type 'make clean' to remove object files, etc
+
+#-------------------------  main targets  ------------------------------
+
+enzo_anyl: ${ENZO_ANYL_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}enzo_anyl \
+	${ENZO_ANYL_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+sb_anyl: ${SB_ANYL_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}sb_anyl \
+	${SB_ANYL_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+enzotojad: ${ENZOTOJAD_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}enzotojad \
+	${ENZOTOJAD_OBJ} ${AMR_DIR}/*.o ${JAD_LIB} ${LIB}
+
+findinit: ${FINDINIT_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}findinit \
+	${FINDINIT_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+findpeaks: ${FINDPEAKS_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}findpeaks \
+	${FINDPEAKS_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+enzohop: ${ENZOHOP_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}enzohop \
+	${ENZOHOP_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+dumpgrids: ${DUMPGRIDS_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}dumpgrids \
+	${DUMPGRIDS_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+findhirez: ${FINDHIREZ_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}findhirez \
+	${FINDHIREZ_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+enzostats: ${ENZOSTATS_OBJ} purge_main
+	${LDR} ${LDR_OPTIMIZE} ${DEBUG} -o ${EXEDIR}enzostats \
+	${ENZOSTATS_OBJ} ${AMR_DIR}/*.o ${LIB}
+
+#---------------------  special compilation rules ---------------------
+
+${ENZOTOJAD_OBJ}:
+	${CCxx} -I${AMR_DIR} ${JAD_INC} -DAMRWRITER ${CCxx_OPTIMIZE} \
+		-D ${PRECISION} ${DEBUG} ${OPTS} $*.C
+purge_main:
+	if (-f ../src/main.o) /bin/rm ../src/main.o
+	if (-f ../src/flow.o) /bin/rm ../src/flow.o
+	if (-f ../src/EvolveHierarchy.o) /bin/rm ../src/EvolveHierarchy.o
+	if (-f ../src/EvolveLevelParallelLoops.o) /bin/rm ../src/*Parallel*.o
+
+#----------------------------- clean ------------------------------------
+
+clean:
+	/bin/rm *.o *.f *~ enzo_anyl findinit findpeaks enzohop dumpgrids \
+                enzostats
+	/bin/rm -r ii_files
+
+#-----------------------------------------------------------------------
+
+${ENZO_ANYL_OBJ}: Grid.h
+${ENZOTOJAD_OBJ}: Grid.h
+${FINDINIT_OBJ}: Grid.h

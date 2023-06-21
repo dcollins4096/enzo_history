@@ -1,0 +1,40 @@
+;;; If environment variable JACQUESDIR exists, then set JDIR to its
+;;; value, else to './'
+JDIR = getenv('JACQUESDIR')
+if JDIR eq '' then JDIR = './'
+
+
+;;; set IDL PATH to include TOOLS directory
+!PATH = JDIR + '/TOOLS/:' + !PATH
+
+
+;;; precompiled routines:
+;;; if the jacques.sav file doesn't exists, compile routines by
+;;; calling tools.com, then save them.
+sav_file_name = JDIR + '/TOOLS/SAV/jacques.sav'
+if file_test(sav_file_name) eq 1 then $
+  restore, filename=sav_file_name
+
+
+;;; set directory and basename
+;data_base_dir = '/scratch/enzo/data/'
+;base_name = 'Dump_256_256_1500'
+
+data_base_dir = '/Users/Brian/Desktop/a6lev_TF_3mpc_z_3/'
+base_name = 'RedshiftOutput0011'
+
+;;; call main routine
+AMRslice, grid_info, data_base_dir, base_name=base_name
+
+
+
+;;; print instructions for how to continue
+print,''
+print,'If you have modified any source code, you need to recompile by'
+print,'typing "@tools.com".'
+print,''
+print,'To restart AMRslice, just type "AMRslice, grid_info, data_base_dir".'
+print,''
+
+
+

@@ -1,0 +1,20 @@
+KEEP_MR4:# PREC_IO    no          yes, no (retain full precision in I/O)
+KEEP_MR4:PREC_IO := no
+KEEP_MR4:ifeq ($(PREC_IO),no)
+KEEP_MR4:ifeq ($(PREC_IO),yes)
+MOD.tar:# PREC_IO    no          yes, no (retain full precision in I/O)
+MOD.tar:PREC_IO := no
+MOD.tar:ifeq ($(PREC_IO),no)
+MOD.tar:ifeq ($(PREC_IO),yes)
+Make_AMR_FastSib:# PREC_IO    no          yes, no (retain full precision in I/O)
+Make_AMR_FastSib:PREC_IO := no
+Make_AMR_FastSib:ifeq ($(PREC_IO),no)
+Make_AMR_FastSib:ifeq ($(PREC_IO),yes)
+Make_Unigrid_Only:# PREC_IO    no          yes, no (retain full precision in I/O)
+Make_Unigrid_Only:PREC_IO := no
+Make_Unigrid_Only:ifeq ($(PREC_IO),no)
+Make_Unigrid_Only:ifeq ($(PREC_IO),yes)
+Make_Unigrid_TaskMap:# PREC_IO    no          yes, no (retain full precision in I/O)
+Make_Unigrid_TaskMap:PREC_IO := no
+Make_Unigrid_TaskMap:ifeq ($(PREC_IO),no)
+Make_Unigrid_TaskMap:ifeq ($(PREC_IO),yes)

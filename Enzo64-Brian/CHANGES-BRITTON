@@ -1,0 +1,44 @@
+8/16/2006
+
+1) Added Cloudy cooling.
+	CloudyCoolingData.h           <-- NEW FILE
+	CloudyCoolingGridRoutines.C   <-- NEW FILE
+	multi_CloudyCooling.C         <-- NEW FILE
+	multi_CloudyCooling_time.C    <-- NEW FILE
+	solve_CloudyCooling.C         <-- NEW FILE
+	solve_CloudyCooling_time.C    <-- NEW FILE
+	global_data.h
+	typedefs.h
+	ReadParameterFile.C
+	SetDefaultGlobalValues.C
+	WriteParameterFile.C
+	Grid_ComputeCoolingTime.C
+	Grid_SolveRadiativeCooling.C
+
+	New parameters:
+		CloudyCooling - on/off flag default:0
+		CloudyCoolingGridRank - dimension of cooling data minus 1. default:0
+        		                0: interpolate over temperature only
+                		        1: temperature and density
+                	       		2: temperature, density, and metallicity
+		CloudyCoolingGridRunFile - path to file containing names of all cooling tables
+        		                   (the .run file created by CIAOLoop). default: ""
+		IncludeCloudyHeating - flag to include heating from CLOUDY as well as cooling
+        		               (depending on the model used in CLOUDY, you don't
+                		        always want the heating) default:0
+		CMBTemperatureFloor - don't allow radiative cooling below CMB temperature,
+        		              even if the cooling data would do so. default:0
+
+	Three options for using CLOUDY cooling in Enzo.
+	1. Take all the cooling from the data tables.
+		CloudyCooling = 1
+		MultiSpecies  = 0
+	2. Take all the cooling from the data tables, except the cooling from H_2.
+	   Use the equations from Lepp & Shull (1983) (already in enzo) to supply
+	   H_2 cooling on the fly.
+		CloudyCooling = 1
+		MultiSpecies  = 2
+	3. Take only the metal cooling from the data tables, and take all of the
+	   H,He,H_2 cooling from the enzo cooling routines.
+		CloudyCooling = 2
+		MultiSpecies  = 2

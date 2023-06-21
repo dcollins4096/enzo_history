@@ -1,0 +1,412 @@
+!=======================================================================
+!
+! Copyright 2006 Daniel R. Reynolds
+! Copyright 2006 Laboratory for Computational Astrophysics
+! Copyright 2006 Regents of the University of California
+!
+! This software is released under the terms of the "Enzo Public License"
+! in the accompanying LICENSE file.
+!
+!=======================================================================
+subroutine gFLDProblem_LocEcRHS(ecrhs, vx, vy, vz, rhoa, eca, Ega,      &
+     n_HIa, n_HeIa, n_HeIIa, nea, Tempa, a, adot, gamma, Model, NTbins, &
+     Tlo, Thi, ceHIa, ceHeIa, ceHeIIa, ciHIa, ciHeIa, ciHeISa, ciHeIIa, &
+     reHIIa, reHeII1a, reHeII2a, reHeIIIa, brema, CompA, Comp_xray,     &
+     Comp_temp, IsE, IsEsHI, IsEsHInu, IsEsHeI, IsEsHeInu, IsEsHeII,    &
+     IsEsHeIInu, aunits, rhounits, timeunits, lenunits, Nchem, dx, dy,  &
+     dz, Nx, Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, ier)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       August, 2006
+!  modified1:
+!
+!  PURPOSE: Computes the spatially-local components of the fluid 
+!           energy correction equation nonlinear rhs for the 
+!           Gray FLD problem.
+!
+!  INPUTS:
+!     vx,vy,vz   - velocity arrays in each direction
+!     rhoa       - density array
+!     eca        - fluid energy correction array
+!     Ega        - radiation energy array
+!     n_HIa      - Hydrogen I number density array
+!     n_HeIa     - Helium I number density array
+!     n_HeIIa    - Helium II number density array
+!     nea        - Electron number density array
+!     Tempa      - Fluid temperature array
+!     a          - cosmological expansion parameter
+!     adot       - da/dt
+!     gamma      - constant in ideal gas law
+!     Model      - flag denoting physical model to use
+!     NTbins     - number of temperature bins in tables
+!     Tlo        - Low end of Temperature bins
+!     Thi        - High end of Temperature bins
+!     ceHIa      - Collisional exitation array for HI
+!     ceHeIa     - Collisional exitation array for HeI
+!     ceHeIIa    - Collisional exitation array for HeII
+!     ciHIa      - Collisional ionization array for HI
+!     ciHeIa     - Collisional ionization array for HeI
+!     ciHeISa    - Collisional ionization array for HeIS
+!     ciHeIIa    - Collisional ionization array for HeII
+!     reHIIa     - Recombination energy array for HII
+!     reHeII1a   - Recombination energy array for HeII (type 1)
+!     reHeII2a   - Recombination energy array for HeII (type 2)
+!     reHeIIIa   - Recombination energy array for HeIII
+!     brema      - Bremsstrahlunh array
+!     CompA      - Compton cooling coefficient 1 (multiplier)
+!     Comp_xray  - X-ray Compton heating coefficient
+!     Comp_temp  - X-ray Compton heating temperature 
+!     IsE        - int_{nu0}^{inf} sigE dnu
+!     IsEsHI     - int_{nu0}^{inf} sigE*sigHI dnu
+!     IsEsHInu   - int_{nu0}^{inf} sigE*sigHI/nu dnu
+!     IsEsHeI    - int_{nu0}^{inf} sigE*sigHeI dnu
+!     IsEsHeInu  - int_{nu0}^{inf} sigE*sigHeI/nu dnu
+!     IsEsHeII   - int_{nu0}^{inf} sigE*sigHeII dnu
+!     IsEsHeIInu - int_{nu0}^{inf} sigE*sigHeII/nu dnu
+!     aunits     - expansion coefficient (a) units
+!     rhounits   - density units
+!     timeunits  - time units
+!     lenunits   - length units
+!     Nchem      - number of chemical species in simulation
+!     dx,dy,dz   - mesh spacing in each direction
+!     Nx,Ny,Nz   - active mesh size in each direction
+!     NG*l/NG*r  - left/right ghost cells in each direction
+!
+!     Note: the vector inputs are of size (Nx + NGxl + NGxr) in 
+!     the x-direction, others are similar.
+!
+!  OUTPUT ARGUMENTS: 
+!     ecrhs      - local nonlinear rhs for the fluid energy 
+!                  correction equation
+!     ier        - success/failure flag (0->failure, 1->success)
+!
+!  EXTERNALS: 
+!
+!  LOCALS:
+!
+!=======================================================================
+#include "fortran.def"
+  implicit none
+    
+!--------------
+! argument declarations
+  integer, intent(in) :: Model, Nchem, NTbins
+  integer, intent(in) :: Nx, NGxl, NGxr
+  integer, intent(in) :: Ny, NGyl, NGyr
+  integer, intent(in) :: Nz, NGzl, NGzr
+  integer, intent(out) :: ier
+  REALSUB, intent(in) :: a, adot
+  REALSUBR, intent(in) :: dx, dy, dz, gamma, Tlo, Thi
+  REALSUBR, intent(in) :: CompA, Comp_xray, Comp_temp
+  REALSUBR, intent(in) :: aunits, rhounits, timeunits, lenunits
+  REALSUBR, intent(in) :: IsE, IsEsHI, IsEsHInu, IsEsHeI
+  REALSUBR, intent(in) :: IsEsHeInu, IsEsHeII, IsEsHeIInu
+  REALSUBR, intent(in),                                            &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr) :: &
+       vx, vy, vz, rhoa, eca, Ega, n_HIa, n_HeIa, n_HeIIa, nea, Tempa
+  REALSUBR, intent(in), dimension(NTbins) :: ceHIa, ceHeIa, ceHeIIa, &
+       ciHIa, ciHeIa, ciHeISa, ciHeIIa, reHIIa, reHeII1a, reHeII2a, &
+       reHeIIIa, brema
+  REALSUBR, intent(out) ::                                  &
+       ecrhs(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)
+  
+!--------------
+! locals
+  integer :: i, j, k, ib, ibp
+  REALSUBR :: c, hp, mp, zr, dom, eV2ergs, gam_1
+  REALSUBR :: HIconst, HeIconst, HeIIconst
+  REALSUBR :: dxi2, dyi2, dzi2, DivV, GradRhoDotV
+  REALSUBR :: rho, ec, Eg, nHI, nHII, nHeI, nHeII, nHeIII, ne
+  REALSUBR :: Temp, logTemp, logTlo, logThi, dlogT, Trat, G, Lambda
+  REALSUBR :: ceHI, ceHeI, ceHeII, ciHI, ciHeI, ciHeIS, ciHeII
+  REALSUBR :: reHII, reHeII1, reHeII2, reHeIII, brem, Comp1, Comp2
+  
+!=======================================================================
+
+  ! initialize output to have all zero values, flag to success
+  ecrhs = 0.d0
+  ier = 1
+  
+  ! initialize constants
+  gam_1 = gamma-1.d0
+  eV2ergs = 1.60217733d-12     ! conversion factor from eV to ergs
+  c  = 2.99792458d10           ! speed of light [cm/s]
+  hp = 6.6260693d-27           ! Planck's constant [ergs*s]
+  mp = 1.67262171d-24          ! mass of a proton [g]
+  zr = 1.d0/(a*aunits) - 1.d0  ! cosmological redshift
+  dom = rhounits*a*a*a/mp      ! number density units
+
+  ! compute shortcuts
+  dxi2 = 0.5d0/dx
+  dyi2 = 0.5d0/dy
+  dzi2 = 0.5d0/dz
+  HIconst   = c*(IsEsHI - IsEsHInu)
+  HeIconst  = c*(IsEsHeI - IsEsHeInu)
+  HeIIconst = c*(IsEsHeII - IsEsHeIInu)
+  if (a .ne. 1.d0) then        ! Compton cooling coefficients
+     Comp1 = CompA*(1.d0 + zr)**4
+     Comp2 = 2.73d0*(1.d0 + zr)
+  else
+     Comp1 = 0.d0
+     Comp2 = 0.d0
+  endif
+  logTlo = log(Tlo)            ! log-Temperature values used 
+  logThi = log(Thi)            ! in linear interpolation
+  dlogT  = (logThi-logTlo)/real(NTbins-1)
+
+!!$  write(*,*) '  '
+!!$  write(*,*) 'Entering gFLDProblem::LocEcRHS routine'
+!!$  write(*,*) 'LocEcRHS Typical input values:'
+!!$  write(*,*) '    vx =',vx(1,1,1),vx(2,4,5),vx(12,3,2)
+!!$  write(*,*) '    vy =',vy(1,1,1),vy(2,4,5),vy(12,3,2)
+!!$  write(*,*) '    vz =',vz(1,1,1),vz(2,4,5),vz(12,3,2)
+!!$  write(*,*) '   rho =',rhoa(1,1,1),rhoa(2,4,5),rhoa(12,3,2)
+!!$  write(*,*) '    ec =',eca(1,1,1),eca(2,4,5),eca(12,3,2)
+!!$  write(*,*) '    Eg =',Ega(1,1,1),Ega(2,4,5),Ega(12,3,2)
+!!$  write(*,*) '   nHI =',n_HIa(1,1,1),n_HIa(2,4,5),n_HIa(12,3,2)
+!!$  write(*,*) '    ne =',nea(1,1,1),nea(2,4,5),nea(12,3,2)
+!!$  write(*,*) '  Temp =',Tempa(1,1,1),Tempa(2,4,5),Tempa(12,3,2)
+!!$  write(*,*) ' gam_1 =',gam_1
+!!$  write(*,*) '     a =',a
+!!$  write(*,*) '    zr =',zr
+!!$  write(*,*) '   dom =',dom
+!!$  write(*,*) '   HIconst =',HIconst
+!!$  write(*,*) '  HeIconst =',HeIconst
+!!$  write(*,*) ' HeIIconst =',HeIIconst
+!!$  write(*,*) '  '
+
+
+  ! compute ec right-hand side depending on physical model
+  select case (Model)
+
+  !    test case with no chemical coupling
+  case (0)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcut values for this spatial location, 
+              ! converting densities from comoving to proper
+              rho = rhoa(i,j,k)/a/a/a
+              ec = eca(i,j,k)
+              Eg = Ega(i,j,k)
+              nHI = n_HIa(i,j,k)/a/a/a   ! fake number density
+              nHII = rho - nHI           ! fake number density
+
+              ! compute velocity divergence
+              DivV = dxi2*(vx(i+1,j,k)-vx(i-1,j,k))  &
+                   + dyi2*(vy(i,j+1,k)-vy(i,j-1,k))  &
+                   + dzi2*(vz(i,j,k+1)-vz(i,j,k-1))
+              
+              ! compute (grad density).dot.(velocity)/density
+              GradRhoDotV = (dxi2*(rhoa(i+1,j,k)-rhoa(i-1,j,k))*vx(i,j,k)  &
+                           + dyi2*(rhoa(i,j+1,k)-rhoa(i,j-1,k))*vy(i,j,k)  &
+                           + dzi2*(rhoa(i,j,k+1)-rhoa(i,j,k-1))*vz(i,j,k)) &
+                           / rhoa(i,j,k)
+              
+              ! put it all together
+              ! NOTE: this is for testing the solvers only.  
+              !       It has absolutely no physical realism!!!
+              ecrhs(i,j,k) = ec/a*(2.d0*adot + gam_1*GradRhoDotV - DivV) &
+                   - Eg/rho + 1.d0
+
+           enddo
+        enddo
+     enddo
+
+
+  !    fully decoupled test case
+  case (10)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              ecrhs(i,j,k) = 0.d0
+           enddo
+        enddo
+     enddo
+
+
+  ! standard cosmological problem
+  case default
+     
+     ! compute ec right-hand side for Hydrogen-only case
+     if (Nchem == 1) then
+
+        ! iterate over the domain
+        do k=1,Nz,1
+           do j=1,Ny,1
+              do i=1,Nx,1
+                 
+                 ! set shortcut values for this spatial location, 
+                 ! converting densities from comoving to proper
+                 rho = rhoa(i,j,k)/a/a/a
+                 ec = eca(i,j,k)
+                 Eg = Ega(i,j,k)
+                 ne = nea(i,j,k)
+                 nHI = n_HIa(i,j,k)/a/a/a/mp   ! actual number density
+                 nHII = rho/mp - nHI           ! actual number density
+                 Temp = Tempa(i,j,k)              
+                 logTemp = log(Temp)
+                 logTemp = max(logTemp,logTlo)
+                 logTemp = min(logTemp,logThi)
+                 
+                 ! compute temperature index in the cooling tables and 
+                 ! precompute components of linear interpolation
+                 ib = min(NTbins-1,max(1,int((logTemp-logTlo)/dlogT)+1))
+                 ibp = ib+1;
+                 Trat = (logTemp - logTlo + (ib-1.d0)*dlogT)/dlogT
+                 
+                 ! Lookup cooling values and linearly interpolate in log(T)
+                 ceHI  = ceHIa(ib)  + Trat*(ceHIa(ibp) -ceHIa(ib) )
+                 ciHI  = ciHIa(ib)  + Trat*(ciHIa(ibp) -ciHIa(ib) )
+                 reHII = reHIIa(ib) + Trat*(reHIIa(ibp)-reHIIa(ib))
+                 brem  = brema(ib)  + Trat*(brema(ibp) -brema(ib) )
+                 
+                 ! compute fluid cooling rate.  Terms (in order):
+                 !    Collisional Excitations
+                 !    Collisional Ionizations
+                 !    Recombinations
+                 !    Compton cooling or heating
+                 !    X-ray Compton heating
+                 !    Bremsstrahlung
+                 Lambda = -ne/rho*(                    &
+                        ceHI*nHI                       &
+                      + ciHI*nHI                       &
+                      + reHII*nHII                     &
+                      + Comp1*(Temp-Comp2)/dom         &
+                      + Comp_xray*(Temp-Comp_temp)/dom &
+                      + brem*nHII                      &
+                      )
+                 
+                 ! compute fluid heating rate
+                 G = nHI/rho*Eg*HIconst
+!!$              G = nHI/rho*Eg*HIconst/dom
+                 
+                 ! compute velocity divergence
+                 DivV = dxi2*(vx(i+1,j,k)-vx(i-1,j,k))  &
+                      + dyi2*(vy(i,j+1,k)-vy(i,j-1,k))  &
+                      + dzi2*(vz(i,j,k+1)-vz(i,j,k-1))
+                 
+                 ! compute (grad density).dot.(velocity)/density
+                 GradRhoDotV = (dxi2*(rhoa(i+1,j,k)-rhoa(i-1,j,k))*vx(i,j,k)  &
+                      + dyi2*(rhoa(i,j+1,k)-rhoa(i,j-1,k))*vy(i,j,k)  &
+                      + dzi2*(rhoa(i,j,k+1)-rhoa(i,j,k-1))*vz(i,j,k)) &
+                      / rhoa(i,j,k)
+                 
+                 ! put it all together
+                 ecrhs(i,j,k) = ec/a*(2.d0*adot + gam_1*GradRhoDotV - DivV) &
+                      - G + Lambda
+                 
+              enddo
+           enddo
+        enddo
+        
+     ! compute ec right-hand side for Hydrogen & Helium case
+     else if (Nchem == 3) then
+
+        ! iterate over the domain
+        do k=1,Nz,1
+           do j=1,Ny,1
+              do i=1,Nx,1
+                 
+                 ! set shortcut values for this spatial location, 
+                 ! converting densities from comoving to proper
+                 rho = rhoa(i,j,k)/a/a/a
+                 ec = eca(i,j,k)
+                 Eg = Ega(i,j,k)
+                 nHI = n_HIa(i,j,k)/a/a/a/mp
+                 nHII = rho*0.75d0/mp - nHI
+                 nHeI = n_HeIa(i,j,k)/a/a/a/4.d0/mp
+                 nHeII = n_HeIIa(i,j,k)/a/a/a/4.d0/mp
+                 nHeIII = rho/16.d0/mp - nHeI - nHeII
+                 Temp = Tempa(i,j,k)
+                 logTemp = log(Temp)
+                 logTemp = max(logTemp,logTlo)
+                 logTemp = min(logTemp,logThi)
+                 
+                 ! compute temperature index in the cooling tables and 
+                 ! precompute components of linear interpolation
+                 ib = min(NTbins-1,max(1,int((logTemp-logTlo)/dlogT)+1))
+                 ibp = ib+1;
+                 Trat = (logTemp - logTlo + (ib-1.d0)*dlogT)/dlogT
+                 
+                 ! Lookup cooling values and linearly interpolate in log(T)
+                 ceHI    = ceHIa(ib)    + Trat*(ceHIa(ibp)   -ceHIa(ib)   )
+                 ceHeI   = ceHeIa(ib)   + Trat*(ceHeIa(ibp)  -ceHeIa(ib)  )
+                 ceHeII  = ceHeIIa(ib)  + Trat*(ceHeIIa(ibp) -ceHeIIa(ib) )
+                 ciHI    = ciHIa(ib)    + Trat*(ciHIa(ibp)   -ciHIa(ib)   )
+                 ciHeI   = ciHeIa(ib)   + Trat*(ciHeIa(ibp)  -ciHeIa(ib)  )
+                 ciHeIS  = ciHeISa(ib)  + Trat*(ciHeISa(ibp) -ciHeISa(ib) )
+                 ciHeII  = ciHeIIa(ib)  + Trat*(ciHeIIa(ibp) -ciHeIIa(ib) )
+                 reHII   = reHIIa(ib)   + Trat*(reHIIa(ibp)  -reHIIa(ib)  )
+                 reHeII1 = reHeII1a(ib) + Trat*(reHeII1a(ibp)-reHeII1a(ib))
+                 reHeII2 = reHeII2a(ib) + Trat*(reHeII2a(ibp)-reHeII2a(ib))
+                 reHeIII = reHeIIIa(ib) + Trat*(reHeIIIa(ibp)-reHeIIIa(ib))
+                 brem    = brema(ib)    + Trat*(brema(ibp)   -brema(ib)   )
+                 
+                 ! compute fluid cooling rate.  Terms (in order):
+                 !    Collisional Excitations (3)
+                 !    Collisional Ionizations (4)
+                 !    Recombinations (4)
+                 !    Compton cooling or heating (1)
+                 !    X-ray Compton heating (1)
+                 !    Bremsstrahlung (1)
+                 Lambda = -ne/rho*(                    &
+                        ceHI*nHI                       &
+                      + ceHeI*nHeII*ne*dom/4.d0        &
+                      + ceHeII*nHeII/4.d0              &
+                      + ciHI*nHI                       &
+                      + ciHeI*nHeI/4.d0                &
+                      + ciHeII*nHeII/4.d0              &
+                      + ciHeIS*nHeII*ne*dom/4.d0       &
+                      + reHII*nHII                     &
+                      + reHeII1*nHeII/4.d0             &
+                      + reHeII2*nHeII/4.d0             &
+                      + reHeIII*nHeIII/4.d0            &
+                      + Comp1*(Temp-Comp2)/dom         &
+                      + Comp_xray*(Temp-Comp_temp)/dom &
+                      + brem*(nHII+nHeII/4.d0+nHeIII)  &
+                      )
+                 
+                 ! compute fluid heating rate
+!!$              G = Eg/rho/dom*(nHI*HIconst &
+!!$                   + nHeI*HeIconst*0.25d0 + nHeII*HeIIconst*0.25d0)
+                 G = Eg/rho*(nHI*HIconst + nHeI*HeIconst + nHeII*HeIIconst)
+                 
+                 ! compute velocity divergence
+                 DivV = dxi2*(vx(i+1,j,k)-vx(i-1,j,k))  &
+                      + dyi2*(vy(i,j+1,k)-vy(i,j-1,k))  &
+                      + dzi2*(vz(i,j,k+1)-vz(i,j,k-1))
+                 
+                 ! compute (grad density).dot.(velocity)/density
+                 GradRhoDotV = (dxi2*(rhoa(i+1,j,k)-rhoa(i-1,j,k))*vx(i,j,k) &
+                      + dyi2*(rhoa(i,j+1,k)-rhoa(i,j-1,k))*vy(i,j,k) &
+                      + dzi2*(rhoa(i,j,k+1)-rhoa(i,j,k-1))*vz(i,j,k)) &
+                      / rhoa(i,j,k)
+                 
+                 ! put it all together
+                 ecrhs(i,j,k) = ec/a*(2.d0*adot + gam_1*GradRhoDotV - DivV) &
+                      - G + Lambda
+                 
+              enddo
+           enddo
+        enddo
+        
+     else
+     
+        write(0,*) 'gFLDProblem_LocEcRHS Error: Nchem = ',Nchem, &
+             ', must be {1,3}'
+        ier = 0;
+
+     endif
+
+  end select
+
+
+  return
+end subroutine gFLDProblem_LocEcRHS
+!=======================================================================

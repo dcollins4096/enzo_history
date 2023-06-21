@@ -1,0 +1,137 @@
+      subroutine divb_rj(fx1, fy1, fz1, fx2, fy2, fz2,
+     +                bxb, byb, bzb, bxc, byc, bzc,
+     +                dx, dy, dz, dt, nx, ny, nz)
+
+c-----------------------------------------------------------------------
+c  enforce divb=0 based on the staggered mesh scheme
+c      written by Dongsu Ryu (April 1998)
+c  subroutine - bound1
+c               bound3
+c-----------------------------------------------------------------------
+      implicit none
+c
+c      include 'mpif.h'
+c      include 'common.inc'
+c
+c     external variables
+
+      integer nx, ny, nz
+
+      real fx1(-1:nx+2+1,-1:ny+2,-1:nz+2)
+      real fx2(-1:nx+2+1,-1:ny+2,-1:nz+2)
+      real bxb(-1:nx+2+1,-1:ny+2,-1:nz+2)
+      real fy1(-1:nx+2,-1:ny+2+1,-1:nz+2)
+      real fy2(-1:nx+2,-1:ny+2+1,-1:nz+2)
+      real byb(-1:nx+2,-1:ny+2+1,-1:nz+2)
+      real fz1(-1:nx+2,-1:ny+2,-1:nz+2+1)
+      real fz2(-1:nx+2,-1:ny+2,-1:nz+2+1)
+      real bzb(-1:nx+2,-1:ny+2,-1:nz+2+1)
+
+      real bxc(-1:nx+2,-1:ny+2,-1:nz+2),byc(-1:nx+2,-1:ny+2,-1:nz+2),
+     +     bzc(-1:nx+2,-1:ny+2,-1:nz+2)
+
+      real dx, dy, dz, dt
+
+
+c     internal variables
+      integer i, j, k
+      real ox1, ox2, oy1, oy2, oz1, oz2, wtemp1, wtemp2, wtemp3
+c-----------------------------------------------------------------------
+c  magnetic field update
+c-----------------------------------------------------------------------
+      wtemp1 = dt/dx
+      wtemp2 = dt/dy
+      wtemp3 = dt/dz
+c
+      do 101 k=1,nz
+      do 101 j=1,ny
+      do 101 i=0,nx
+c
+         oz1 = (fx1(i,j+1,k)+fx1(i,j,k)
+     +         -fy2(i+1,j,k)-fy2(i,j,k))*0.5d0
+         oz2 = (fx1(i,j,k)+fx1(i,j-1,k)
+     +         -fy2(i+1,j-1,k)-fy2(i,j-1,k))*0.5d0
+         oy1 = (fz1(i+1,j,k)+fz1(i,j,k)
+     +         -fx2(i,j,k+1)-fx2(i,j,k))*0.5d0
+         oy2 = (fz1(i+1,j,k-1)+fz1(i,j,k-1)
+     +         -fx2(i,j,k)-fx2(i,j,k-1))*0.5d0
+c
+         bxb(i,j,k) = bxb(i,j,k)+wtemp2*(oz1-oz2)
+     +                                -wtemp3*(oy1-oy2)
+c
+ 101  continue
+c
+      do 102 k=1,nz
+      do 102 j=0,ny
+      do 102 i=1,nx
+c
+         ox1 = (fy1(i,j,k+1)+fy1(i,j,k)
+     +         -fz2(i,j+1,k)-fz2(i,j,k))*0.5d0
+         ox2 = (fy1(i,j,k)+fy1(i,j,k-1)
+     +         -fz2(i,j+1,k-1)-fz2(i,j,k-1))*0.5d0
+         oz1 = (fx1(i,j+1,k)+fx1(i,j,k)
+     +         -fy2(i+1,j,k)-fy2(i,j,k))*0.5d0
+         oz2 = (fx1(i-1,j+1,k)+fx1(i-1,j,k)
+     +         -fy2(i,j,k)-fy2(i-1,j,k))*0.5d0
+c
+         byb(i,j,k) = byb(i,j,k)+wtemp3*(ox1-ox2)
+     +                                -wtemp1*(oz1-oz2)
+c
+ 102  continue
+c
+      do 103 k=0,nz
+      do 103 j=1,ny
+      do 103 i=1,nx
+c
+         oy1 = (fz1(i+1,j,k)+fz1(i,j,k)
+     +         -fx2(i,j,k+1)-fx2(i,j,k))*0.5d0
+         oy2 = (fz1(i,j,k)+fz1(i-1,j,k)
+     +         -fx2(i-1,j,k+1)-fx2(i-1,j,k))*0.5d0
+         ox1 = (fy1(i,j,k+1)+fy1(i,j,k)
+     +         -fz2(i,j+1,k)-fz2(i,j,k))*0.5d0
+         ox2 = (fy1(i,j-1,k+1)+fy1(i,j-1,k)
+     +         -fz2(i,j,k)-fz2(i,j-1,k))*0.5d0
+c
+         bzb(i,j,k) = bzb(i,j,k)+wtemp1*(oy1-oy2)
+     +                                -wtemp2*(ox1-ox2)
+c
+ 103  continue
+c
+c      do 111 k=1,nzp
+c      do 111 j=1,ny
+c      do 111 i=1,nx
+cc
+c         q8(i,j,k) = q8(i,j,k)
+c     +        -(q5(i,j,k)**2+q6(i,j,k)**2+q7(i,j,k)**2)*0.5d0
+cc
+c 111  continue
+c
+
+      do 112 k=1,nz
+      do 112 j=1,ny
+      do 112 i=1,nx
+c
+         bxc(i,j,k) = (bxb(i-1,j,k)+bxb(i,j,k))*0.5d0
+         byc(i,j,k) = (byb(i,j-1,k)+byb(i,j,k))*0.5d0
+         bzc(i,j,k) = (bzb(i,j,k-1)+bzb(i,j,k))*0.5d0
+c
+ 112  continue
+c
+c      do 113 k=1,nzp
+c      do 113 j=1,ny
+c      do 113 i=1,nx
+cc
+c         q8(i,j,k) = q8(i,j,k)
+c     +        +(q5(i,j,k)**2+q6(i,j,k)**2+q7(i,j,k)**2)*0.5d0
+c
+c 113  continue
+c
+c      call MPI_BARRIER (MPI_COMM_WORLD,err)
+c
+c      call bound1
+c      call bound3
+c-----------------------------------------------------------------------
+c  end
+c-----------------------------------------------------------------------
+      return
+      end

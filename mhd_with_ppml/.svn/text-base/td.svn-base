@@ -1,0 +1,40 @@
+#!/bin/tcsh
+#
+# Subversion Diff for Branches.
+# The trunk is always first.  
+# --brief flag to just list files that have changed.
+# --local flag to compare the versions on the working copies.
+
+set brief = 'no'
+set file = ''
+set dir1_r = "svn://mngrid.ucsd.edu/Enzo/trunk/devel/Enzo/amr_mpi/src"
+set dir2_r = "svn://mngrid.ucsd.edu/Enzo/branches/MHD/Enzo/amr_mpi/src"
+set dir1_l = "./trunk"
+set dir2_l = "../branches/dev"
+set dir1 = $dir1_r
+set dir2 = $dir2_r
+#parse command line.
+foreach arg ($argv)
+ echo $arg
+ switch ( $arg )
+    
+ case "--brief":
+    set brief = 'yes'
+    breaksw
+ case "--local":
+    set dir1 = $dir1_l
+    set dir2 = $dir2_l
+    breaksw
+ default:
+    set file  = $arg
+    breaksw
+  endsw
+end
+
+if ( $brief == 'yes' ) then 
+    svn diff ${dir1}/$file ${dir2}/$file |& grep "^Index"
+else
+    svn diff ${dir1}/$file ${dir2}/$file 
+endif
+#
+

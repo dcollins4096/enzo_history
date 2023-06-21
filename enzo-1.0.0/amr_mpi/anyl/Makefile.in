@@ -1,0 +1,567 @@
+#======================================================================
+#
+# ENZO ANYL Makefile: amr_mpi/anyl/Makefile.in
+#
+#======================================================================
+#
+#  WARNING!!!  THIS DIRECTORY REFERENCES FILES IN ../src !!!
+#
+#======================================================================
+#
+# Autoconf variable values:
+#
+#    top_srcdir    = @top_srcdir@
+#
+#---------------------------------------------------------------------
+#
+# Targets:
+#
+#    all:          (default) make all executables
+#    install:      install enzo executable
+#    clean:        clean object files
+#    distclean:    clean object files, executable, and configuration
+#
+# Also, all configuration targets available in config/MAKE.CONFIG
+#
+#---------------------------------------------------------------------
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-20  jb  created
+#
+#======================================================================
+
+TOP_DIR = @top_srcdir@
+
+FLAGS_MAIN = -I$(TOP_DIR)/amr_mpi/src -I.
+DEFINES_MAIN = -DANALYSIS_TOOLS
+ENZO_OBJ =  \
+            CommunicationBroadcastValue.o \
+            CommunicationBufferedSend.o \
+            CommunicationCombineGrids.o \
+            CommunicationInitialize.o \
+            CommunicationLoadBalanceGrids.o \
+            CommunicationShareGrids.o \
+            CommunicationTransferParticles.o \
+            CommunicationUtilities.o \
+            CopyOverlappingParticleMassFields.o \
+            CopyOverlappingZones.o \
+            CosmologyComputeExpansionFactor.o \
+            CosmologyComputeExpansionTimestep.o \
+            CosmologyComputeTimeFromRedshift.o \
+            CosmologyGetUnits.o \
+            CosmologyReadParameters.o \
+            CosmologyWriteParameters.o \
+            DeleteFluxes.o \
+            DepositParticleMassField.o \
+            ExternalBoundary_IdentifyPhysicalQuantities.o \
+            ExternalBoundary_ReadExternalBoundaryHDF5.o \
+            ExternalBoundary_SetDoubleMachBoundary.o \
+            ExternalBoundary_SetExternalBoundary.o \
+            ExternalBoundary_SetExternalBoundaryParticles.o \
+            ExternalBoundary_SetShockPoolBoundary.o \
+            ExternalBoundary_SetWavePoolBoundary.o \
+            ExternalBoundary_WriteExternalBoundaryHDF5.o \
+            ExternalBoundary_constructor.o \
+            FindField.o \
+            FindSubgrids.o \
+            Grid_AddFieldMassToMassFlaggingField.o \
+            Grid_AddOverlappingParticleMassField.o \
+            Grid_CheckForOverlap.o \
+            Grid_CleanUp.o \
+            Grid_CleanUpMovedParticles.o \
+            Grid_ClearFlaggingField.o \
+            Grid_ClearGravitatingMassField.o \
+            Grid_ClearGravitatingMassFieldParticles.o \
+            Grid_ClearMassFlaggingField.o \
+            Grid_CollectGridInformation.o \
+            Grid_CommunicationMoveGrid.o \
+            Grid_CommunicationReceiveRegion.o \
+            Grid_CommunicationSendParticles.o \
+            Grid_CommunicationSendRegion.o \
+            Grid_CommunicationTransferParticles.o \
+            Grid_ComputeCoolingTime.o \
+            Grid_ComputePressure.o \
+            Grid_ComputePressureDualEnergyFormalism.o \
+            Grid_ComputeTemperatureField.o \
+            Grid_ComputeTimeStep.o \
+            Grid_ComputeXrayEmissivity.o \
+            Grid_CopyBaryonFieldToOldBaryonField.o \
+            Grid_CopyPotentialField.o \
+            Grid_CopyZonesFromGrid.o \
+            Grid_CopyZonesFromGridCountOnly.o \
+            Grid_DebugCheck.o \
+            Grid_DeleteAllFields.o \
+            Grid_DeleteFlaggingField.o \
+            Grid_DepositParticlePositions.o \
+            Grid_DepositPositions.o \
+            Grid_FlagBufferZones.o \
+            Grid_FlagCellsToBeRefinedByCoolingTime.o \
+            Grid_FlagCellsToBeRefinedByJeansLength.o \
+            Grid_FlagCellsToBeRefinedByMass.o \
+            Grid_FlagCellsToBeRefinedByShocks.o \
+            Grid_FlagCellsToBeRefinedBySlope.o \
+            Grid_IdentifyPhysicalQuantities.o \
+            Grid_IdentifySpeciesFields.o \
+            Grid_InheritProperties.o \
+            Grid_InitializeGravitatingMassField.o \
+            Grid_InitializeGravitatingMassFieldParticles.o \
+            Grid_InitializeUniformGrid.o \
+            Grid_InterpolateBoundaryFromParent.o \
+            Grid_InterpolateFieldValues.o \
+            Grid_MoveAllParticles.o \
+            Grid_MoveSubgridParticlesFast.o \
+            Grid_OutputAsParticleData.o \
+            Grid_PrepareGrid.o \
+            Grid_PrepareGridDerivedQuantities.o \
+            Grid_ReadGridHDF4.o \
+            Grid_ReadGridHDF5.o \
+            Grid_RestoreEnergyConsistency.o \
+            Grid_ReturnGridInfo.o \
+            Grid_SetExternalBoundaryValues.o \
+            Grid_SetFlaggingField.o \
+            Grid_SetFlaggingFieldStaticRegions.o \
+            Grid_SolveRadiativeCooling.o \
+            Grid_SortParticlesByNumber.o \
+            Grid_UpdateParticlePosition.o \
+            Grid_WriteGridHDF5.o \
+            Grid_WriteGridInterpolate.o \
+            Grid_ZeroSolutionUnderSubgrid.o \
+            Grid_constructor.o \
+            Grid_destructor.o \
+            IdentifyNewSubgridsBySignature.o \
+            InitializeEquilibriumCoolData.o \
+            InitializeRadiationFieldData.o \
+            InitializeRateData.o \
+            LevelHierarchy_AddLevel.o \
+            ListIO.o \
+            ProtoSubgrid_AcceptableGrid.o \
+            ProtoSubgrid_CleanUp.o \
+            ProtoSubgrid_ComputeSecondDerivative.o \
+            ProtoSubgrid_ComputeSignature.o \
+            ProtoSubgrid_CopyFlaggedZonesFromGrid.o \
+            ProtoSubgrid_CopyToNewSubgrid.o \
+            ProtoSubgrid_FindGridsByZeroSignature.o \
+            ProtoSubgrid_ReturnNthLongestDimension.o \
+            ProtoSubgrid_ShrinkToMinimumSize.o \
+            ProtoSubgrid_constructor.o \
+            QuickSortAndDrag.o \
+            RadiationFieldCalculateRates.o \
+            ReadAllData.o \
+            ReadDataHierarchy.o \
+            ReadParameterFile.o \
+            ReadRadiationData.o \
+            ReadStarParticleData.o \
+            RebuildHierarchy.o \
+            ReduceFragmentation.o \
+            ReportMemoryUsage.o \
+            ReturnCPUTime.o \
+            SetDefaultGlobalValues.o \
+            ShockPoolInitialize.o \
+            WavePoolInitialize.o \
+            WriteAllData.o \
+            WriteDataHierarchy.o \
+            WriteParameterFile.o \
+            WriteRadiationData.o \
+            WriteStarParticleData.o \
+            WriteStringAttrHDF5.o \
+            c_message.o \
+            calc_dt.o \
+            calc_photo_rates.o \
+            calc_rates.o \
+            chtable.o \
+            cic_deposit.o \
+            cicinterp.o \
+            colh2diss.o \
+            cool1d.o \
+            cool1d_multi.o \
+            cool_multi_time.o \
+            cool_time.o \
+            f_message.o \
+            int_lin3d.o \
+            interp1d.o \
+            interp2d.o \
+            interp3d.o \
+            interpolate.o \
+            mcooling.o \
+            mpi_error_file.o \
+            multi_cool.o \
+            ngpinterp.o \
+            project.o \
+            smooth_deposit.o \
+            solve_cool.o \
+            tscint1d.o \
+            tscint2d.o \
+            tscint3d.o \
+            utilities.o \
+            $(OBJS_PERF)
+
+ENZO_SRC_FC = \
+            calc_dt.src \
+            calc_photo_rates.src \
+            calc_rates.src \
+            chtable.src \
+            cic_deposit.src \
+            cicinterp.src \
+            colh2diss.src \
+            cool1d.src \
+            cool1d_multi.src \
+            cool_multi_time.src \
+            cool_time.src \
+            f_message.src \
+            int_lin3d.src \
+            interp1d.src \
+            interp2d.src \
+            interp3d.src \
+            interpolate.src \
+            mcooling.src \
+            mpi_error_file.src \
+            multi_cool.src \
+            ngpinterp.src \
+            project.src \
+            smooth_deposit.src \
+            solve_cool.src \
+            tscint1d.src \
+            tscint2d.src \
+            tscint3d.src \
+            utilities.src \
+            fortran.def \
+            performance.def \
+            error.def
+
+ENZO_SRC_CC = \
+            CommunicationBroadcastValue.C \
+            CommunicationBufferedSend.C \
+            CommunicationCombineGrids.C \
+            CommunicationInitialize.C \
+            CommunicationLoadBalanceGrids.C \
+            CommunicationShareGrids.C \
+            CommunicationTransferParticles.C \
+            CommunicationUtilities.C \
+            CopyOverlappingParticleMassFields.C \
+            CopyOverlappingZones.C \
+            CosmologyComputeExpansionFactor.C \
+            CosmologyComputeExpansionTimestep.C \
+            CosmologyComputeTimeFromRedshift.C \
+            CosmologyGetUnits.C \
+            CosmologyReadParameters.C \
+            CosmologyWriteParameters.C \
+            DeleteFluxes.C \
+            DepositParticleMassField.C \
+            ExternalBoundary_IdentifyPhysicalQuantities.C \
+            ExternalBoundary_ReadExternalBoundaryHDF5.C \
+            ExternalBoundary_SetDoubleMachBoundary.C \
+            ExternalBoundary_SetExternalBoundary.C \
+            ExternalBoundary_SetExternalBoundaryParticles.C \
+            ExternalBoundary_SetShockPoolBoundary.C \
+            ExternalBoundary_SetWavePoolBoundary.C \
+            ExternalBoundary_WriteExternalBoundaryHDF5.C \
+            ExternalBoundary_constructor.C \
+            FindField.C \
+            FindSubgrids.C \
+            Grid_AddFieldMassToMassFlaggingField.C \
+            Grid_AddOverlappingParticleMassField.C \
+            Grid_CheckForOverlap.C \
+            Grid_CleanUp.C \
+            Grid_CleanUpMovedParticles.C \
+            Grid_ClearFlaggingField.C \
+            Grid_ClearGravitatingMassField.C \
+            Grid_ClearGravitatingMassFieldParticles.C \
+            Grid_ClearMassFlaggingField.C \
+            Grid_CollectGridInformation.C \
+            Grid_CommunicationMoveGrid.C \
+            Grid_CommunicationReceiveRegion.C \
+            Grid_CommunicationSendParticles.C \
+            Grid_CommunicationSendRegion.C \
+            Grid_CommunicationTransferParticles.C \
+            Grid_ComputeCoolingTime.C \
+            Grid_ComputePressure.C \
+            Grid_ComputePressureDualEnergyFormalism.C \
+            Grid_ComputeTemperatureField.C \
+            Grid_ComputeTimeStep.C \
+            Grid_ComputeXrayEmissivity.C \
+            Grid_CopyBaryonFieldToOldBaryonField.C \
+            Grid_CopyPotentialField.C \
+            Grid_CopyZonesFromGrid.C \
+            Grid_CopyZonesFromGridCountOnly.C \
+            Grid_DebugCheck.C \
+            Grid_DeleteAllFields.C \
+            Grid_DeleteFlaggingField.C \
+            Grid_DepositParticlePositions.C \
+            Grid_DepositPositions.C \
+            Grid_FlagBufferZones.C \
+            Grid_FlagCellsToBeRefinedByCoolingTime.C \
+            Grid_FlagCellsToBeRefinedByJeansLength.C \
+            Grid_FlagCellsToBeRefinedByMass.C \
+            Grid_FlagCellsToBeRefinedByShocks.C \
+            Grid_FlagCellsToBeRefinedBySlope.C \
+            Grid_IdentifyPhysicalQuantities.C \
+            Grid_IdentifySpeciesFields.C \
+            Grid_InheritProperties.C \
+            Grid_InitializeGravitatingMassField.C \
+            Grid_InitializeGravitatingMassFieldParticles.C \
+            Grid_InitializeUniformGrid.C \
+            Grid_InterpolateBoundaryFromParent.C \
+            Grid_InterpolateFieldValues.C \
+            Grid_MoveAllParticles.C \
+            Grid_MoveSubgridParticlesFast.C \
+            Grid_OutputAsParticleData.C \
+            Grid_PrepareGrid.C \
+            Grid_PrepareGridDerivedQuantities.C \
+            Grid_ReadGridHDF4.C \
+            Grid_ReadGridHDF5.C \
+            Grid_RestoreEnergyConsistency.C \
+            Grid_ReturnGridInfo.C \
+            Grid_SetExternalBoundaryValues.C \
+            Grid_SetFlaggingField.C \
+            Grid_SetFlaggingFieldStaticRegions.C \
+            Grid_SolveRadiativeCooling.C \
+            Grid_SortParticlesByNumber.C \
+            Grid_UpdateParticlePosition.C \
+            Grid_WriteGridHDF5.C \
+            Grid_WriteGridInterpolate.C \
+            Grid_ZeroSolutionUnderSubgrid.C \
+            Grid_constructor.C \
+            Grid_destructor.C \
+            IdentifyNewSubgridsBySignature.C \
+            InitializeEquilibriumCoolData.C \
+            InitializeRadiationFieldData.C \
+            InitializeRateData.C \
+            LevelHierarchy_AddLevel.C \
+            ListIO.C \
+            ProtoSubgrid_AcceptableGrid.C \
+            ProtoSubgrid_CleanUp.C \
+            ProtoSubgrid_ComputeSecondDerivative.C \
+            ProtoSubgrid_ComputeSignature.C \
+            ProtoSubgrid_CopyFlaggedZonesFromGrid.C \
+            ProtoSubgrid_CopyToNewSubgrid.C \
+            ProtoSubgrid_FindGridsByZeroSignature.C \
+            ProtoSubgrid_ReturnNthLongestDimension.C \
+            ProtoSubgrid_ShrinkToMinimumSize.C \
+            ProtoSubgrid_constructor.C \
+            QuickSortAndDrag.C \
+            RadiationFieldCalculateRates.C \
+            ReadAllData.C \
+            ReadDataHierarchy.C \
+            ReadParameterFile.C \
+            ReadRadiationData.C \
+            ReadStarParticleData.C \
+            RebuildHierarchy.C \
+            ReduceFragmentation.C \
+            ReportMemoryUsage.C \
+            ReturnCPUTime.C \
+            SetDefaultGlobalValues.C \
+            ShockPoolInitialize.C \
+            WavePoolInitialize.C \
+            WriteAllData.C \
+            WriteDataHierarchy.C \
+            WriteParameterFile.C \
+            WriteRadiationData.C \
+            WriteStarParticleData.C \
+            WriteStringAttrHDF5.C \
+            c_message.C
+
+ENZO_SRC = $(ENZO_SRC_CC) $(ENZO_SRC_FC)
+
+EXES = dumpgrids enzo_anyl enzostats findinit findpeaks enzohop 
+
+.PHONY: all
+all: $(patsubst %,%.exe,$(EXES))
+
+OBJS_HDF5 = \
+            HDF5_FindClusterInitialExtent.o \
+            HDF5_FindHighResolutionRegions.o
+
+OBJS_HDF4 = \
+            HDF4_FindClusterInitialExtent.o \
+            HDF4_FindHighResolutionRegions.o
+
+#======================================================================
+
+OBJS_MAIN_ENZO_ANYL = \
+            AnalyzeClusterComputeClumpingFactor.o \
+            AnalyzeClusterReadParameterFile.o \
+            Grid_AddToDiskProfile.o \
+            Grid_AddToRadialProfile.o \
+            Grid_CollectParticleInfo.o \
+            Grid_FindMaximumBaryonDensity.o \
+            Grid_FindMeanVelocity.o \
+            enzo_anyl.o
+
+OBJS_MAIN_FINDINIT = \
+            Grid_FindMatchingParticles.o \
+            Grid_FindParticlesWithinSphere.o                
+
+OBJS_MAIN_FINDPEAKS = \
+            FindDensityPeaks.o \
+            Grid_FindDensityPeaks.o
+
+OBJS_MAIN_ENZOHOP = \
+            HopAnalysis.o \
+            hop_hop.o \
+            hop_kd.o \
+            hop_regroup.o \
+            hop_slice.o \
+            hop_smooth.o
+
+OBJS_MAIN_DUMPGRIDS = \
+            DumpGridData.o \
+            Grid_DumpGridData.o
+
+OBJS_MAIN_ENZOSTATS = \
+            EnzoGlobalStatistics.o \
+            Grid_ComputeGlobalStatistics.o
+
+#======================================================================
+# Include configuration targets
+#======================================================================
+
+include $(TOP_DIR)/config/MAKE.CONFIG
+
+# OVERRIDE: turn off performance stuff!
+
+include $(TOP_DIR)/config/Make.perf.off
+
+# OVERRIDE: turn off MPI!
+
+include $(TOP_DIR)/config/Make.mpi.off
+
+#======================================================================
+# MAIN TARGET
+#======================================================================
+
+OBJS_IO = 
+OBJS_IO_FINDINIT = HDF5_FindClusterInitialExtent.o
+
+OBJS_DUMPGRIDS = $(OBJS_MAIN_DUMPGRIDS) $(OBJS_PERF) $(OBJS_IO) $(ENZO_OBJ) 
+OBJS_ENZO_ANYL = $(OBJS_MAIN_ENZO_ANYL) $(OBJS_PERF) $(OBJS_IO) $(ENZO_OBJ) 
+OBJS_ENZOHOP   = $(OBJS_MAIN_ENZOHOP)   $(OBJS_PERF) $(OBJS_IO) $(ENZO_OBJ) 
+OBJS_ENZOSTATS = $(OBJS_MAIN_ENZOSTATS) $(OBJS_PERF) $(OBJS_IO) $(ENZO_OBJ) 
+OBJS_FINDINIT  = $(OBJS_MAIN_FINDINIT)  $(OBJS_PERF) $(OBJS_IO) $(ENZO_OBJ) $(OBJS_IO_FINDINIT)
+OBJS_FINDPEAKS = $(OBJS_MAIN_FINDPEAKS) $(OBJS_PERF) $(OBJS_IO) $(ENZO_OBJ) 
+
+# (grep removes 'gmake[2]: Leaving directory `...' messages):
+
+dumpgrids.exe: $(ENZO_SRC) $(OBJS_DUMPGRIDS) 
+	-$(LD) $(LDFLAGS) -o $@ $(OBJS_DUMPGRIDS) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > dumpgrids.config
+	($(MAKE) show-flags) | grep -v directory > dumpgrids.flags
+enzo_anyl.exe: $(ENZO_SRC) $(OBJS_ENZO_ANYL)
+	-$(LD) $(LDFLAGS) -o $@ $(OBJS_ENZO_ANYL) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > enzo_anyl.config
+	($(MAKE) show-flags) | grep -v directory > enzo_anyl.flags
+enzostats.exe: $(ENZO_SRC) $(OBJS_ENZOSTATS) 
+	-$(LD) $(LDFLAGS) -o $@ $(OBJS_ENZOSTATS) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > enzostats.config
+	($(MAKE) show-flags) | grep -v directory > enzostats.flags
+findinit.exe: $(ENZO_SRC) $(OBJS_FINDINIT) 
+	-$(LD) $(LDFLAGS) -o $@ $(OBJS_FINDINIT) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > findinit.config
+	($(MAKE) show-flags) | grep -v directory > findinit.flags
+findpeaks.exe: $(ENZO_SRC) $(OBJS_FINDPEAKS) 
+	-$(LD) $(LDFLAGS) -o $@ $(OBJS_FINDPEAKS) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > findpeaks.config
+	($(MAKE) show-flags) | grep -v directory > findpeaks.flags
+enzohop.exe:  $(ENZO_SRC) $(OBJS_ENZOHOP) 
+	-$(LD) $(LDFLAGS) -o $@ $(OBJS_ENZOHOP) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > enzohop.config
+	($(MAKE) show-flags) | grep -v directory > enzohop.flags
+
+#======================================================================
+# Link code from src to here if needed (ugh!)
+#======================================================================
+
+%.C:
+	ln -s $(TOP_DIR)/amr_mpi/src/$*.C .
+%.def:
+	ln -s $(TOP_DIR)/amr_mpi/src/$*.def .
+%.src:
+	ln -s $(TOP_DIR)/amr_mpi/src/$*.src .
+%.h:
+	ln -s $(TOP_DIR)/amr_mpi/src/$*.h .
+
+#======================================================================
+# Pattern rules
+#======================================================================
+
+.SUFFIXES: .c .C .src .f
+
+.c.o:
+	$(CC) -c $(DEFINES) $(CFLAGS) $*.c
+.C.o:
+	$(CXX) -c $(DEFINES) $(CXXFLAGS) $*.C
+.src.o:
+	$(CPP) $(DEFINES) $(CPPFLAGS) $*.src > $*.f
+	$(FC) -c $(FFLAGS) $*.f
+	rm -f $*.f
+
+#======================================================================
+# install, clean, and help targets
+#======================================================================
+
+.PHONY: install install-%
+install: $(patsubst %,install-%,$(EXES))
+
+install-%:
+	-@mv $*.exe    $(TOP_DIR)/bin/$*
+	-@mv $*.config $(TOP_DIR)/bin/$*.config
+	-@mv $*.flags  $(TOP_DIR)/bin/$*.flags
+
+#----------------------------------------------------------------------
+
+.PHONY: clean distclean
+clean:
+	-@rm -f *.o *.f *~ work.pc $(ENZO_SRC)
+distclean: clean
+	-@rm -f $(patsubst %,%.exe,   $(EXES))
+	-@rm -f $(patsubst %,%.config,$(EXES))
+	-@rm -f $(patsubst %,%.flags, $(EXES))
+
+#----------------------------------------------------------------------
+
+.PHONY: help
+help:
+	@echo ""
+	@echo "ENZO HELP: amr_mpi"
+	@echo ""
+	@echo "   make                Compile enzo"
+	@echo "   make install        Install enzo"
+	@echo "   make help           Show this help information"
+	@echo "   make clean          Clean *.o *.f *~ files"
+	@echo ""
+	@$(MAKE) -s help-config
+
+#======================================================================
+# Dependencies
+#======================================================================
+
+AnalyzeClusterComputeClumpingFactor.o: AnalyzeClusters.h
+AnalyzeClusterComputeClumpingFactor.o: Grid_AnalyzeClusters.h
+AnalyzeSBCluster.o: Grid_AnalyzeClusters.h
+DumpGridData.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+EnzoGlobalStatistics.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+FindDensityPeaks.o: Grid.h AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_AddToDiskProfile.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_AddToRadialProfile.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_CollectParticleInfo.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_ComputeGlobalStatistics.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_DumpGridData.o: Grid_AnalyzeClusters.h
+Grid_FindDensityPeaks.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_FindInertiaTensor.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_FindMatchingParticles.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_FindMaximumBaryonDensity.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_FindMeanVelocity.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_FindParticlesWithinSphere.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+Grid_ReturnParticleIndexList.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+HDF4_AnalyzeCluster.o: Grid_AnalyzeClusters.h
+HDF4_FindClusterInitialExtent.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+HDF4_FindHighResolutionRegions.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+HDF5_AnalyzeCluster.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+HDF5_FindClusterInitialExtent.o: Grid.h AnalyzeClusters.h
+HDF5_FindClusterInitialExtent.o: Grid_AnalyzeClusters.h
+HDF5_FindHighResolutionRegions.o: Grid.h AnalyzeClusters.h
+HDF5_FindHighResolutionRegions.o: Grid_AnalyzeClusters.h
+HopAnalysis.o: Grid.h AnalyzeClusters.h Grid_AnalyzeClusters.h kd.h
+Grid.o: AnalyzeClusters.h Grid_AnalyzeClusters.h
+smooth.o: kd.h
+

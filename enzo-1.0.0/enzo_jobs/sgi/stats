@@ -1,0 +1,1 @@
+mpirun -np 1 enzostats output_0008

@@ -1,0 +1,41 @@
+      subroutine nrx_1d(x, rank, n1, n2, n3, dir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, dir
+      complex :: x(n1)
+ 
+      integer :: n(3)
+      real :: factor
+
+!     write(*,*) 'NROT_1D ',rank,n1,n2,n3,dir
+
+      if( rank /= 1 ) then
+        write(0,*) 'NROT_1D rank != 1'
+        call stop_all_cpus
+      end if
+
+      if( n2 /= 1 ) then
+        write(0,*) 'NROT_1D dim2 > 1'
+        call stop_all_cpus
+      end if
+
+      if( n3 /= 1 ) then
+        write(0,*) 'NROT_1D dim3 > 1'
+        call stop_all_cpus
+      end if
+
+      factor = 1.0/real(n1)
+
+      n(1) = n1
+      n(2) = 1
+      n(3) = 1
+
+      call fourn(x(1), n, 1, dir)
+
+      if( dir == 1 ) then
+        x = x * factor
+      end if
+
+      return
+      end

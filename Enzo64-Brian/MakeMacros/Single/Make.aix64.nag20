@@ -1,0 +1,44 @@
+#
+# macros for IBM SP
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /usr/local/apps/apps64/hdf5
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+
+ifeq ($(NAG20_INSTALL),$(null))
+NAG20_INSTALL = /usr/local/apps/nag
+endif
+
+CPP          = /usr/ccs/lib/cpp
+PROF         =
+
+#PROF        = -pg
+
+## Fortran compiler
+FC           = xlf90_r -qfixed $(PROF)
+FC_OPT       = -O3 -C -qstrict
+FREE90       = -qsuffix=f=f90 -qfree
+DEFINES      = -DSP2
+
+## C Compiler
+CC           = xlC_r $(PROF)
+CC_OPT       = -qstrict -DSP2
+
+## C++ Compiler
+CCxx	     = xlC_r $(PROF)
+CCxx_OPT     = -qstrict -DSP2
+
+## Linker/loader
+LDR          = xlC_r $(PROF)
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 \
+               -L$(NAG20_INSTALL) -lnag \
+               $(SZIP_INSTALL)/lib/libsz.a \
+               $(ZLIB_INSTALL)/lib/libz.a \
+               -lm -lC -lxlf90_r
+
+OPTS         = -c -I$(HDF5_INCLUDE)
+DEBUG        = -g

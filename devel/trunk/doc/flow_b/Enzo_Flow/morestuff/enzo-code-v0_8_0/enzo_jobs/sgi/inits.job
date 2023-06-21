@@ -1,0 +1,21 @@
+#BSUB -M 800M
+#BSUB -n 1
+#BSUB -W 1:00
+#BSUB -P pqk
+#BSUB -N
+#BSUB -J g256
+#BSUB -o /u/ncsa/harkness/g256.out
+#
+set -x
+#export MP_SET_NUMTHREADS=$BSUB_NUMTHREADS
+
+cd $SCR
+pwd
+
+msscmd -b "tar cvf g256.tar GridDensity GridVelocities ParticlePositions ParticleVelocities PowerSpectrum.out"
+
+cp $HOME/inits/inits5 .
+cp $HOME/enzo_tests/Samp256 .
+./inits5 -d Samp256
+ls -lt
+

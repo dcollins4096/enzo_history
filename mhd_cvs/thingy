@@ -1,0 +1,7 @@
+#!/bin/tcsh
+
+foreach i ("`cat files`")
+
+echo "$i" | sed -e 's,#include "\(.*\)",\[source:/public/trunk/src/enzo/\1 \1\],'
+end
+#end

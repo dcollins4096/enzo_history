@@ -1,0 +1,39 @@
+#
+# macros for Coyote (LANL linux cluster)
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL =  /usr/projects/cosmo/bwoshea/coyote/hdf5lib
+endif
+
+ifeq ($(INTEL_INSTALL),$(null))
+INTEL_C_INSTALL = $(INTEL_C)
+INTEL_FORTRAN_INSTALL = $(INTEL_FORTRAN)
+endif
+
+
+CPP          = /usr/bin/cpp
+DEFINES      = -DLINUX 
+
+## Fortran compiler
+FC           = ifort
+FC_OPT       = -O3 -mp 
+
+## C Compiler
+CC           = icc
+CC_OPT       = -O2 -mp -DLINUX 
+
+## C++ Compiler
+CCxx         = icpc
+CCxx_OPT     = -O3 -mp  -DLINUX 
+
+## Linker/loader
+LDR          = icpc -Wl,-noinhibit-exec
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib64 -lz -ljpeg \
+               -L$(INTEL_FORTRAN_INSTALL)/lib -lifcore
+
+INCLUDE      = -I$(HDF5_INSTALL)/include
+
+OPTS         = -c  -DLINUX ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

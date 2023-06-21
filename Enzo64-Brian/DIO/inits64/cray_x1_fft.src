@@ -1,0 +1,233 @@
+#ifdef CRAYX1
+
+#ifdef r4
+
+      subroutine cray_1d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1)
+
+      real :: factor
+      real :: scale
+
+      real*8 :: table(100+8*n1)
+      real :: work(8*n1)
+
+      factor = 1.0/real(n1)
+
+      if( idir == -1 ) then
+        scale = 1.0d-00
+      else
+        scale = factor
+      end if
+
+      call ccfft(   0, n1, scale, x, x, table, work, 0)
+      call ccfft(idir, n1, scale, x, x, table, work, 0)
+
+      return
+      end
+
+
+
+
+      subroutine cray_2d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1,n2)
+
+      real :: factor
+      real :: scale
+
+      real*8 :: table(100+n1+n2)
+      real :: work(2048*max(n1,n2))
+
+      factor = 1.0/real(n1*n2)
+
+      if( idir == -1 ) then
+        scale = 1.0d-00
+      else
+        scale = factor
+      end if
+
+      call ccfft2d(   0, n1, n2, scale, x, n1, x, n1, table, work, 0)
+      call ccfft2d(idir, n1, n2, scale, x, n1, x, n1, table, work, 0)
+
+      return
+      end
+
+
+
+
+      subroutine cray_3d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1,n2,n3)
+
+      real :: factor
+      real :: scale
+
+      real*8 :: table(100+n1+n2+n3)
+      real :: work(2048*max(n1,n2,n3))
+
+      factor = 1.0/real(n1*n2*n3)
+
+      if( idir == -1 ) then
+        scale = 1.0d-00
+      else
+        scale = factor
+      end if
+
+      call ccfft3d(   0, n1, n2, n3, scale, x, n1, n2, x, n1, n2,
+     &            table, work, 0)
+      call ccfft3d(idir, n1, n2, n3, scale, x, n1, n2, x, n1, n2,
+     &            table, work, 0)
+
+      return
+      end
+
+#endif
+
+#ifdef r8
+
+      subroutine cray_1d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1)
+
+      real :: factor
+      real :: scale
+
+      real*8 :: table(100+8*n1)
+      real :: work(8*n1)
+
+      factor = 1.0/real(n1)
+
+      if( idir == -1 ) then
+        scale = 1.0d-00
+      else
+        scale = factor
+      end if
+
+      call zzfft(   0, n1, scale, x, x, table, work, 0)
+      call zzfft(idir, n1, scale, x, x, table, work, 0)
+
+      return
+      end
+
+
+
+
+      subroutine cray_2d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1,n2)
+
+      real :: factor
+      real :: scale
+
+      real*8 :: table(100+2*(n1+n2))
+      real :: work(2048*max(n1,n2))
+
+      factor = 1.0/real(n1*n2)
+
+      if( idir == -1 ) then
+        scale = 1.0d-00
+      else
+        scale = factor
+      end if
+
+      call zzfft2d(   0, n1, n2, scale, x, n1, x, n1, table, work, 0)
+      call zzfft2d(idir, n1, n2, scale, x, n1, x, n1, table, work, 0)
+
+      return
+      end
+
+
+
+
+      subroutine cray_3d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1,n2,n3)
+
+      real :: factor
+      real :: scale
+
+      real*8 :: table(100+2*(n1+n2+n3))
+      real :: work(2048*max(n1,n2,n3))
+
+!     for isys=1
+!     real :: work(4*ncpus*max(n1*n2, n2*n3, n3*n1))
+
+      factor = 1.0/real(n1*n2*n3)
+
+      if( idir == -1 ) then
+        scale = 1.0d-00
+      else
+        scale = factor
+      end if
+
+      call zzfft3d(   0, n1, n2, n3, scale, x, n1, n2, x, n1, n2,
+     &            table, work, 0)
+      call zzfft3d(idir, n1, n2, n3, scale, x, n1, n2, x, n1, n2,
+     &            table, work, 0)
+
+      return
+      end
+
+#endif
+
+#else
+
+      subroutine cray_1d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1)
+
+      write(0,'("Dummy Cray X1 1D FFT - error")')
+      call stop_all_cpus
+
+      return
+      end
+
+      subroutine cray_2d(x, rank, n1, n2, n3, idir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1,n2)
+
+      write(0,'("Dummy Cray X1 2D FFT - error")')
+      call stop_all_cpus
+
+      return
+      end
+
+      subroutine cray_3d( x, rank, n1, n2, n3, idir )
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, idir
+      complex :: x(n1,n2,n3)
+
+      write(0,'("Dummy Cray X1 3D FFT - error")')
+      call stop_all_cpus
+
+      return
+      end
+
+#endif

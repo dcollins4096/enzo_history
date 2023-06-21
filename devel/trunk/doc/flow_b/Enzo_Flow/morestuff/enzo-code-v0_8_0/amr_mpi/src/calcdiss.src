@@ -1,0 +1,452 @@
+#include "fortran.def"
+c=======================================================================
+c/////////////////////////  SUBROUTINE CALCDIFF  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine calcdiss(
+     &            dslice, eslice, uslice, v, w, pslice, dx, dy, dz,
+     &            idim, jdim, kdim, i1, i2, j1, j2, k, nzz, idir,
+     &            dimx, dimy, dimz, dt, gamma, idiff, iflatten,
+     &            diffcoef, flatten
+     &                    )
+c
+c  COMPUTES THE DIFFUSION COEFFICIENTS AND FLATTENING FOR PPM (CW84)
+c
+c  written by: Greg Bryan
+c  date:       July, 1994
+c  modified1:
+c
+c  PURPOSE:  Given the values of idiff and iflatten, we calculate
+c     the diffusion coefficients and amount of local flattening using
+c     one of a number of routines.  They are:
+c     a) idiff = 0  -> no difussion
+c     b) idiff = 1  -> simple diffusion
+c       Computes the diffusion coefficient given in Colella &
+c       Woodward eq. A.3 for use later when calculating the diffusive
+c       flux.  The essential logic is given in 4.4:
+c
+c            diffcoef =  K max|-Div u(j+1/2), 0|
+c
+c       where Div is the discrete undivided difference approximation to
+c       the multidimensional divergence of u.  This version calculates
+c       the diffusion coefficient for a single slice (k).
+c     c) idiff = 2  -> alternate diffusion
+c       Here we use the scheme described in CW84, eq. A11.  Although,
+c       this is intended for local grid motion, here we adapt it for
+c       the local amount of explicit diffusion.
+c     d) iflatten = 0 -> no flattening
+c     e) iflatten = 1 -> The simple flattening scheme described in eqs
+c        A1 & A2 of CW84.
+c     f) iflatten = 2 -> Flattening needed for Lagrangean hydrodynamics
+c        (note: not L+remap).  Stuck in for completeness, but not tested.
+c        This is described in equations. A.4 - A.6.
+c     g) iflatten = 3 -> Flattening recomended for multidimensional
+c        calculations.  Described in CW84 A7-A10.
+c     NOTE: this routine is intended to be called for x,y and z directions,
+c        cyclically permuting the arguments to obtain the correct result
+c        for each direction (i.e. call with dx,dy,dz,... for x-dir, dy,dz,dx
+c        for y-dir, and dz,dx,dy for z-dir).  Also, insure idir is set
+c        correctly, since a few calculation must know which sweep
+c        direction this is.  
+c           permute: v,w,dx,dy,dz,i1,i2,j1,j2,k,nzz,idim,jdim,kdim
+c           do not permute: dimx,dimy,dimz
+c
+c  INPUT ARGUMENTS:
+c     d      - density field
+c     dimx,y,z - dimensions of v and w field arrays
+c     dslice - single slice of the density in (sweep, orthodim) direction
+c     dx     - distance between Eulerian zone edges in direction 1
+c     dy,dz  - distance between Eulerian zone edges in 2,3 directions
+c     eslice - single slice of the total energy in (sweep, orthodim) direction
+c     i1,i1  - active range in direction-1
+c     idiff  - type of explicit diffusion to be used (see above)
+c     idir   - direction of sweep (1=x, 2=y, 3=z)
+c     idim   - first dimension of slices (direction-1)
+c     iflatten - type of local flattening to be used (see above)
+c     j2,j2  - active range in direction-2
+c     jdim   - second dimension of slices (direction-2)
+c     k      - current slice index
+c     kdim   - dimension of direction-3
+c     nzz    - number of active zones in the z-direction
+c     pslice - single slice of the pressure in (sweep, orthodim) direction
+c     uslice - single slice of the pressure in (sweep, orthodim) direction
+c     v      - 2-velocity field
+c     w      - 3-velocity field
+c
+c  OUTPUT ARGUMENTS:
+c     diffcoef - diffusion coefficient in slice k
+c     flatten  - amount of local flattening (0-1)
+c
+c  LOCALS:
+c     di     - temporary for 1/dslice
+c     wflag  - CW84 eq. A1
+c
+c  PARAMETERS
+c     K      - free parameter in diffusion coefficient calculation [0.1]
+c     (for other parameters see CW84)
+c
+c-----------------------------------------------------------------------
+      implicit NONE
+c
+      integer ijkn
+      parameter (ijkn=MAX_ANY_SINGLE_DIRECTION)
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer dimx, dimy, dimz, i1, i2, idiff, idim, idir, iflatten, 
+     &        j1, j2, jdim, k, kdim, nzz
+      real    gamma, dt, dx(idim), dy(jdim), dz(kdim)
+      real    dslice(idim,jdim), eslice(idim,jdim), uslice(idim,jdim),
+     &        diffcoef(idim,jdim), flatten(idim,jdim), pslice(idim,jdim)
+      real    v(dimx,dimy,dimz), w(dimx,dimy,dimz)
+c
+c  locals
+c
+      integer i, j, nyz, is
+      real    cj2s, di(ijkn), difftemp(ijkn), flattemp(ijkn),
+     &        kappa(ijkn), kappa_tilde, omega(ijkn),
+     &        qa, qb, qc, s, sigma(ijkn),
+     &        sigma_tilde, vdiff1(ijkn), vdiff2(ijkn), wdiff1(ijkn),
+     &        wdiff2(ijkn), wflag(ijkn), Z, ZE
+c
+c  parameters
+c
+      real    epsilon, kappa1, kappa2, Kparam, nu1, nu2, nu3,
+     &        omega1, omega2, sigma1, sigma2
+      parameter (epsilon = 0.33  , kappa1 = 2.0 , kappa2 =  0.01,
+     &            Kparam = 0.1   ,    nu1 = 2.0 , nu2    =  0.1 ,
+     &               nu3 = 0.2333, omega1 = 0.75, omega2 = 10.0 ,
+     &            sigma1 = 0.5   , sigma2 = 1.0)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////////////////
+c=======================================================================
+c
+c  Compute number of active zones in transverse direction
+c
+      nyz = j2 - j1 + 1
+c
+c  Loop across the k slice
+c
+      do 1000 j=j1, j2
+c
+c  All (well, almost all) routine below need this quantity (CW84, eq. a1)
+c
+         do 10 i=i1-2, i2+2
+            qb       =    (pslice(i+1,j) - pslice(i-1,j)       )/
+     &                 min(pslice(i+1,j),  pslice(i-1,j)       )
+            if (qb .gt. epsilon .and.
+     &          uslice(i-1,j) - uslice(i+1,j) .gt. 0.0) then
+               wflag(i) = 1.0
+            else
+               wflag(i) = 0.0
+            endif
+ 10      continue
+c
+c  Diffusion routine (B) need this calculation, which depends on v & w,
+c    so it depends on the sweep direction.
+c
+         if (idiff .eq. 1) then
+c
+           if (idir .eq. 1) then
+
+             do 20 i=i1-2, i2+2
+c
+               if (dimy .gt. 1)
+     &           vdiff1(i) = (v(i,j-1,k  )+v(i-1,j-1,k  )) -
+     &                       (v(i,j+1,k  )+v(i-1,j+1,k  ))
+               if (dimz .gt. 1)
+     &           wdiff1(i) = (w(i,j  ,k-1)+w(i-1,j  ,k-1)) -
+     &                       (w(i,j  ,k+1)+w(i-1,j  ,k+1))
+c
+ 20          continue
+c
+           elseif (idir .eq. 2) then
+c
+             do 22 i=i1-2, i2+2
+c
+               if (dimz .gt. 1)
+     &           vdiff1(i) = (v(k  ,i,j-1)+v(k  ,i-1,j-1)) -
+     &                       (v(k  ,i,j+1)+v(k  ,i-1,j+1))
+               if (dimx .gt. 1)
+     &           wdiff1(i) = (w(k-1,i,j  )+w(k-1,i-1,j  )) -
+     &                       (w(k+1,i,j  )+w(k+1,i-1,j  ))
+c
+ 22          continue
+c
+           elseif (idir .eq. 3) then
+c
+             do 24 i=i1-2, i2+2
+c
+               if (dimx .gt. 1)
+     &           vdiff1(i) = (v(j-1,k  ,i)+v(j-1,k  ,i-1)) -
+     &                       (v(j+1,k  ,i)+v(j+1,k  ,i-1))
+               if (dimy .gt. 1)
+     &           wdiff1(i) = (w(j  ,k-1,i)+w(j  ,k-1,i-1)) -
+     &                       (w(j  ,k+1,i)+w(j  ,k+1,i-1))
+c
+ 24          continue
+c                
+           endif
+c
+         endif
+c
+c  Diffusion routine (C) need this calculation, which depends on v & w,
+c    so it depends on the sweep direction.
+c
+         if (idiff .eq. 2) then
+c
+           if (idir .eq. 1) then
+c
+             do 30 i=i1-2, i2+2
+c
+               if (dimy .gt. 1)
+     &           vdiff2(i) = (v(i,j-2,k  )+v(i-1,j-2,k  )) -
+     &                       (v(i,j+2,k  )+v(i-1,j+2,k  ))
+               if (dimz .gt. 1)
+     &           wdiff2(i) = (w(i,j  ,k-2)+w(i-1,j  ,k-2)) -
+     &                       (w(i,j  ,k+2)+w(i-1,j  ,k+2))
+c
+ 30          continue
+c
+           elseif (idir .eq. 2) then
+c
+             do 32 i=i1-2, i2+2
+c
+               if (dimz .gt. 1)
+     &           vdiff2(i) = (v(k  ,i,j-2)+v(k  ,i-1,j-2)) -
+     &                       (v(k  ,i,j+2)+v(k  ,i-1,j+2))
+               if (dimx .gt. 1)
+     &           wdiff2(i) = (w(k-2,i,j  )+w(k-2,i-1,j  )) -
+     &                       (w(k+2,i,j  )+w(k+2,i-1,j  ))
+c
+ 32          continue
+c
+           elseif (idir .eq. 3) then
+c
+             do 34 i=i1-2, i2+2
+c
+               if (dimx .gt. 1)
+     &           vdiff2(i) = (v(j-2,k  ,i)+v(j-2,k  ,i-1)) -
+     &                       (v(j+2,k  ,i)+v(j+2,k  ,i-1))
+               if (dimy .gt. 1)
+     &           wdiff2(i) = (w(j  ,k-2,i)+w(j  ,k-2,i-1)) -
+     &                       (w(j  ,k+2,i)+w(j  ,k+2,i-1))
+c
+ 34         continue
+c                
+           endif
+c
+         endif
+c  
+c-----------------------------------------------------------------------
+c (B)  Compute diffusion coefficient
+c
+        if (idiff .eq. 1) then
+c
+          do 100 i=i1, i2+1
+c
+             if (nyz .eq. 1) then
+                qa = 0.0
+             else
+                qa = 0.25*(dx(i)+dx(i-1))/
+     &               (0.5*(dy(j+1)+dy(j-1))+dy(j))
+             endif
+c
+             if (nzz .eq. 1) then
+                qb = 0.0
+             else
+                qb = 0.25*(dx(i)+dx(i-1))/
+     &               (0.5*(dz(k+1)+dz(k-1))+dz(k))
+             endif
+c
+            qc = max(0.0, uslice(i-1,j) - uslice(i,j) +
+     &                    qa*vdiff1(i) + qb*wdiff1(i)    )
+c
+            diffcoef(i,j) = Kparam*qc
+c
+ 100      continue
+c
+        endif
+c
+c-----------------------------------------------------------------------
+c (E)  Construct flattening parameter (eqns A1 and A2), also 68-74
+c
+      if (iflatten .eq. 1) then
+c
+         do 200 i=i1-1, i2+1
+            qa =     (pslice(i+1,j) - pslice(i-1,j)        )/
+     &              ((pslice(i+2,j) - pslice(i-2,j)) + tiny)
+c           flattemp(i) = max(0.0, min(0.5,5.0*(qa-omega1)))*wflag(i)
+            flattemp(i) = max(0.0, (qa-omega1)*omega2)*wflag(i)
+            if (flattemp(i) .gt. 1.0) write (7,*) i,j,flattemp(i),idir
+            flattemp(i) = min(0.5, flattemp(i))
+ 200     continue
+c
+         flattemp(i1-2) = flattemp(i1-1)
+         flattemp(i2+2) = flattemp(i2+1)
+c
+c  Now, choose the maximum (eq. A2, first part)
+c
+         do 210 i=i1-1, i2+1
+            if (pslice(i+1,j) - pslice(i-1,j) .lt. 0.0) then
+               flatten(i,j) = max(flattemp(i),flattemp(i+1))
+            else
+               flatten(i,j) = max(flattemp(i),flattemp(i-1))
+            endif
+ 210     continue
+c
+      endif
+c
+c-----------------------------------------------------------------------
+c (F) Construct second type flattening parameter (eq. A4-A6)
+c
+      if (iflatten .eq. 2) then
+c
+         do 300 i=i1-3, i2+3
+            di(i) = 1.0/dslice(i,j)
+ 300     continue
+c
+         do 310 i=i1-1, i2+1
+c
+            s     = sign(1.0, pslice(i-1,j) - pslice(i+1,j))
+            is     = i-2*s
+c
+            omega(i) = max(0.0, omega1*(omega2 -
+     &                           (pslice(i+1,j) - pslice(i-1,j))/
+     &                           (pslice(i+2,j) - pslice(i-2,j)) )
+     &                    )
+c
+            Z     = sqrt(
+     &              (max(pslice(i+2,j),pslice(i-2,j)           ) +
+     &               0.5*pslice(i+2,j)+pslice(i-2,j)*(gamma-1.0)  )/
+     &              max(di(i+2),di(i-2))
+     &                  )
+            cj2s    = sqrt(gamma*pslice(is,j)*dslice(is,j))
+            kappa_tilde = (Z + cj2s)/Z
+            kappa(i)   = max(0.0, (kappa_tilde - kappa1)/
+     &                            (kappa_tilde + kappa2))
+c
+            flattemp(i) = min(wflag(i)*omega(i), kappa(i))
+c
+ 310     continue
+c
+         flattemp(i1-2) = flattemp(i1-1)
+         flattemp(i2+2) = flattemp(i2+1)
+c
+c  Choose minimum (eq. A6)
+c
+         do 320 i=i1-1, i2+1
+            flatten(i,j) = max(flattemp(i-1), max(flattemp(i  ),
+     &                                            flattemp(i+1) ))
+ 320     continue
+c
+      endif
+c
+c-----------------------------------------------------------------------
+c (G) Construct second type flattening parameter (eq. A7-A9)
+c
+      if (iflatten .eq. 2 .or. idiff .eq. 2) then
+c
+         do 400 i=i1-3, i2+3
+            di(i) = 1.0/dslice(i,j)
+ 400     continue
+c
+         do 410 i=i1-1, i2+1
+c
+            s     = sign(1.0, pslice(i-1,j) - pslice(i+1,j))
+            is     = i-2*s
+c
+            sigma_tilde = wflag(i)*abs(pslice(i+2,j)-pslice(i-2,j))/
+     &                    max(pslice(i+2,j), pslice(i-2,j))
+            sigma(i) = max(0.0, (sigma_tilde - sigma1)/
+     &                          (sigma_tilde + sigma2) )
+c
+            omega(i) = max(0.0, omega1*(omega2 -
+     &                          max((pslice(i+1,j) - pslice(i-1,j))/
+     &                              (pslice(i+2,j) - pslice(i-2,j)) ,
+     &                              (eslice(i+1,j) - eslice(i-1,j))/
+     &                              (eslice(i+2,j) - eslice(i-2,j)) ))
+     &                    )
+c
+            Z     = sqrt(
+     &              (max(pslice(i+2,j),pslice(i-2,j)           ) +
+     &               0.5*pslice(i+2,j)+pslice(i-2,j)*(gamma-1.0)  )/
+     &              max(di(i+2),di(i-2))
+     &                  )
+            ZE    = s*Z/dslice(is,j) + uslice(is,j)
+            cj2s = sqrt(gamma*pslice(is,j)/dslice(is,j))
+            kappa_tilde = abs((ZE - uslice(is,j) + s*cj2s)/ZE)
+            kappa(i)   = max(0.0, (kappa_tilde - kappa1)/
+     &                            (kappa_tilde + kappa2) )
+c
+            flattemp(i) = min(kappa(i), min(wflag(i)*omega(i),
+     &                                      wflag(i)*sigma(i))
+     &                       )
+c
+ 410     continue
+c
+      endif
+c
+      if (iflatten .eq. 2) then
+c
+         flattemp(i1-2) = flattemp(i1-1)
+         flattemp(i2+2) = flattemp(i2+1)
+c
+c  Now, choose the maximum (eq. A2, first part)
+c
+         do 420 i=i1-1, i2+1
+            if (pslice(i+1,j) - pslice(i-1,j) .lt. 0.0) then
+               flatten(i,j) = max(flattemp(i),flattemp(i+1))
+            else
+               flatten(i,j) = max(flattemp(i),flattemp(i-1))
+            endif
+ 420     continue
+c
+      endif
+c
+c-----------------------------------------------------------------------
+c (C)  Compute complex diffusion coefficient
+c
+        if (idiff .eq. 2) then
+c
+          qa = 0.0
+          qb = 0.0
+          do 500 i=i1-1, i2+1
+c
+            if (nyz .ne. 1) qa =
+     &                 0.5*(0.5*dx(i+1)+dx(i)+dx(i-1)+0.5*dx(i-2))/
+     &                   (0.5*(dy(j+2)+dy(j-2))+dy(j)+dy(j+1)+dy(j-1))
+            if (nzz .ne. 1) qb =
+     &                 0.5*(0.5*dx(i+1)+dx(i)+dx(i-1)+0.5*dx(i-2))/
+     &                   (0.5*(dz(k+2)+dz(k-2))+dz(k)+dz(k+1)+dz(k-1))
+            qc = max(0.0, uslice(i-2,j) - uslice(i+1,j) +
+     &                    qa*vdiff2(i) + qb*vdiff2(i)     )
+            difftemp(i) = qc*nu1
+c
+ 500     continue
+c
+         difftemp(i1-2) = difftemp(i1-1)
+         difftemp(i2+2) = difftemp(i2+1)
+c
+         do 510 i=i1-1, i2+1
+c
+            s  = sign(1.0, pslice(i-1,j) - pslice(i,j))
+            diffcoef(i,j) = s*min(
+     &                    max(difftemp(i-1),
+     &                        difftemp(i  ),
+     &                        difftemp(i+1) ),
+     &                    (nu2 + nu3*max(sigma(i-1)*kappa(i-1)**2,
+     &                                   sigma(i  )*kappa(i  )**2 ))*
+     &                    dx(i+1)*s/dt
+     &                           )
+c
+ 510     continue
+c
+        endif
+c
+c  Done
+c
+ 1000    continue
+c
+      return
+      end

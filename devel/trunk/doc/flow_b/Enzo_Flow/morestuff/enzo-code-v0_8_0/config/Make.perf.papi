@@ -1,0 +1,16 @@
+#======================================================================
+#
+# Make.perf for jbPerf/PAPI
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_PERF = $(TEXT_PERF_PAPI)
+
+DEFINES_PERF = -DUSE_JBPERF -DUSE_PAPI
+OBJS_PERF = jbPerf.o jbPerf77.o
+FLAGS_PERF = $(FLAGS_PERF_ARCH)
+LIBS_PERF = $(LIBS_PERF_ARCH)

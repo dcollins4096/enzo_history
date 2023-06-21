@@ -1,0 +1,59 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+      subroutine open_mpi_error_file( fn, iunit, type )
+
+      implicit none
+
+
+
+      character*(*) fn, type
+      integer       iunit
+
+      character*4   post
+      integer       id, ierr
+      integer       i
+      character*32  fnx
+
+#ifdef USE_MPI
+      call fc_mpi_comm_rank( id, ierr)
+#else
+      id = 0
+#endif
+
+      write(post,'(i4)') id
+      do i=1,4
+      if(post(i:i).eq.' ') post(i:i)='0'
+      end do
+!     write(*,'(i4,4x,a4)') id,post
+      fnx=fn // '_' // post
+
+C      *** jb: Removed position='append' for f77 compatibility
+
+C      open(unit=iunit,file=fnx,status=type,position='append')
+
+      open(unit=iunit,file=fnx,status=type)
+
+      return
+      end
+
+      subroutine close_mpi_error_file( iunit )
+
+      implicit none
+
+      integer iunit
+
+      close(unit=iunit)
+
+      return
+      end
+

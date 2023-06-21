@@ -1,0 +1,82 @@
+      subroutine make_random_field(nx, ny, nz, iseed)
+
+      implicit none
+
+      integer :: nx, ny, nz
+
+      integer :: i, i1, j, j1, n, n1, l, m, p
+      integer :: long_seed, iseed
+      integer :: lrec
+
+      real, allocatable :: ranbuf(:,:,:,:)
+      real :: rr(2)
+
+!     External functions
+
+      real ::    ran1
+      real ::    enzo_ranf
+
+!     Initialize random # generator with random seed
+
+      long_seed = iseed
+      call enzo_seed(long_seed)
+
+!     Loop over k-box sizes, so that we fill k-space from low-k outwards
+
+      lrec = 8 * (2 * 5 * (2*(nx/2)+1) * (2*(nx/2)+1) )
+
+      write(0,'("Allocate ",i16," bytes for random buffer")') lrec
+      allocate( ranbuf(1:2, 1:5, -nx/2 : nx/2, -nx/2 : nx/2) )
+
+      write(0,'("Open direct access file - recl = ",i16," nx = ",i4)')
+     &      lrec, nx
+      open(120, file='random_numbers', form='unformatted',
+     &          status='unknown', access='direct',
+     &          recl = 8 * (2 * 5 * (2*(nx/2)+1) * (2*(nx/2)+1) ) )
+
+      do n=1,nx/2
+
+         do i=-n+1, n
+
+            do j=-n+1, n
+               ranbuf(1,1,j,i) = enzo_ranf()
+               ranbuf(2,1,j,i) = enzo_ranf()
+               if (i .ge. 0 .and. i .ne. n) then
+                 ranbuf(1,2,j,i) = enzo_ranf()
+                 ranbuf(2,2,j,i) = enzo_ranf()
+                 ranbuf(1,3,j,i) = enzo_ranf()
+                 ranbuf(2,3,j,i) = enzo_ranf()
+               else
+                 ranbuf(1,2,j,i) = 0.0
+                 ranbuf(2,2,j,i) = 0.0
+                 ranbuf(1,3,j,i) = 0.0
+                 ranbuf(2,3,j,i) = 0.0
+               end if
+               if (i .ge. 0 .and. i .ne. n .and.
+     &             j .ne. -n+1 .and. j .ne. n) then
+                 ranbuf(1,4,j,i) = enzo_ranf()
+                 ranbuf(2,4,j,i) = enzo_ranf()
+                 ranbuf(1,5,j,i) = enzo_ranf()
+                 ranbuf(2,5,j,i) = enzo_ranf()
+               else
+                 ranbuf(1,4,j,i) = 0.0
+                 ranbuf(2,4,j,i) = 0.0
+                 ranbuf(1,5,j,i) = 0.0
+                 ranbuf(2,5,j,i) = 0.0
+               end if
+            end do
+         end do
+
+         write(120, rec=n)
+     &  ((((ranbuf(l,m,j,i),l=1,2),m=1,5),j=-nx/2,nx/2),i=-nx/2,nx/2)
+
+      call write_random_number_table(nx, n-1, ranbuf)
+
+      end do
+
+      close(120)
+
+      write(0,'("De-Allocate ",i16," bytes for random buffer")') lrec
+      deallocate( ranbuf )
+
+      end

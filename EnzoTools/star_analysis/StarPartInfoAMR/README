@@ -1,0 +1,40 @@
+StarPartInfoAMR.C
+
+This reads in the files starinfo.dat and time_vs_redshift.dat (which you
+need for this particular tool, and is in this directory - also you may
+need to rewrite it).  These files have to be in the same directory.  The 
+output is two files:  starinfo_sfr.dat and speeddisp.dat.  The columns in
+starinfo_sfr.dat are:
+
+1) redshift
+2) time (megayears)
+3) stellar mass created this time bin
+4) cumulative stellar mass
+5) dm/dt (Msolar/year)
+6) dm/dt/dV (Msolar/year/Mpc^3) (not per (mpc/h)^3!)
+
+The file speedbindisp.dat has two columns:
+
+1) velocity bin (km/s)
+2) number of stars in that bin
+
+(this was just intended as a sanity check)
+
+IMPORTANT NOTE:
+
+You have to set the box size, redshift, etc. at the top of the C++ file
+before compiling!  If you do not do this there will be errors!  In principle
+this should be read in as a parameter file or as command line arguments,
+but oh well.  Also, the file time_vs_redshift is only valid for simulations
+that start at z=99, and it only calculates up to z=3.  Various bits of the code
+depend on assumptions about the file size.  This was a hack and this code was
+never intended for public consumption, so your mileage may vary.
+
+compile:
+
+xlC_r -o starinfo StarPartInfoAMR.C  (on DataStar)
+
+run:
+
+./starinfo  
+

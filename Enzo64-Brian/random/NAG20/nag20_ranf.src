@@ -1,0 +1,19 @@
+      real function enzo_ranf()
+
+      implicit none
+
+!     NAG Mark 20
+
+      integer*4 :: iseed(4), igen
+      real*8 :: g05kaf
+
+      common /nag_g05kbf_block/ igen, iseed
+
+      external :: g05kaf
+
+      save /nag_g05kbf_block/
+
+      enzo_ranf = g05kaf(igen, iseed)
+
+      return
+      end

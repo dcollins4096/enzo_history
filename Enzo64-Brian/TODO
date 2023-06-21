@@ -1,0 +1,30 @@
+========================================================================
+Enzo: TODO
+========================================================================
+
+This file lists proposed changes to anything in the Enzo project.
+This file is maintained by both Bordner and Harkness.
+
+The "Tag" column contains unique ID's to facilitate referring to proposed
+changes.  (E.g. in the "CHANGES" file.)
+
+The "priority" column refers to the priority level for the change.
+Priority 1 is urgent, priority 2 is moderate, priority 3 is low.  A
+priority of "?" means its priority is undecided.
+
+The "status" column refers to the state of the proposed change.  (*)
+means it is completed, (o) means it is currently being worked on, and
+( ) means nobody is working on it.
+
+ ID     status
+   priority   Description     
+------ - --- --------------------------------------------------
+TD-001 ? ( )  Assign a tiny mass to tracer particles
+TD-002 ? ( )  Make the potential iteration a parameter
+TD-003 ? ( )  Perhaps add FFTE (and NOT FFTW!)
+TD-004 1 ( )  Fix BUG EB-001
+TD-005 3 ( )  Consolidate multiple "inits64" branches.
+TD-006 3 ( )  Eliminate redundant copies of files, e.g.
+                 macros_and_parameters.h
+TD-007 3 ( )  Clear out unused files to (e.g.) "Obsolete" subdirectory
+

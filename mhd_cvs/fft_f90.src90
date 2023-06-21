@@ -1,0 +1,150 @@
+!****************************************************************************
+!                                                                           *
+! Copyright 2004 Greg Bryan                                                 *
+! Copyright 2004 Laboratory for Computational Astrophysics                  *
+! Copyright 2004 Board of Trustees of the University of Illinois            *
+! Copyright 2004 Regents of the University of California                    *
+!                                                                           *
+! This software is released under the terms of the "Enzo Public License"    *
+! in the accompanying LICENSE file.                                         *
+!                                                                           *
+!****************************************************************************
+
+#include "error.def"
+
+! ======================================================================
+      subroutine s90_1d(x, rank, n1, n2, n3, dir)
+! ======================================================================
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, dir
+      complex :: x(n1)
+     
+      if( rank.ne.1 .or. n2.ne.1 .or. n3.ne.1) then
+        write(0,*) 'S90_1D rank != 1: ',rank,n1,n2,n3
+        ERROR_MESSAGE
+      end if
+    
+      call sf90( x(1), n1, dir )
+
+      return
+
+      end
+
+! ======================================================================
+      subroutine s90_2d(x, rank, n1, n2, n3, dir)
+! ======================================================================
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, dir
+      complex :: x(n1,n2)
+
+      complex, allocatable :: y(:,:)
+      integer :: i,j
+         
+      if( rank.ne.2 .or. n3.ne.1) then
+        write(0,*) 'S90_2D rank != 2: ',rank,n1,n2,n3
+        ERROR_MESSAGE
+      end if
+     
+      do j=1,n2
+         call sf90( x(1,j), n1, dir )
+      end do
+
+      allocate( y(n2,n1) )
+
+      call rotate2d(x,n1,n2,y)
+
+      do i=1,n1
+         call sf90( y(1,i), n2, dir )
+      end do
+
+      call rotate2d(y,n2,n1,x)
+
+      deallocate( y )
+
+      return
+
+      end
+
+
+! ======================================================================
+      subroutine s90_3d(x, rank, n1, n2, n3, dir)
+! ======================================================================
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, dir
+      complex :: x(n1,n2,n3)
+
+      complex, allocatable :: y(:,:,:), z(:,:,:)
+      integer :: i,j,k
+     
+      do k=1,n3
+         do j=1,n2
+            call sf90( x(1,j,k), n1, dir )
+         end do
+      end do
+
+      allocate( y(n2,n3,n1) )
+
+      call rotate3d(x,n1,n2,n3,y)
+
+      do i=1,n1
+         do k=1,n3
+            call sf90( y(1,k,i), n2, dir )
+         end do
+      end do
+
+      allocate( z(n3,n1,n2) )
+
+      call rotate3d(y,n2,n3,n1,z)
+
+      deallocate( y)
+
+      do j=1,n2
+         do i=1,n1
+            call sf90( z(1,i,j), n3, dir )
+         end do
+      end do
+
+      call rotate3d(z,n3,n1,n2,x)
+
+      deallocate( z )
+    
+      return
+
+      end
+
+! ======================================================================
+      subroutine sf90( a, n, dir )
+! ======================================================================
+
+      use singleton
+
+      implicit none
+
+      integer :: n, dir
+      complex :: a(n)
+
+      integer :: i
+      integer :: sn(1)
+
+      sn(1) = n
+
+      if( dir == -1 ) then
+         call fftn(a, sn, inv=.false. )
+         do i = 1,n
+            a(i) = a(i) * sqrt(real(n))
+         end do
+      else
+         call fftn(a, sn, inv=.true. )
+         do i = 1,n
+            a(i) = a(i) / sqrt(real(n))
+         end do
+      end if
+
+      return
+      end

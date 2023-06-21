@@ -1,0 +1,19 @@
+#======================================================================
+#
+# Make.opt for debugging optimization level
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_OPT = $(TEXT_OPT_DEBUG)
+
+FLAGS_OPT = $(FLAGS_OPT_DEBUG_ARCH)
+
+  CFLAGS_OPT =   $(CFLAGS_OPT_DEBUG_ARCH)
+CXXFLAGS_OPT = $(CXXFLAGS_OPT_DEBUG_ARCH)
+  FFLAGS_OPT =   $(FFLAGS_OPT_DEBUG_ARCH)
+ LDFLAGS_OPT =  $(LDFLAGS_OPT_DEBUG_ARCH)
+

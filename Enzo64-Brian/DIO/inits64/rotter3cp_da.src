@@ -1,0 +1,157 @@
+      subroutine rotter(x, y, z, n1, n2, n3, dir, method)
+
+      implicit none
+
+      integer :: n1, n2, n3, dir
+      integer :: i, j, k
+      integer :: n(3)
+      complex :: x(n1,n2,n3)
+      complex :: y(n2,n3,n1)
+      complex :: z(n3,n1,n2)
+
+      complex :: tx(n3,n1)
+      complex :: ty(n1,n2)
+      complex :: tz(n2,n3)
+
+      external :: method
+
+!     equivalence (x(1,1,1), y(1,1,1), z(1,1,1))
+
+
+      n(1) = n1
+      n(2) = 1
+      n(3) = 1
+
+!     call fft(x(1,j,k))
+
+!$omp parallel
+!$omp-  shared(x, n, dir, n1, n2, n3)
+!$omp-  private(j, k)
+!$omp-  default(none)
+!$omp do
+      do k=1,n3
+      do j=1,n2
+      call fftwrap3d( x(1,j,k), n, dir, method )
+      end do
+      end do
+!$omp end do
+!$omp end parallel
+      
+      open(77, file='permute', status='unknown', form='unformatted',
+     &         access='direct', recl=16*n1*n2)
+
+      do k=1,n3
+      write(77, rec=k) ((x(i,j,k),i=1,n1),j=1,n2)
+      end do
+
+!     need y(j,k,i) == x(i,j,k)
+
+!     rewind(77)
+
+      do k=1,n3
+!       do j=1,n2
+!         do i=1,n1
+            read(77, rec=k) ((ty(i,j),i=1,n1),j=1,n2)
+!         end do
+!       end do
+        do i=1,n1
+          do j=1,n2
+             y(j,k,i) = ty(i,j)
+          end do
+        end do
+      end do
+
+      close(77)
+
+      n(1) = n2
+
+!     call fft(yy(1,k,i))
+
+!$omp parallel
+!$omp-  shared(y, n, dir, n1, n2, n3)
+!$omp-  private(i, k)
+!$omp-  default(none)
+!$omp do
+      do i=1,n1
+      do k=1,n3
+      call fftwrap3d( y(1,k,i), n, dir, method )
+      end do
+      end do
+!$omp end do
+!$omp end parallel
+
+      open(77, file='permute', status='unknown', form='unformatted',
+     &         access='direct', recl=16*n2*n3)
+
+!     rewind(77)
+
+      do i=1,n1
+      write(77, rec=i) ((y(j,k,i),j=1,n2),k=1,n3)
+      enddo
+
+!     need z(k,i,j) == y(j,k,i)
+
+!     rewind(77)
+
+      do i=1,n1
+!       do k=1,n3
+!         do j=1,n2
+            read(77, rec=i) ((tz(j,k),j=1,n2),k=1,n3)
+!         end do
+!       end do
+        do j=1,n2
+          do k=1,n3
+            z(k,i,j) = tz(j,k)
+          end do
+        end do
+      end do
+
+      close(77)
+
+      n(1) = n3
+
+!     call fft(zz(1,i,j))
+
+!$omp parallel
+!$omp-  shared(z, n, dir, n1, n2, n3)
+!$omp-  private(i, j)
+!$omp-  default(none)
+!$omp do
+      do j=1,n2
+      do i=1,n1
+      call fftwrap3d( z(1,i,j), n, dir, method )
+      end do
+      end do
+!$omp end do
+!$omp end parallel
+
+      open(77, file='permute', status='unknown', form='unformatted',
+     &         access='direct', recl=16*n3*n1)
+
+!     rewind(77)
+
+      do j=1,n2
+      write(77, rec=j) ((z(k,i,j),k=1,n3),i=1,n1)
+      end do
+
+!     need x(i,j,k) == z(k,i,j)
+
+!     rewind(77)
+
+      do j=1,n2
+!       do i=1,n1
+!         do k=1,n3
+            read(77, rec=j) ((tx(k,i),k=1,n3),i=1,n1)
+!         end do
+!       end do
+        do k=1,n3
+          do i=1,n1
+            x(i,j,k) = tx(k,i)
+          end do
+        end do
+      end do
+
+      close(77)
+
+      return
+      end

@@ -1,0 +1,41 @@
+#
+# macros for ia64
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /usr
+endif
+
+ifeq ($(INTEL_INSTALL),$(null))
+INTEL_C_INSTALL = $(INTEL_C)
+INTEL_FORTRAN_INSTALL = $(INTEL_FORTRAN)
+endif
+
+ifeq ($(MPI_INSTALL),$(null))
+MPI_INSTALL = $(MPI_ROOT)
+endif
+
+CPP          = /usr/bin/cpp
+DEFINES      = -D${PRECISION} -DLINUX -DUSE_MPI
+
+## Fortran compiler
+FC           = ifort
+FC_OPT       = -O3  -mp -Wall -I$(MPI_INSTALL)/include
+
+## C Compiler
+CC           = icc
+CC_OPT       = -O2  -mp -DLINUX -fno-second-underscore 
+
+## C++ Compiler
+CCxx         = icpc
+CCxx_OPT     = -O1  -mp -DLINUX -DUSE_MPI -DOLD_HDF5 -DSYSCALL
+
+## Linker/loader
+LDR          = icpc -Wl,-noinhibit-exec -L$(INTEL_FORTRAN_INSTALL)/lib -lifcore -lifport -lpthread 
+LDR_OPT      = -Wl,-rpath=$(HDF5_INSTALL)/lib 
+LIB          = -I$(MPI_INSTALL)/include -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib -lz -ljpeg -ldl -L$(MPI_INSTALL)/lib -lmpich -lfmpich -lpmpich++  -ltvmpich -lmpe -lm
+
+INCLUDE      = -I$(HDF5_INSTALL)/include
+
+OPTS         = -c  -DLINUX ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

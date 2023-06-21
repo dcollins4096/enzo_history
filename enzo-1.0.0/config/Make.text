@@ -1,0 +1,64 @@
+TEXT_ARCH_ALPHAEV68 = DEC Alpha
+TEXT_ARCH_I686      = Intel Pentium
+TEXT_ARCH_IA64      = Intel Itanium
+TEXT_ARCH_MIPS      = MIPS SGI
+TEXT_ARCH_POWERPC   = IBM PowerPC
+TEXT_ARCH_SPARC     = SUN UltraSPARC
+TEXT_ARCH_X86_64    = AMD Opteron
+
+TEXT_IO_HDF4 = HDF4
+TEXT_IO_HDF5 = HDF5
+
+TEXT_MACH_COSMOS       = LCA Cosmos with MPICH
+TEXT_MACH_PAOLO        = Paolo's Opteron Cluster
+TEXT_MACH_PAOLO_GNU    = Paolo's Opteron Cluster (GNU compiler)
+TEXT_MACH_COPPER       = NCSA Copper
+TEXT_MACH_DIAPASON     = Bordner's Intel Pentium4 laptop 'diapason'
+TEXT_MACH_DS_SDSC      = SDSC DataStar
+TEXT_MACH_GNU          = Generic GNU compiler (single-precision only!)
+TEXT_MACH_NORDLYS      = Bordner's Intel Pentium4 desktop 'nordlys'
+TEXT_MACH_ETF          = SDSC ETF
+TEXT_MACH_FNORD        = O'Shea's G4 GNU laptop
+TEXT_MACH_GNU          = Intel Linux GNU
+TEXT_MACH_HORIZON      = SDSC Blue Horizon
+TEXT_MACH_TUNGSTEN     = NCSA Tungsten
+TEXT_MACH_UNKNOWN      = Generic
+TEXT_MACH_TITAN_PABLO  = NCSA Titan with HDF5 Pablo Profiling
+TEXT_MACH_TG_NCSA      = NCSA TeraGrid
+TEXT_MACH_TG_SDSC      = SDSC TeraGrid
+TEXT_MACH_AMR2003      = U. Chicago AMR workshop SGI Altix
+
+TEXT_MPI_OFF = Off
+TEXT_MPI_ON  = On
+
+TEXT_PERF_OFF    = Off
+TEXT_PERF_JBPERF = jbPerf
+TEXT_PERF_JBMEM  = jbMem
+TEXT_PERF_MPE    = MPE
+
+TEXT_FFT_F77   = Numerical Recipes FFT
+TEXT_FFT_F90   = F90 FFT
+
+TEXT_JBOPT_OFF    = Off
+TEXT_JBOPT_ON     = On (excludes un-tested optimizations)
+TEXT_JBOPT_BETA   = Beta (includes un-tested optimizations)
+
+TEXT_TEST_ON     = On
+TEXT_TEST_OFF    = Off
+
+TEXT_OBJ32  = 32-bit objects
+TEXT_OBJ64  = 64-bit objects
+
+TEXT_OPT_CHECK      = Check + Debug
+TEXT_OPT_DEBUG      = Debug
+TEXT_OPT_WARN       = Debug + Optimize + Warn
+TEXT_OPT_HIGH       = Debug + Optimize
+TEXT_OPT_PROF       = Debug + Optimize + Profile
+TEXT_OPT_AGGRESSIVE = Aggressive
+
+TEXT_PARTICLES_SINGLE = Single
+TEXT_PARTICLES_DOUBLE = Double
+TEXT_PARTICLES_QUAD   = Quad
+
+TEXT_PRECISION_SINGLE = Single
+TEXT_PRECISION_DOUBLE = Double

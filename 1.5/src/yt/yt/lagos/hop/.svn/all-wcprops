@@ -1,0 +1,95 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/yt/!svn/ver/792/branches/yt-1.0/yt/lagos/hop
+END
+kd.h
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/kd.h
+END
+slice.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/slice.h
+END
+hop_kd.c
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/hop_kd.c
+END
+hop_slice.c
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/hop_slice.c
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/__init__.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/setup.py
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/README
+END
+HopOutput.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/yt/!svn/ver/792/branches/yt-1.0/yt/lagos/hop/HopOutput.py
+END
+smooth.h
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/smooth.h
+END
+hop_smooth.c
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/hop_smooth.c
+END
+EnzoHop.c
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/EnzoHop.c
+END
+Merger.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/Merger.py
+END
+hop_regroup.c
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/hop_regroup.c
+END
+hop.h
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/hop.h
+END
+hop_hop.c
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/yt/!svn/ver/666/branches/yt-1.0/yt/lagos/hop/hop_hop.c
+END

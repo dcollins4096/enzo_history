@@ -1,0 +1,31 @@
+I have taken the liberty to change the usage of Jacques slightly.
+
+In version 0.2r5 one needed to call shell scripts (install, doit),
+which in turn started up IDL and executed a batch job.
+
+In this version the shell script layer has been removed, so all
+actions are now performed from within IDL.
+
+Again, there are three IDL batch files:
+
+1) jacques. Use this one to start the actual program. Within this
+   batch file you can specify a directory (data_base_dir) that
+   contains all your ENZO data, and the ENZO basename (base_name).
+
+2) compall. Use this one to compile all the Jacques routines. Say you
+   ran jacques once, discovered and fixed a bug, and now you want to test
+   your changes. You could either exit IDL and start over, or just type
+   "@compall", and then "@jacques". Saves you the IDL exit...
+
+3) saveall. Use this script if you want to pre-compile and save all the
+   jacques routines. As before the IDL save file will be put into
+   TOOLS/SAV. When you run "@jacques" it checks for the existence of a
+   file called TOOLS/SAV/jacques.sav, and restore it if it finds one.
+
+
+Note that it is not necessary to precompile all routines. You just
+start IDL and type "@jacques" and off you go, provided you have
+specified the correct data directory and basename in the batch file.
+
+Alright, that's all for now.
+

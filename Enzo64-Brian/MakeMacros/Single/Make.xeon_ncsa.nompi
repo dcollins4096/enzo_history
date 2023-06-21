@@ -1,0 +1,38 @@
+#
+# macros for ia64
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(HOME)/hdf5/5-1.4.4-ia32
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+INT = /usr/local/intel/7.1.038/compiler70/ia32
+
+CPP          = /usr/bin/cpp
+
+DEFINES      = -DIA64
+
+## Fortran compiler
+FC           = ifort
+FC_OPT       = -O3
+
+## C Compiler
+CC           = icc
+CC_OPT       = -O2 -DIA64
+
+## C++ Compiler
+CCxx         = icc
+CCxx_OPT     = -O2 -DIA64
+
+## Linker/loader
+LDR          = icc # -Wl,-noinhibit-exec
+LDR_OPT      =
+LIB          = $(HDF5_INSTALL)/lib/libhdf5.a \
+               -L/usr/lib -lcmpi_fort -lcmpi_fort_io \
+               -lifcore -lifport -lpthread -ldl
+
+INCLUDE      = -I$(HDF5_INSTALL)/include
+
+OPTS         = -c -DIA32 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

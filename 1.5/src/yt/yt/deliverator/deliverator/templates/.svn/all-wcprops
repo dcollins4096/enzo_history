@@ -1,0 +1,71 @@
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates
+END
+master.kid
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/master.kid
+END
+welcome.kid
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/welcome.kid
+END
+paraminfo.kid
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/paraminfo.kid
+END
+viewimage.kid
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/viewimage.kid
+END
+gallery.kid
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/gallery.kid
+END
+listparams.kid
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/listparams.kid
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/__init__.py
+END
+selectrun.kid
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/selectrun.kid
+END
+images.kid
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/images.kid
+END
+selection.kid
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/selection.kid
+END
+login.kid
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator/templates/login.kid
+END

@@ -1,0 +1,83 @@
+General change:
+ 1.) Added EquationOfState to remove dependance on the energy field.
+ 2.) Added IdentifyPhysicalQuantities2, which now uses an extendable structure instead
+     of a horrible set of individual integers
+ 3.) Extended PPML to accept switches for riemann solver, reconstruction, limiters
+
+Athena_ComputeElectricField.C
+ The CT module.  I would rather not have more than one CT module going forward.
+Athena_PPMLViscosity.C
+ The artificial viscosity module.
+Athena_RotateState.C
+ Since the Athena method only uses a single axis, this aligns the vector fields
+CollapseTestInitialize.C
+ Added magnetic fields.
+DiscontInitialize.C, Grid_DiscontInitializeGrid.C
+ Initializes a generalized (sphere, slab, cylander) discontinuity
+SRB_HDF5_Grid_WriteGrid.C, HDF5_Grid_ReadGrid.C
+ Added boundary write capability
+SRB_WriteAllData.C
+ hacked to remove directory write
+
+
+l MPICH_EvolveHierarchy.C
+l FastSib_EvolveLevel.C
+l FastSib_MPICH_EvolveLevelRoutinesOptimized.C
+
+
+Grid_IdentifyPhysicalQuantities.C
+ Added IdentifyPhysicalQuantities2, which now uses an extendable structure instead
+ of a horrible set of individual integers
+Grid_InheritProperties.C
+ NumberOfFluidQuantities, PPML_NFaces
+Grid_PPML_MHD_Clone.C
+Grid_PPML_Mono1.C
+Grid_PPML_Mono2.C
+Grid_PPML_Mono3.C
+Grid_PPML_Update.C
+PPML_InitializeRoutines.C
+PPML_InterfacePointerBundle_Constructor.C
+PPML_NoSolver.C
+PPML_Wrapper.C
+
+Athena.h
+ The header for the objects used for the CT and Viscosity modules
+global_data.h
+
+PPML.h
+ Two data structures (PPML_InterfacePointerBundle and  IndexPointerMap) to 
+ access baryonf fields in useful ways
+ppml_barth.src, ppml_ct.src, ppml_eigensystem.src, ppml_flux.src, ppml_mono.src,ppml_ppm.src
+ The source routines used in Enzo PPML
+ppml.src
+ The original code as I got it.
+ppml_standalone.src
+ The original routine with common blocks removed.
+
+
+Self Explanitory files
+Self explanitory (i hope) changes
+Grid.h
+X_Main.C
+ only one headder
+X_CommunicationPartitionGrid.C
+ by hand processor toplogy 
+WriteParameterFile.C
+TurbulenceSimulationInitialize.C
+ReadParameterFile.C
+SetDefaultGlobalValues.C
+HDF5_Grid_ReadRandomForcingFields.C
+HDF5_ReadFile.C
+Grid_TurbulenceSimulationInitializeHDF5.C
+Grid_SolveHydroEquations.C
+ nothing to do with ppml-- added some writes for testing.
+Grid_MHDOrszagTangInitGrid.C
+Grid_AddRandomForcing.C
+Grid_AppendForcingToBaryonFields.C
+Grid_CenterMagneticField.C
+Grid_CollapseTestInitializeGrid.C
+Grid_ComputeGlobalStatsGrid.C
+Grid_ComputePressure.C
+Grid_ComputeTimeStep.C
+Grid_constructor.C
+Grid_DetachForcingFromBaryonFields.C

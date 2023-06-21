@@ -1,0 +1,5 @@
+pyf('enzo_routines.pyf', 
+    sources=['f_src/solve_rate_cool.f',
+             'f_src/cool1d_multi_bdf.f'],
+    compiler_options='-ffixed-line-length-none')
+

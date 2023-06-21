@@ -1,0 +1,16 @@
+K 10
+svn:ignore
+V 112
+IgnoreThese
+Makefile
+Make.config.override
+DEPEND.bak
+DEPEND
+el.C
+elro.C
+svn_version.def
+singleton.mod
+enzo.exe
+
+
+END

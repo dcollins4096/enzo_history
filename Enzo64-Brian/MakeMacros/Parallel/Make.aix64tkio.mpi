@@ -1,0 +1,52 @@
+#
+# macros for IBM SP
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /usr/local/apps64/hdf5
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+#PROF         = -pg
+PROF =
+CPP          = /usr/ccs/lib/cpp
+DEFINES      = -D${PRECISION} -DUSE_MPI -DIO_LOG -DSP2
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = mpxlf90_r
+FC_OPT       = -O3 $(PROF) -qstrict
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed
+
+## C Compiler
+CC           = mpcc_r
+CC_OPT       = -O -DSP2 $(PROF) -qstrict
+CFLAGS       =
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = mpCC_r
+CCxx_OPT     = -O -DSP2 -DUSE_MPI -DIO_LOG -D MEM_TRACE $(PROF) -qstrict
+CCxxFLAGS    =
+
+#CCxx	     = xlC128
+#CCxx_OPT    = -O -DSP2 -DUSE_MPI -qldbl128
+
+## Linker/loader
+LDR          = mpCC_r -L/usr/local/apps/iotrace -ltkio
+LDR_OPT      = 
+#LDR_OPT      = /usr/local/lib/libmpitrace.a
+#LDR_OPT      = $(HOME)/apps64/mpi_trace/mpi_trace.o
+
+#LDR          = xlC128 -qldbl128 -binitfini:poe_remote_main -lmpi -lvtd -v -L/usr/lpp/ppe.poe/lib -L/usr/lpp/ppe.poe/lib/ip
+#LDR          = xlC128 -qldbl128 -lm
+
+LIB          = -L${HDF5_INSTALL}/lib -lhdf5 \
+               $(SZIP_INSTALL)/lib/libsz.a \
+               $(ZLIB_INSTALL)/lib/libz.a \
+               -lxlf90_r -lessl
+
+OPTS         = -c -I${HDF5_INSTALL}/include
+DEBUG        = 

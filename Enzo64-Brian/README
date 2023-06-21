@@ -1,0 +1,55 @@
+========================================================================
+Enzo: README
+========================================================================
+
+2006-01-31
+
+By decree, this is the official LCA branch of Enzo.  It can be obtained
+by the following:
+
+   setenv CVSROOT :pserver:anonymous@jbpc.ucsd.edu:/usr/local/cvs_enzo
+   cvs login [password "amrrox"]
+   cvs co Enzo
+
+Only Robert and James have write access.  Everyone who knows the
+password has read access to the latest version.
+
+Robert will be in change of code development--nothing goes into the
+code without his approval.
+
+James will be in charge of software management, such as tagging
+revisions, maintaining the various support files (BUGS, CHANGES,
+README.*, TODO, VERSION, etc.), and code refactoring.
+
+------------------------------------------------------------------------
+
+Enzo Contents
+
+  Directories
+
+    CVS/             Directory containing files used by cvs
+    doc/             Directory containing documentation
+    MakeMacros/      Harkness's makefile system
+    amr_mpi/         Enzo source code and analysis tools
+    inits64/         Inits
+    DIO/             ??? Inits branch
+    OMP/             ??? Inits branch
+    random/          Random number libraries
+    ring64/          Ring tool
+
+  Files
+
+    BUGS             List of bug reports
+    CHANGES          Description of all changes and corresponding CVS tags
+    LICENSE          License file
+    README           This README file
+    TODO             List of proposed modifications
+    VERSION          Current version v??_??_??[-pre#|-patch#]
+                        (corresponds to CVS tag)
+    amr_mpi/src/version.def Version file used by the code.  This should
+                     remain in synch with VERSION.
+
+Robert Harkness <harkness@sdsc.edu>
+James Bordner <jbordner@cosmos.ucsd.edu>
+
+------------------------------------------------------------------------

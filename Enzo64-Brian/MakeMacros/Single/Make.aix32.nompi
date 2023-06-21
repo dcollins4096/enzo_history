@@ -1,0 +1,41 @@
+#
+# macros for sp2
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /usr/local/apps/hdf5
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /usr/local/apps/hdf4
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+CPP          = /usr/ccs/lib/cpp
+PROF         =
+
+#PROF         = -pg
+
+## Fortran compiler
+FC           = xlf90_r -qfixed -bmaxdata:0x80000000 -bmaxstack:0x70000000 $(PROF)
+FC_OPT       = -O3
+FREE90       = -qsuffix=f=f90 -qfree
+DEFINES      = 
+
+## C Compiler
+CC           = xlC_r -bmaxdata:0x80000000 -bmaxstack:0x70000000 $(PROF)
+CC_OPT       = 
+
+## C++ Compiler
+CCxx	     = xlC_r -bmaxdata:0x80000000 -bmaxstack:0x70000000 $(PROF)
+CCxx_OPT     = -DSP2
+
+## Linker/loader
+LDR          = xlC_r
+LDR_OPT      = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 -L$(HDF4_INSTALL)/lib -lz \
+               -lm -lC -lxlf90_r
+
+OPTS         = -c -I$(HDF5_INCLUDE)
+DEBUG        = -g

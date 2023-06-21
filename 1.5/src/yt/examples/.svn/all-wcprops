@@ -1,0 +1,161 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/yt/!svn/ver/778/branches/yt-1.0/examples
+END
+cookbook_extract_data.py
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_extract_data.py
+END
+parallel_projection_mpi4py.py
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/yt/!svn/ver/666/branches/yt-1.0/examples/parallel_projection_mpi4py.py
+END
+cookbook_make_timeseries.py
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_make_timeseries.py
+END
+fastBuildMerge.py
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/yt/!svn/ver/666/branches/yt-1.0/examples/fastBuildMerge.py
+END
+cookbook_make_zoomin.py
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_make_zoomin.py
+END
+cookbook_multiple_widths_plot.py
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_multiple_widths_plot.py
+END
+cookbook_multiple_fields_multiple_widths_plot.py
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_multiple_fields_multiple_widths_plot.py
+END
+parallel_galaxy_analysis.py
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/examples/parallel_galaxy_analysis.py
+END
+cookbook_single_width_plot.py
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_single_width_plot.py
+END
+cookbook_multiple_fields_single_width_plot.py
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_multiple_fields_single_width_plot.py
+END
+fido_dirwatch.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/yt/!svn/ver/666/branches/yt-1.0/examples/fido_dirwatch.py
+END
+find_clumps_dataset.py
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/yt/!svn/ver/666/branches/yt-1.0/examples/find_clumps_dataset.py
+END
+cookbook_linked_plot_save.py
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_linked_plot_save.py
+END
+clumping_factor.py
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/yt/!svn/ver/666/branches/yt-1.0/examples/clumping_factor.py
+END
+cookbook_timeseries_max_dens.py
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_timeseries_max_dens.py
+END
+cookbook_mass_sum.py
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_mass_sum.py
+END
+cookbook_plotting_1dprofiles.py
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/yt/!svn/ver/712/branches/yt-1.0/examples/cookbook_plotting_1dprofiles.py
+END
+cookbook_plotting_2dprofiles.py
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/yt/!svn/ver/712/branches/yt-1.0/examples/cookbook_plotting_2dprofiles.py
+END
+clumping_factors_all_datasets.py
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/yt/!svn/ver/666/branches/yt-1.0/examples/clumping_factors_all_datasets.py
+END
+automated_plotconfig.xml
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/yt/!svn/ver/666/branches/yt-1.0/examples/automated_plotconfig.xml
+END
+cookbook_timeseries_avg_temp.py
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_timeseries_avg_temp.py
+END
+cookbook_making_1d_profiles.py
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_making_1d_profiles.py
+END
+cookbook_hop_mass_sum.py
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/yt/!svn/ver/666/branches/yt-1.0/examples/cookbook_hop_mass_sum.py
+END
+find_clumps_all_datasets.py
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/examples/find_clumps_all_datasets.py
+END
+cookbook_making_2d_profiles.py
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/yt/!svn/ver/680/branches/yt-1.0/examples/cookbook_making_2d_profiles.py
+END
+test_parallel_projection.py
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/yt/!svn/ver/666/branches/yt-1.0/examples/test_parallel_projection.py
+END

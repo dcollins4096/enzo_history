@@ -1,0 +1,340 @@
+      subroutine calc_eigv_mhd(rho_a,wa_un,wa_ut1,wa_ut2,wa_bn,
+     &     wa_bt1, wa_bt2,pre_a, gamma, v_eig, l_eigv,r_eigv,
+     &     v_c_af, v_cf_af, csmin, choice)
+      implicit none
+      integer choice
+      real wa_un, wa_ut1,wa_ut2, wa_bn, wa_bt1, wa_bt2, rho_a, pre_a
+      real l_eigv(8,8), r_eigv(8,8), v_eig(8), gamma
+      real rho_a_inv, bb_a, vv_a, v_c_af, v_a_af, csmin,
+     &     v_cf_af, v_cs_af
+      real v_tmp1, v_alphaf, v_alphas, v_betay, v_betaz, tmp1
+      real v_sqrt_rho_af,v_c_af2
+      real gm1, gm1_c2, sign_bn_af, tmp2, tmp3, tmp4, tmp5
+      real tmp6,tmp7,tmp8
+      real sign, gammaf, gammas, gammaa, gammab,wpar,sqhalf
+      integer i
+c     integer j, k
+      integer printflag
+      common /printff/printflag
+      
+      sqhalf = 0.7071067811865475244e0
+      gm1 = gamma - 1e0
+      rho_a_inv = 1.e0/rho_a
+      bb_a = wa_bn*wa_bn + wa_bt1*wa_bt1 + wa_bt2*wa_bt2
+      wpar = 1.0e-4
+      tmp1 = max(abs(wa_un),abs(wa_ut1),abs(wa_ut2))*wpar
+      v_c_af2 = max(csmin, gamma*pre_a*rho_a_inv,tmp1*tmp1)
+      v_a_af = wa_bn*wa_bn*rho_a_inv
+      tmp2   = v_c_af2 + bb_a*rho_a_inv ! a^2 + b^2
+      tmp3   = max(0.e0, tmp2*tmp2 - 4.e0*v_c_af2*v_a_af)
+      tmp3   = sqrt(tmp3)
+      v_cf_af = sqrt(0.5e0*(tmp2+tmp3))
+      v_c_af  = sqrt(v_c_af2)
+      v_cf_af = max(v_cf_af, v_c_af)           
+c 
+c...  engienvalue
+      v_eig(5) = wa_un + v_cf_af
+      v_eig(7) = wa_un - v_cf_af
+
+      if (choice.eq.1) return
+
+      sign_bn_af = sign(1.e0,wa_bn)
+      v_eig(1) = wa_un
+      v_a_af   = sign_bn_af*sqrt(v_a_af)
+      v_eig(2) = wa_un + v_a_af
+      v_eig(3) = wa_un - v_a_af
+      v_cs_af  = max(0.e0,0.5e0*(tmp2-tmp3))
+      v_cs_af  = sqrt(v_cs_af)
+      v_cs_af  = min(v_cs_af, v_c_af)
+      v_eig(4) = wa_un + v_cs_af
+      v_eig(6) = wa_un - v_cs_af
+      v_eig(8) = wa_un
+
+      vv_a = wa_un*wa_un + wa_ut1*wa_ut1 + wa_ut2*wa_ut2
+c     
+c...  renormalization coefficients
+c     
+c$$$      v_tmp1 = max(1.e-9, wa_bt1*wa_bt1+wa_bt2*wa_bt2)
+c$$$      v_tmp1 = sqrt(1.e0/v_tmp1)
+c$$$
+c$$$      if (v_tmp1 .lt. 1.e4) then
+c$$$         v_betay = wa_bt1*v_tmp1
+c$$$         v_betaz = wa_bt2*v_tmp1
+c$$$      else
+c$$$         v_betay = sqhalf
+c$$$         v_betaz = v_betay
+c$$$      end if
+c$$$      
+c$$$      tmp1 = v_cf_af*v_cf_af - v_cs_af*v_cs_af
+c$$$      if (tmp1 .gt. 1.e-8) then
+c$$$         v_alphaf = (v_c_af**2-v_cs_af*v_cs_af)/tmp1
+c$$$         v_alphas = (v_cf_af*v_cf_af-v_c_af**2)/tmp1
+c$$$      else if (abs(v_a_af) .le. v_c_af) then
+c$$$         v_alphaf = 1.e0
+c$$$         v_alphas = 0.e0
+c$$$      else
+c$$$         v_alphaf = 0.e0
+c$$$         v_alphas = 1.e0
+c$$$      end if
+
+      v_tmp1 = sqrt(wa_bt1*wa_bt1+wa_bt2*wa_bt2)
+      if (v_tmp1.gt.0.e0) then
+         v_betay = wa_bt1/v_tmp1
+         v_betaz = wa_bt2/v_tmp1
+      else
+         v_betay = sqhalf
+         v_betaz = sqhalf
+      end if
+      
+      tmp3 = v_cf_af*v_cf_af - v_cs_af*v_cs_af
+      if (tmp3 .gt. 0.e0) then
+         v_alphaf = (v_c_af**2-v_cs_af*v_cs_af)/tmp3
+      else 
+         v_alphaf = sqhalf
+      end if
+      v_alphas = 1.e0 - v_alphaf
+
+      v_alphaf = sqrt(v_alphaf)
+      v_alphas = sqrt(v_alphas)
+
+      v_sqrt_rho_af = sqrt(rho_a)
+c     
+c...  Eigenvectors
+c     
+      gm1_c2 = gm1/(v_c_af2)
+      tmp1 = 1.e0/(2.e0*rho_a*v_c_af2)
+      tmp2 = sqhalf/rho_a
+      tmp3 = sqhalf/v_sqrt_rho_af
+      tmp4 = sign_bn_af*(wa_ut1*v_betay+wa_ut2*v_betaz)
+      gammaf = v_alphaf*wa_un*v_cf_af - v_alphas*v_cs_af*tmp4
+      gammaa = v_betaz*wa_ut1 - v_betay*wa_ut2
+      gammab = (v_betaz*wa_bt1 - v_betay*wa_bt2)*v_sqrt_rho_af
+      gammas = v_alphas*v_cs_af*wa_un + v_alphaf*v_cf_af*tmp4
+
+                                ! Left eigenvector for Entropy wave
+      l_eigv(1,1) = 1.e0-0.5e0*gm1_c2*vv_a
+      l_eigv(2,1) = gm1_c2*wa_un
+      l_eigv(3,1) = gm1_c2*wa_ut1
+      l_eigv(4,1) = gm1_c2*wa_ut2
+      l_eigv(5,1) = gm1_c2*wa_bn
+      l_eigv(6,1) = gm1_c2*wa_bt1
+      l_eigv(7,1) = gm1_c2*wa_bt2
+      l_eigv(8,1) = -gm1_c2
+                                ! Left eigenvector for Alfven wave +
+      l_eigv(1,2) = gammaa*tmp2
+      l_eigv(2,2) = 0.e0
+      l_eigv(3,2) = -(v_betaz*tmp2)
+      l_eigv(4,2) =  (v_betay*tmp2)
+      l_eigv(5,2) = 0.e0
+      l_eigv(6,2) =  (v_betaz*tmp3)
+      l_eigv(7,2) = -(v_betay*tmp3)
+      l_eigv(8,2) = 0.e0      
+                                ! Left eigenvector for Alfven wave -
+      l_eigv(1,3) = gammaa*tmp2
+      l_eigv(2,3) = 0.e0
+      l_eigv(3,3) = -(v_betaz*tmp2)
+      l_eigv(4,3) =  (v_betay*tmp2)
+      l_eigv(5,3) = 0.e0
+      l_eigv(6,3) = -(v_betaz*tmp3)
+      l_eigv(7,3) =  (v_betay*tmp3)
+      l_eigv(8,3) = 0.e0
+
+      tmp2 = v_c_af*v_sqrt_rho_af
+      tmp3 = v_betay*sign_bn_af
+      tmp4 = v_betaz*sign_bn_af
+      tmp5 = v_alphas*gm1*vv_a/2.e0
+      tmp6 = tmp1*v_alphas
+      tmp7 = tmp1*v_alphaf
+      
+                                ! Left eigenvector for Slow magnetosonic wave +
+      l_eigv(1,4) = tmp1*(tmp5-gammas)
+      l_eigv(2,4) = tmp6*(-wa_un*gm1+v_cs_af)
+      l_eigv(3,4) = -tmp6*gm1*wa_ut1 + tmp7*v_cf_af*tmp3
+      l_eigv(4,4) = -tmp6*gm1*wa_ut2 + tmp7*v_cf_af*tmp4
+      l_eigv(5,4) = -wa_bn*tmp6*gm1
+      l_eigv(6,4) = -tmp7*v_betay*tmp2 - gm1*wa_bt1*tmp6
+      l_eigv(7,4) = -tmp7*v_betaz*tmp2 - gm1*wa_bt2*tmp6
+      l_eigv(8,4) =  tmp6*gm1
+                                ! Left eigenvector for Slow magnetosonic wave -
+      l_eigv(1,6) = tmp1*(tmp5+gammas)
+      l_eigv(2,6) =  tmp6*(-wa_un*gm1-v_cs_af)
+      l_eigv(3,6) = -tmp6*gm1*wa_ut1 - tmp7*v_cf_af*tmp3
+      l_eigv(4,6) = -tmp6*gm1*wa_ut2 - tmp7*v_cf_af*tmp4
+      l_eigv(5,6) = l_eigv(5,4)
+      l_eigv(6,6) = l_eigv(6,4)
+      l_eigv(7,6) = l_eigv(7,4)
+      l_eigv(8,6) = l_eigv(8,4)
+      
+      if (choice.eq.0) then
+         tmp5 = v_alphaf*gm1*vv_a/2.e0
+                                ! Left eigenvector for Fast magnetosonic wave +
+         l_eigv(1,5) = tmp1*(tmp5-gammaf)
+         l_eigv(2,5) =  tmp7*(-wa_un*gm1+v_cf_af)
+         l_eigv(3,5) = -tmp7*gm1*wa_ut1 - tmp6*v_cs_af*tmp3
+         l_eigv(4,5) = -tmp7*gm1*wa_ut2 - tmp6*v_cs_af*tmp4
+         l_eigv(5,5) = -tmp7*gm1*wa_bn
+         l_eigv(6,5) =  tmp6*v_betay*tmp2 - gm1*wa_bt1*tmp7
+         l_eigv(7,5) =  tmp6*v_betaz*tmp2 - gm1*wa_bt2*tmp7
+         l_eigv(8,5) =  tmp7*gm1
+                                ! Left eigenvector for fast magnetosonic wave -
+         l_eigv(1,7) = tmp1*(tmp5+gammaf)
+         l_eigv(2,7) =  tmp7*(-wa_un*gm1-v_cf_af)
+         l_eigv(3,7) = -tmp7*gm1*wa_ut1 + tmp6*v_cs_af*tmp3
+         l_eigv(4,7) = -tmp7*gm1*wa_ut2 + tmp6*v_cs_af*tmp4
+         l_eigv(5,7) = l_eigv(5,5)
+         l_eigv(6,7) = l_eigv(6,5)
+         l_eigv(7,7) = l_eigv(7,5)
+         l_eigv(8,7) = l_eigv(8,5)
+      end if
+c     
+c$$$c...  added the eight wave system
+c$$$      l_eigv(5,1) = l_eigv(8,1)*(-wa_bn)
+c$$$      l_eigv(5,2) = l_eigv(8,2)*(-wa_bn)
+c$$$      l_eigv(5,3) = l_eigv(8,3)*(-wa_bn)
+c$$$      l_eigv(5,4) = l_eigv(8,4)*(-wa_bn)
+c$$$      l_eigv(5,5) = l_eigv(8,5)*(-wa_bn)
+c$$$      l_eigv(5,6) = l_eigv(8,6)*(-wa_bn)
+c$$$      l_eigv(5,7) = l_eigv(8,7)*(-wa_bn)
+      
+                                ! Left eigenvector for Divergence wave
+      l_eigv(1,8) = 0.e0
+      l_eigv(2,8) = 0.e0
+      l_eigv(3,8) = 0.e0
+      l_eigv(4,8) = 0.e0
+      l_eigv(5,8) = 1.e0
+      l_eigv(6,8) = 0.e0
+      l_eigv(7,8) = 0.e0
+      l_eigv(8,8) = 0.e0
+
+                                ! Right eigenvector for Entropy wave
+      r_eigv(1,1) = 1.e0
+      r_eigv(1,2) = wa_un
+      r_eigv(1,3) = wa_ut1
+      r_eigv(1,4) = wa_ut2
+      r_eigv(1,6) = 0.e0
+      r_eigv(1,7) = 0.e0
+      r_eigv(1,8) = 0.5e0*vv_a
+
+      tmp1 = sqhalf
+      tmp5 = tmp2*(wa_bt1*v_betay+wa_bt2*v_betaz)
+c      tmp2 = rho_a*vv_a*0.5e0 + gamma*pre_a/gm1
+      tmp2 = rho_a*vv_a*0.5e0 + v_c_af2*rho_a/gm1
+      tmp6 = -gammaa*rho_a*tmp1
+      tmp7 = gammab*tmp1
+                                ! Right eigenvector for Alfven wave +
+      r_eigv(2,1) = 0.e0
+      r_eigv(2,2) = 0.e0
+      r_eigv(2,3) = -v_betaz*rho_a*tmp1
+      r_eigv(2,4) =  v_betay*rho_a*tmp1
+      r_eigv(2,6) =  v_betaz*v_sqrt_rho_af*tmp1
+      r_eigv(2,7) = -v_betay*v_sqrt_rho_af*tmp1
+      r_eigv(2,8) =  tmp6 + tmp7
+                                ! Right eigenvector for Alfven wave -
+      r_eigv(3,3) =  r_eigv(2,3)
+      r_eigv(3,4) =  r_eigv(2,4)
+      r_eigv(3,6) = -r_eigv(2,6)
+      r_eigv(3,7) = -r_eigv(2,7)
+      r_eigv(3,1) = 0.e0
+      r_eigv(3,2) = 0.e0
+      r_eigv(3,8) =  tmp6 - tmp7
+
+      tmp6 = tmp2
+      tmp2 = v_alphas*tmp2 - v_alphaf*tmp5
+      tmp5 = v_alphaf*tmp6 + v_alphas*tmp5
+
+      tmp6 = v_c_af*v_sqrt_rho_af
+      tmp7 = -v_alphaf*tmp6
+      tmp8 =  v_alphas*tmp6
+      tmp1 = rho_a*v_alphas
+      tmp6 = rho_a*v_alphaf
+      gammas = gammas*rho_a
+                                ! Right eigenvector for Slow magnetosonic wave+
+      r_eigv(4,1) = tmp1
+      r_eigv(4,2) = tmp1*(wa_un+v_cs_af)
+      r_eigv(4,3) = tmp1*wa_ut1 + tmp6*v_cf_af*tmp3
+      r_eigv(4,4) = tmp1*wa_ut2 + tmp6*v_cf_af*tmp4
+      r_eigv(4,6) = tmp7*v_betay
+      r_eigv(4,7) = tmp7*v_betaz
+      r_eigv(4,8) = tmp2 + gammas
+                                ! Right eigenvector for Slow magnetosonic wave-
+      r_eigv(6,6) = r_eigv(4,6)
+      r_eigv(6,7) = r_eigv(4,7)
+      r_eigv(6,1) = tmp1
+      r_eigv(6,2) = tmp1*(wa_un-v_cs_af)
+      r_eigv(6,3) = tmp1*wa_ut1 - tmp6*v_cf_af*tmp3
+      r_eigv(6,4) = tmp1*wa_ut2 - tmp6*v_cf_af*tmp4
+      r_eigv(6,8) = tmp2 - gammas
+
+      if (choice.eq.0) then
+         gammaf = gammaf*rho_a
+                                ! Right eigenvector for Fast magnetosonic wave+
+         r_eigv(5,1) = tmp6
+         r_eigv(5,2) = tmp6*(wa_un+v_cf_af)
+         r_eigv(5,3) = tmp6*wa_ut1 - tmp1*v_cs_af*tmp3
+         r_eigv(5,4) = tmp6*wa_ut2 - tmp1*v_cs_af*tmp4
+         r_eigv(5,6) = tmp8*v_betay
+         r_eigv(5,7) = tmp8*v_betaz
+         r_eigv(5,8) = tmp5 + gammaf      
+                                ! Right eigenvector for Fast magnetosonic wave-
+         r_eigv(7,6) = r_eigv(5,6)
+         r_eigv(7,7) = r_eigv(5,7)
+         r_eigv(7,1) = tmp6
+         r_eigv(7,2) = tmp6*(wa_un-v_cf_af)
+         r_eigv(7,3) = tmp6*wa_ut1 + tmp1*v_cs_af*tmp3
+         r_eigv(7,4) = tmp6*wa_ut2 + tmp1*v_cs_af*tmp4
+         r_eigv(7,8) = tmp5 - gammaf
+      end if
+c     
+c...  added the eight wave system
+      r_eigv(1,5) =0e0
+      r_eigv(2,5) =0e0
+      r_eigv(3,5) =0e0
+      r_eigv(4,5) =0e0
+      r_eigv(5,5) =0e0
+      r_eigv(6,5) =0e0
+      r_eigv(7,5) =0e0
+
+                                ! Right eigenvector for Divergence wave
+      r_eigv(8,1) = 0.e0
+      r_eigv(8,2) = 0.e0
+      r_eigv(8,3) = 0.e0
+      r_eigv(8,4) = 0.e0
+      r_eigv(8,5) = 1.e0
+      r_eigv(8,6) = 0.e0
+      r_eigv(8,7) = 0.e0
+      r_eigv(8,8) = wa_bn
+c     
+c...  seven wave formulation
+c$$$  do i = 1, 8
+c$$$  l_eigv(5,i) = 0e0
+c$$$  l_eigv(i,8) = 0e0
+c$$$  r_eigv(8,i) = 0e0
+c$$$  end do
+c     
+
+c$$$      do k = 5,5
+c$$$         tmp1 = 0e0
+c$$$         do i = 1,8
+c$$$            do j = 1, 8
+c$$$               tmp1 = tmp1 + l_eigv(j,i)*r_eigv(k,j)
+c$$$            end do
+c$$$         end do
+c$$$         if (abs(tmp1-1e0) .gt. 1.e-11) then
+c$$$            print *, '+++++++++++++++++++++++', k, tmp1
+c$$$            do i = 1,8
+c$$$               tmp1 = 0.e0
+c$$$               do j = 1, 8
+c$$$                  tmp1 = tmp1 + l_eigv(j,i)*r_eigv(k,j)
+c$$$               end do
+c$$$               if (i.ne.5 .and. abs(tmp1).gt.1e-8) then
+c$$$                  print *, i, tmp1
+c$$$                  print *, (l_eigv(j,i),j=1,8)
+c$$$                  print *, v_c_af,wa_un,wa_ut1,wa_ut2
+c$$$               end if
+c$$$            end do
+c$$$            
+c$$$         end if
+c$$$      end do
+
+      return
+      end

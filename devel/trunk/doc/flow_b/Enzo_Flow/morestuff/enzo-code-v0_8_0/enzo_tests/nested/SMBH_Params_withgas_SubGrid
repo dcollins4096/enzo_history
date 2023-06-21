@@ -1,0 +1,51 @@
+#
+#  Second shot at supermassive black hole formation project
+#
+#	(two subgrids) - subgrid 1
+#
+#  Cosmology Parameters
+#
+CosmologyOmegaMatterNow      = 0.3
+CosmologyOmegaLambdaNow      = 0.7
+CosmologyOmegaBaryonNow      = 0.04
+CosmologyComovingBoxSize     = 17.5       // in Mpc/h
+CosmologyHubbleConstantNow   = 0.70      // in units of 100 km/s/Mpc
+CosmologyInitialRedshift     = 50.0
+#
+#  Power spectrum Parameters
+#
+PowerSpectrumType            = 11
+PowerSpectrumSigma8          = 0.9
+PowerSpectrumPrimordialIndex = 1.0
+PowerSpectrumRandomSeed      = -942751638
+#
+#  Grid info
+#
+Rank = 3
+GridDims = 16 16 16 
+GridRefinement = 2
+InitializeGrids = 1
+#
+#  Particle Info
+#
+ParticleDims = 16 16 16
+ParticleRefinement = 2
+InitializeParticles = 1
+#
+#  Overall field parameters
+#
+MaxDims = 64 64 64
+#
+# Recentering grid!
+#
+NewCenterFloat = 0.640489459 0.212684795 0.870117247
+StartIndexInNewCenterTopGridSystem = 4 4 4
+EndIndexInNewCenterTopGridSystem   = 11 11 11  
+RootGridDims = 16 16 16
+#
+#  Names
+#
+ParticlePositionName = ParticlePositions.1
+ParticleVelocityName = ParticleVelocities.1
+GridDensityName      = GridDensity.1
+GridVelocityName     = GridVelocities.1

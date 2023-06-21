@@ -1,0 +1,32 @@
+#
+# macros for linux.
+#
+CPP          = /usr/bin/cpp -traditional
+
+## Fortran compiler
+FC           = cmpifc
+FC_OPTIMIZE  = -O2
+DEFINES      = -D $(PRECISION)
+
+## C Compiler
+CC           = cmpicc
+CC_OPTIMIZE  = -O2
+
+## C++ Compiler
+CCxx	     = cmpicc
+CCxx_OPTIMIZE = -O2
+
+## Linker/loader
+HDF_DIR      = ${HOME}/hdf
+#MPI_DIR      = /usr/parallel/mpich-gm.pgi
+#MPI_DIR      = /usr/parallel/mpich-eth.pgi
+LDR          = cmpicc
+LDR_OPTIMIZE = -O2
+
+LIB          = -L${HDF_DIR}/lib -lm -lmfhdf -ldf -lz -ljpeg -lsz \
+               -lifport	-lifcoremt -limf
+#	       -L/usr/local/intel/8.0.058/lib               
+#-lintrins -lIEPCF90 -lF90
+OPTS         = -c -I${HDF_DIR}/include -D USE_MPI -D LINUX
+DEBUG        = 
+

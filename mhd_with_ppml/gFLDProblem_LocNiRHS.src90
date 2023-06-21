@@ -1,0 +1,333 @@
+!=======================================================================
+!
+! Copyright 2006 Daniel R. Reynolds
+! Copyright 2006 Laboratory for Computational Astrophysics
+! Copyright 2006 Regents of the University of California
+!
+! This software is released under the terms of the "Enzo Public License"
+! in the accompanying LICENSE file.
+!
+!=======================================================================
+subroutine gFLDProblem_LocNiRHS(rhs_HI, rhs_HeI, rhs_HeII, Nchem,     &
+     n_HIa, n_HeIa, n_HeIIa, Era, Tempa, rhoa, nea, Model, a, adot,   &
+     IsE, IsEsHI, IsEsHInu, IsEsHeI, IsEsHeInu, IsEsHeII, IsEsHeIInu, &
+     Nx, Ny, Nz, NGxl,  NGxr, NGyl, NGyr, NGzl, NGzr, ier)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       August, 2006
+!  modified1:
+!
+!  PURPOSE: Computes the spatially-local components of the chemical 
+!           reaction equation nonlinear RHS for the Gray FLD problem.
+!
+!  INPUTS:
+!     Nchem      - number of chemical species (allowed: 0, 1, 3)
+!     n_HIa      - number density of Hydrogen I species
+!     n_HeIa     - number density of Helium I species
+!     n_HeIIa    - number density of Helium II species
+!     Tempa      - fluid temperature
+!     Era        - Gray radiation energy density
+!     rhoa       - fluid density, assumed partitioned into either 
+!                  100% hydrogen (Nchem = 1), or 75% hydrogen (Nchem = 3)
+!     nea        - electron number density
+!     Model      - flag denoting physical model to use
+!     a          - cosmological expansion parameter
+!     adot       - da/dt
+!     IsE        - int_{nu0}^{inf} sigE dnu
+!     IsEsHI     - int_{nu0}^{inf} sigE*sigHI dnu
+!     IsEsHInu   - int_{nu0}^{inf} sigE*sigHI/nu dnu
+!     IsEsHeI    - int_{nu1}^{inf} sigE*sigHeI dnu
+!     IsEsHeInu  - int_{nu1}^{inf} sigE*sigHeI/nu dnu
+!     IsEsHeII   - int_{nu2}^{inf} sigE*sigHeII dnu
+!     IsEsHeIInu - int_{nu2}^{inf} sigE*sigHeII/nu dnu
+!     Nx,Ny,Nz   - active mesh size in each direction
+!     NG*l/NG*r  - left/right ghost cells in each direction
+!
+!     Note: the vector inputs are of size (Nx + NGxl + NGxr) in 
+!     the x-direction, others are similar.
+!
+!  OUTPUT ARGUMENTS: 
+!     rhs_HI   - local nonlinear rhs for the HI chemistry equation
+!     rhs_HeI  - local nonlinear rhs for the HeI chemistry eq.
+!     rhs_HeI  - local nonlinear rhs for the HeII chemistry eq.
+!     ier      - success/failure flag (0->failure, 1->success)
+!
+!  EXTERNALS: 
+!
+!  LOCALS:
+!
+!=======================================================================
+#include "fortran.def"
+  implicit none
+     
+!--------------
+! argument declarations
+  integer, intent(in) :: Nchem, Model
+  integer, intent(in) :: Nx, NGxl, NGxr
+  integer, intent(in) :: Ny, NGyl, NGyr
+  integer, intent(in) :: Nz, NGzl, NGzr
+  integer, intent(out) :: ier
+  REALSUB, intent(in) :: a, adot
+  REALSUBR, intent(in) :: IsE, IsEsHI, IsEsHInu
+  REALSUBR, intent(in) :: IsEsHeI, IsEsHeInu, IsEsHeII, IsEsHeIInu
+  REALSUBR, intent(in),                                          &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)  &
+       :: n_HIa, n_HeIa, n_HeIIa, Tempa, Era, rhoa, nea
+  REALSUBR, intent(out),                                         &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)  &
+       :: rhs_HI, rhs_HeI, rhs_HeII
+
+!--------------
+! locals
+  integer :: i, j, k
+  REALSUBR :: cHII0,cHII1,cHII2,cHII3,cHII4,cHII5,cHII6,cHII7,cHII8,cHII9
+  REALSUBR :: T, lnT, lnT2, lnT3, lnT4, lnT5, lnT6, lnT7, lnT8, lnT9
+  REALSUBR :: TeV, lamT, c, hp
+  REALSUBR :: afac, mp, rho, Er, nHI, nHeI, nHeII, nHII, nHeIII, ne, HFrac, HeFrac
+  REALSUBR :: a_HII, a_HeIIr, a_HeIIId, a_HeIII, G_HI, G_HeI, G_HeII
+
+!=======================================================================
+
+!!$  write(*,*) 'Entering gFLDProblem::LocNiRHS routine'
+!!$  write(*,*) '   Nchem =',Nchem
+!!$  write(*,*) '   Model =',Model
+!!$  write(*,*) '   adot =',adot
+!!$  write(*,*) '   a =',a
+!!$  write(*,*) '   typical rho =',rhoa(4,6,8),rhoa(12,3,5),rhoa(17,22,7)
+!!$  write(*,*) '   typical nHI =',n_HIa(4,6,8),n_HIa(12,3,5),n_HIa(17,22,7)
+!!$  write(*,*) '   typical ne =',nea(4,6,8),nea(12,3,5),nea(17,22,7)
+!!$  write(*,*) '   typical T =',Tempa(4,6,8),Tempa(12,3,5),Tempa(17,22,7)
+
+  ! set flag to success
+  ier = 1
+
+  ! check for allowable chemical species number
+  if ((Nchem < 0) .or. (Nchem == 2) .or. (Nchem > 3)) then
+     write(*,*) 'Chemistry ERROR: illegal value Nchem = ',Nchem
+     write(*,*) '  Nchem must be one of {0, 1, 3}.  Returning!!'
+     return
+  endif
+
+  ! if no chemistry to perform, just return successfully
+  if (Nchem == 0) then
+     return
+  endif
+
+  ! initialize outputs to have all zero values
+  rhs_HI = 0.d0
+  HFrac  = 1.d0
+  if (Nchem > 1) then
+     rhs_HeI  = 0.d0
+     rhs_HeII = 0.d0
+     HFrac  = 0.75d0
+     HeFrac = 0.25d0
+  endif
+
+  ! initialize constants
+  afac = adot/a        ! adot/a
+  mp = 1.67262171d-24  ! mass of a proton [g]
+
+  ! set shortcut values
+  cHII0 = -2.86130338d1        ! Recombination rate parameters
+  cHII1 = -7.24112560d-1
+  cHII2 = -2.02604473d-2
+  cHII3 = -2.38086188d-3
+  cHII4 = -3.21260521d-4
+  cHII5 = -1.42150291d-5
+  cHII6 =  4.98910892d-6
+  cHII7 =  5.75561414d-7
+  cHII8 = -1.85676704d-8
+  cHII9 = -3.07113524d-9
+  c  = 2.99792458d10           ! speed of light    [cm/s]
+  hp = 6.6260693d-27           ! Planck's constant [ergs*s]
+
+
+  ! perform Hydrogen calculation, depending on whether 
+  ! we are using case A or case B recombination rates
+  select case (Model)
+
+  !     case A HII recombination rate, with emissivity
+  case (2)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcut values for this spatial location,
+              ! converting densities from comoving to proper
+              rho = rhoa(i,j,k)/a/a/a
+              nHI = n_HIa(i,j,k)/a/a/a/mp
+              ne  = nea(i,j,k)/a/a/a
+              Er  = Era(i,j,k)
+              
+              ! shortcuts for temperature, ln(temp) and powers
+              T = Tempa(i,j,k)
+              lnT = log(T)
+              lnT2 = lnT*lnT
+              lnT3 = lnT*lnT2
+              lnT4 = lnT*lnT3
+              lnT5 = lnT*lnT4
+              lnT6 = lnT*lnT5
+              lnT7 = lnT*lnT6
+              lnT8 = lnT*lnT7
+              lnT9 = lnT*lnT8
+              
+              ! compute number density of HII from fluid density 
+              nHII = rho*HFrac/mp - nHI
+              
+              ! compute case A Hydrogen recombination coefficient
+              ! [Abel, Anninos, Zhang & Norman, 1997: k_2]
+              a_HII = exp(cHII0 + cHII1*lnT + cHII2*lnT2 + cHII3*lnT3 &
+                   + cHII4*lnT4 + cHII5*lnT5 + cHII6*lnT6             &
+                   + cHII7*lnT7 + cHII8*lnT8 + cHII9*lnT9)
+              
+              ! compute Hydrogen photoionization rate 
+              G_HI = c*Er*IsEsHI
+
+              ! compute rhs for HI species
+              rhs_HI(i,j,k) = nHI*(3.d0*afac + G_HI) - a_HII*ne*nHII
+              
+           enddo
+        enddo
+     enddo
+     
+  !     case B HII recombination rate, no emissivity
+  case (1)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcut values for this spatial location,
+              ! converting densities from comoving to proper
+              rho = rhoa(i,j,k)/a/a/a
+              nHI = n_HIa(i,j,k)/a/a/a/mp
+              ne  = nea(i,j,k)/a/a/a
+              T = Tempa(i,j,k)
+              Er  = Era(i,j,k)
+              
+              ! inverse scaled temperature
+              lamT = 3.15614d5/T
+              
+              ! compute number density of HII from fluid density 
+              nHII = rho*HFrac/mp - nHI
+              
+              ! compute case B Hydrogen recombination coefficient 
+              ! [Hui & Gnedin, 1997: RI^B_{HII}]
+              a_HII = 2.753d-14*lamT**(1.5d0) /             &
+                   (1.d0+(lamT/2.74d0)**(0.407d0))**(2.242d0)
+              
+              ! compute Hydrogen photoionization rate 
+              G_HI = c*Er*IsEsHI
+
+              ! compute rhs for HI species
+              rhs_HI(i,j,k) = nHI*(3.d0*afac + G_HI) - a_HII*ne*nHII
+              
+           enddo
+        enddo
+     enddo
+     
+  !     test case (omits coupling between HI and other vars due to unit conflict)
+  case (0)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              
+              ! set shortcut values for this spatial location,
+              ! converting densities from comoving to proper
+              nHI = n_HIa(i,j,k)/a/a/a
+
+              ! compute Hydrogen photoionization rate 
+              G_HI = c*IsEsHI
+
+              ! compute rhs for HI species
+              rhs_HI(i,j,k) = nHI*(3.d0*afac + G_HI)
+              
+           enddo
+        enddo
+     enddo
+     
+  !     Fully decoupled test problem (no chemistry)
+  case (10)
+
+     ! iterate over the domain
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              rhs_HI(i,j,k) = 0.d0
+           enddo
+        enddo
+     enddo
+     
+  case default
+
+     write(0,*) 'gFLDProblem_LocNiRHS: Model =',Model,' undefined!'
+
+  end select
+
+  
+  ! perform Helium calculations over domain
+  if (Nchem > 1) then
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+
+              ! set shortcut values for this spatial location,
+              ! converting densities from comoving to proper
+              rho   = rhoa(i,j,k)/a/a/a
+              nHeI  = n_HeIa(i,j,k)/a/a/a/mp
+              nHeII = n_HeIIa(i,j,k)/a/a/a/mp
+              ne    = nea(i,j,k)/a/a/a
+              Er    = Era(i,j,k)
+
+              ! shortcuts for temperature, ln(temp/4) and powers
+              T = Tempa(i,j,k)
+              TeV = T/1.1605d4
+              lnT = log(T/4.d0)
+              lnT2 = lnT*lnT
+              lnT3 = lnT*lnT2
+              lnT4 = lnT*lnT3
+              lnT5 = lnT*lnT4
+              lnT6 = lnT*lnT5
+              lnT7 = lnT*lnT6
+              lnT8 = lnT*lnT7
+              lnT9 = lnT*lnT8
+              
+              ! compute number density of HeIII from fluid density 
+              nHeIII = rho*HeFrac/4.d0/mp - nHeI - nHeII
+
+              ! compute Helium recombination coefficients
+              ! [Abel, Anninos, Zhang & Norman, 1997: k_{4r}]
+              a_HeIIr  = (3.925d-13)*TeV**(-0.6353)
+              ! [Abel, Anninos, Zhang & Norman, 1997: k_{4d}]
+              a_HeIIId = (1.544d-9)/TeV**(1.5d0)*exp(-48.596/TeV) &
+                   *(0.3d0 + exp(8.1d0/TeV))
+              ! [Abel, Anninos, Zhang & Norman, 1997: k_6]
+              a_HeIII  = 2.d0*exp(cHII0 + cHII1*lnT + cHII2*lnT2  &
+                   + cHII3*lnT3 + cHII4*lnT4 + cHII5*lnT5 + cHII6*lnT6   &
+                   + cHII7*lnT7 + cHII8*lnT8 + cHII9*lnT9)
+              
+              ! compute Helium photoionization rates 
+              G_HeI  = c*Er*IsEsHeI
+              G_HeII = c*Er*IsEsHeII
+
+              ! compute rhs for HeII species
+              rhs_HeI(i,j,k) = nHeI*(3.d0*afac + G_HeI)  &
+                   - a_HeIIr*ne*nHeII - a_HeIIId*ne*nHeIII
+
+              ! compute rhs for HeIII species
+              rhs_HeII(i,j,k) = nHeII*(3.d0*afac + G_HeII)  &
+                   - nHeI*G_HeI - a_HeIII*ne*nHeIII + a_HeIIr*ne*nHeII
+
+           enddo
+        enddo
+     enddo
+  endif
+  
+  return
+end subroutine gFLDProblem_LocNiRHS
+!=======================================================================

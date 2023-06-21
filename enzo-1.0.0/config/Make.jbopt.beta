@@ -1,0 +1,14 @@
+#======================================================================
+#
+# Make.jbopt for all optimizations, including untested ones
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-07-31  Created
+#
+#======================================================================
+
+TEXT_JBOPT = $(TEXT_JBOPT_BETA)
+
+DEFINES_JBOPT = -DJB_OPT -DJB_OPT_BETA
+

@@ -1,0 +1,51 @@
+#
+# macros for sp2
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /usr/local/apps/hdf5
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /usr/local/apps/hdf4
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+CPP          = /usr/ccs/lib/cpp
+DEFINES      = -D${PRECISION} -DUSE_MPI
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = mpxlf90_r
+FC_OPT       = -O3
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed -bmaxdata:0x80000000 -bmaxstack:0x70000000
+
+## C Compiler
+CC           = mpcc_r
+CC_OPT       =
+CFLAGS       = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = mpCC_r
+CCxx_OPT     = -O -DSP2 -DUSE_MPI
+CCxxFLAGS    = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+
+#CCxx	     = xlC128
+#CCxx_OPT    = -O -DSP2 -DUSE_MPI -qldbl128
+
+## Linker/loader
+LDR          = mpCC_r
+LDR_OPT      = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+
+#LDR          = xlC128 -qldbl128 -binitfini:poe_remote_main -lmpi -lvtd -v -L/usr/lpp/ppe.poe/lib -L/usr/lpp/ppe.poe/lib/ip
+#LDR	     = xlC128 -qldbl128 -lm
+
+LIB          = -L${HDF5_INSTALL}/lib -lhdf5 \
+               -L${HDF4_INSTALL}/lib -lmfhdf -ldf -ljpeg -lz -lxlf90_r
+
+OPTS         = -c -I${HDF5_INSTALL}/include -I${HDF4_INSTALL}/include
+DEBUG        = 

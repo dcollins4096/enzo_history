@@ -1,0 +1,181 @@
+
+This README contains two things.  
+First is notes on the actual fix.  Second is the methodology behind the fix, 
+in case you don't believe me.  
+
+Section I
+---------
+
+Cosmolocial AMR in Enzo doesn't conserve what it should.  
+
+This is due to a minor algebra error in the Flux Correction.  Essentially, 
+there's a sum over time of fluxes on the fine grid.  In the code, "a" is assumed constant,
+and pulled out.  SO what should be "dt(1)/a(1)*f(1)+dt(2)/a(2)*f(2)" is reduced to 
+1/a(2)*(dt(1)*f(1)+dt(2)*f(2)", which is not quite correct.
+
+To fix this, three files need to be changed.  In this tar you'll find 4 files.  The 3 files 
+mentioned below, plus  Grid_CorrectForRefinedFluxes.C.OldVersion.  If you haven't yet implimented 
+our SUBling fix to the flux correction, use this last file.  If you have use
+Grid_CorrectForRefinedFluxes.C.  In theory, you should be able to simply copy these files.  
+These are the versions from the public version.
+
+
+1.) euler.src
+2.) Grid_GetProjectedBoundaryFluxes.C
+3.) Grid_CorrectForRefinedFluxes.C
+
+
+1.) euler.src
+Devide the fluxes by the cell width.  Here, the cell with is ACTUALLY the width*expansion factor.
+That's how we get the "a" we want, and we get an extra cell width for free, which we'll need later.
+
+<OldVersion>
+         do i=i1, i2+1
+            df(i,j) = dt*dub(i)
+            ef(i,j) = dt*(dueb(i) + upb(i))
+            uf(i,j) = dt*(duub(i) + pb(i))
+            vf(i,j) = dt*duvb(i)
+            wf(i,j) = dt*duwb(i)
+         enddo
+</OldVersion>
+
+<NewVersion>
+      do i=i1, i2+1
+          qc = dt/dx(i)
+          df(i,j) = qc*dub(i)
+          ef(i,j) = qc*(dueb(i) + upb(i))
+          uf(i,j) = qc*(duub(i) + pb(i))
+          vf(i,j) = qc*duvb(i)
+          wf(i,j) = qc*duwb(i)
+       enddo
+</NewVersion>
+
+2.) Grid_GetProjectedBoundaryFluxes.C
+
+The above picked us up an extra factor of r1, the refinement along whatever that sweep is.
+More on this can be followed in the long tirade below.
+
+To fix this, instead of an area weighted average of the fluxes, do a volume average.  Fundamental
+theorem of calculus allows us to switch between the two, since we're integrating a gradient.  
+But the order of operations is important
+
+Note that Grid_CorrectForRefinedFluxes.C.OldVersion is the version to use if you have NOT 
+installed the other flux correction fix.
+
+<OldVersion>
+    for (i = 0; i < 3; i++)
+        if (i != dim) {
+          ProjectedDims[i] = Dims[i]/RefinementFactors[i];
+          TotalRefinement *= RefinementFactors[i];
+        }
+        else
+          ProjectedDims[i] = 1;
+</OldVersion>
+<NewVersion>
+     int TotalRefinement = 1;
+      for (i = 0; i < 3; i++){
+          TotalRefinement *= RefinementFactors[i];
+        if (i != dim) {
+          ProjectedDims[i] = Dims[i]/RefinementFactors[i];
+        }
+        else
+          ProjectedDims[i] = 1;
+      }
+</NewVersion>
+
+3.) Grid_CorrectForRefinedFluxes.C
+
+Remove the CellWidth and Expansion from the actual correction.  There are Two of these, one
+for the right side and one for the left.
+
+<OldVersion>
+                 BaryonField[field][FieldIndex] +=
+                     (InitialFluxes->LeftFluxes[field][dim][FluxIndex] -
+                      RefinedFluxes->LeftFluxes[field][dim][FluxIndex] )/
+                     (CellWidth[dim][0]*a);
+</OldVersion>
+<NewVersion>
+                 BaryonField[field][FieldIndex] +=
+                     (InitialFluxes->LeftFluxes[field][dim][FluxIndex] -
+                      RefinedFluxes->LeftFluxes[field][dim][FluxIndex] );
+</NewVersion>
+
+
+Section II
+----------
+
+Here's the algebra driving the above.
+
+In what follows, Capital letters are for the Coarse grid, lowercase for fine. i,I are space
+indices,  n and N are steps.  There are several n for each N, and they may not be
+of equal size.  There are always r "i"s for each "I", where r is the refinement.  This,
+of course, assumes a rectangular mesh.
+
+The time update of our system is
+U( t+dt(N) ) = U(t) - dt(N)/dX*( F(I+1/2)-F(I-1/2) )
+u( t+dt(n) ) = u(t) - dt(n)/dx*( f(i+1/2)-f(i-1/2) )
+
+At the coarse/fine boundary 
+
+----------------
+       |       |
+       |       |
+-------|       |
+       |       |
+       |       |
+----------------
+      I+1/2
+
+
+
+U( t+dt(N) , I) += dt(N)/dX*F(I+1/2)
+U( t+dt(N) , I) -= 1/dX*Sum[n, 1/2 Sum[j, dt(n) * f(i+1/2, j)]]
+
+Removal of coarse flux through the boundary at I+1/2, and the addition of the TOTAL flux
+of of the fine grid flow.  Note that we use 1/dX for the inclusion of the fine
+flux, not 1/dx.  This is because it's a Gradient that we're fixing.  Thinking of it as 
+"flow through a surface" can (as it did me) lead the scientist into falsely thinking that 
+f/dx is the important quantity to be using for the correction.  Rather, it's the gradient of f.
+The inclusion of the timestep in f is SIMPLY an averaging convinence.  
+
+The two sums in the second line, in space and time, over the fine grids, are the problem.
+(by Sum[n, blah] I mean "sum over n of blah")  That factor of 1/2 is for a spatial averaging, 
+since that's how the density is projected.
+
+
+What gets done in Enzo is a little algebra, with the following definition:
+
+G=dt(N)F(I+1/2)
+g=Sum[n, 1/2 Sum[j, dt(n) * f(i+1/2, j)]]
+
+U( t+dt(N) , I) += 1/dX*G
+U( t+dt(N) , I) -= 1/dX*g
+
+Horray.  This works great.
+
+
+For cosmology, what should be done (almost-- see later) is simply the same
+as the first with dX-> a*dX
+
+U( t+dt(N) ) = U(t) - dt(N)/a*dX*( F(I+1/2)-F(I-1/2) )
+u( t+dt(n) ) = u(t) - dt(n)/a*dx*( f(i+1/2)-f(i-1/2) )
+
+So in the code,
+
+G=dt(N)F(I+1/2)
+g=Sum[n, 1/2 Sum[j, dt(n) * f(i+1/2, j)]]
+
+U( t+dt(N) , I) += 1/a*dX*G
+U( t+dt(N) , I) -= 1/a*dX*g
+
+But wait! In the definition of g, "a" was taken out of the sum.  Can't do that!
+(There's a bit more I ahve to say about Gradients here, but you've read this far--I'll
+spare you)
+
+So what I've done is replace the above with the appropriate averages:
+
+G=dt(N)/dX*F(I+1/2)
+g=Sum[n, 1/2 Sum[j, dt(n)/(a*dx)* f(i+1/2, j)]]
+
+Email me if any of this isn't clear.
+

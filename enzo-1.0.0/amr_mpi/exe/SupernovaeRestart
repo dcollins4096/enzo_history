@@ -1,0 +1,10 @@
+#
+#   This is the parameter file for restarting a first structure run
+#     with a supernova in the middle.
+#
+ProblemType                   = 40    // supernova restart
+SupernovaRestartEjectaMass    = 10.0   // in solar masses
+SupernovaRestartEjectaRadius  = 0.2   // in pc
+SupernovaRestartEjectaCenter  = 0.2799399222 0.2754843312 0.4202480319
+SupernovaRestartColourField   = 0
+SupernovaRestartName          = 128_halo1_0058

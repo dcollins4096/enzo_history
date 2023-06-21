@@ -1,0 +1,50 @@
+#======================================================================
+#
+# Make.mach for SDSC DataStar
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-11-18  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_DS_SDSC)
+
+#----------------------------------------------------------------------
+# Libraries if there IS NO distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_DIR_ARCH = 
+HDF5_DIR_ARCH = 
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+# CFLAGS_ARCH   = 
+# CXXFLAGS_ARCH = 
+# FFLAGS_ARCH   = 
+# F90FLAGS_ARCH = 
+# LDFLAGS_ARCH  = 
+
+#----------------------------------------------------------------------
+# Libraries if there IS a distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_ROOT = /users01/ucsd/ux452912/public
+HDF5_ROOT = /users01/ucsd/ux452912/public
+
+HDF4_DIR_OBJ32_ARCH = $(HDF4_ROOT)/hdf4-32
+HDF5_DIR_OBJ32_ARCH = $(HDF5_ROOT)/hdf5-32
+
+HDF4_DIR_OBJ64_ARCH = $(HDF4_ROOT)/hdf4-64
+HDF5_DIR_OBJ64_ARCH = $(HDF5_ROOT)/hdf5-64
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = /users01/ucsd/ux452912/public/papi-64
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI
+FLAGS_PERF_PAPI_ARCH = -I$(PERF_PAPI_DIR)/include
+LIBS_PERF_PAPI_ARCH = -L$(PERF_PAPI_DIR)/lib -lpapi  -L /usr/pmapi/lib -lpmapi

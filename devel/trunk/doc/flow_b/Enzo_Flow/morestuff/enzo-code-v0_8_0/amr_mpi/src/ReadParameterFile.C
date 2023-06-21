@@ -1,0 +1,473 @@
+/***********************************************************************
+/
+/  READ A PARAMETER FILE
+/
+/  written by: Greg Bryan
+/  date:       November, 1994
+/  modified1:
+/
+/  PURPOSE:
+/
+/  RETURNS: SUCCESS or FAIL
+/
+************************************************************************/
+
+// This routine reads the parameter file in the argument and sets parameters
+//   based on it.
+
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+#include "TopGridData.h"
+#include "StarParticleData.h"
+
+
+/* This variable is only declared and used in Grid_DepositPositions. */
+
+extern float DepositPositionsParticleSmoothRadius;
+
+/* function prototypes */
+
+int ReadListOfFloats(FILE *fptr, int N, float floats[]);
+int ReadListOfInts(FILE *fptr, int N, int nums[]);
+int CosmologyReadParameters(FILE *fptr, FLOAT *StopTime, FLOAT *InitTime);
+int InitializeRateData(FLOAT Time);
+int InitializeEquilibriumCoolData(FLOAT Time);
+int InitializeRadiationFieldData(FLOAT Time);
+
+
+int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
+{
+  /* declarations */
+
+  char line[MAX_LINE_LENGTH];
+  int dim, ret, int_dummy;
+  float TempFloat;
+  char *dummy = new char[MAX_LINE_LENGTH];
+  dummy[0] = 0;
+  
+  /* read until out of lines */
+
+  while (fgets(line, MAX_LINE_LENGTH, fptr) != NULL) {
+
+    ret = 0;
+
+    /* read MetaData parameters */
+
+    ret += sscanf(line, "InitialCycleNumber = %d", &MetaData.CycleNumber);
+    ret += sscanf(line, "InitialTime        = %"PSYM, &MetaData.Time);
+    ret += sscanf(line, "InitialCPUTime     = %"FSYM, &MetaData.CPUTime);
+    ret += sscanf(line, "Initialdt          = %"FSYM, Initialdt);
+
+    ret += sscanf(line, "StopTime    = %"PSYM, &MetaData.StopTime);
+    ret += sscanf(line, "StopCycle   = %d", &MetaData.StopCycle);
+    ret += sscanf(line, "StopCPUTime = %"FSYM, &MetaData.StopCPUTime);
+
+    ret += sscanf(line, "TimeLastRestartDump = %"PSYM, 
+		  &MetaData.TimeLastRestartDump);
+    ret += sscanf(line, "dtRestartDump       = %"PSYM, &MetaData.dtRestartDump);
+    ret += sscanf(line, "TimeLastDataDump    = %"PSYM, 
+		  &MetaData.TimeLastDataDump);
+    ret += sscanf(line, "dtDataDump          = %"PSYM, &MetaData.dtDataDump);
+    ret += sscanf(line, "TimeLastHistoryDump = %"PSYM, 
+		  &MetaData.TimeLastHistoryDump);
+    ret += sscanf(line, "dtHistoryDump       = %"PSYM, &MetaData.dtHistoryDump);
+    ret += sscanf(line, "TimeLastMovieDump = %"PSYM, 
+		  &MetaData.TimeLastMovieDump);
+    ret += sscanf(line, "dtMovieDump       = %"PSYM, &MetaData.dtMovieDump);
+
+    ret += sscanf(line, "MovieRegionLeftEdge  = %"PSYM" %"PSYM" %"PSYM, 
+		  MetaData.MovieRegionLeftEdge,
+		  MetaData.MovieRegionLeftEdge+1, 
+		  MetaData.MovieRegionLeftEdge+2);
+    ret += sscanf(line, "MovieRegionRightEdge = %"PSYM" %"PSYM" %"PSYM, 
+		  MetaData.MovieRegionRightEdge, 
+		  MetaData.MovieRegionRightEdge+1,
+		  MetaData.MovieRegionRightEdge+2);
+
+    ret += sscanf(line, "CycleLastRestartDump = %d", 
+		  &MetaData.CycleLastRestartDump);
+    ret += sscanf(line, "CycleSkipRestartDump = %d", 
+		  &MetaData.CycleSkipRestartDump);
+    ret += sscanf(line, "CycleLastDataDump    = %d", 
+		  &MetaData.CycleLastDataDump);
+    ret += sscanf(line, "CycleSkipDataDump    = %d", 
+		  &MetaData.CycleSkipDataDump);
+    ret += sscanf(line, "CycleLastHistoryDump = %d", 
+		  &MetaData.CycleLastHistoryDump);
+    ret += sscanf(line, "CycleSkipHistoryDump = %d", 
+		  &MetaData.CycleSkipHistoryDump);
+    ret += sscanf(line, "OutputFirstTimeAtLevel = %d", 
+		  &MetaData.OutputFirstTimeAtLevel);
+    ret += sscanf(line, "StopFirstTimeAtLevel = %d", 
+		  &MetaData.StopFirstTimeAtLevel);
+
+    ret += sscanf(line, "RestartDumpNumber = %d", &MetaData.RestartDumpNumber);
+    ret += sscanf(line, "DataDumpNumber    = %d", &MetaData.DataDumpNumber);
+    ret += sscanf(line, "HistoryDumpNumber = %d", &MetaData.HistoryDumpNumber);
+    ret += sscanf(line, "MovieDumpNumber   = %d", &MetaData.MovieDumpNumber);
+
+    if (sscanf(line, "RestartDumpName      = %s", dummy) == 1)
+      MetaData.RestartDumpName = dummy;
+    if (sscanf(line, "DataDumpName         = %s", dummy) == 1) 
+      MetaData.DataDumpName = dummy;
+    if (sscanf(line, "HistoryDumpName      = %s", dummy) == 1) 
+      MetaData.HistoryDumpName = dummy;
+    if (sscanf(line, "MovieDumpName        = %s", dummy) == 1) 
+      MetaData.MovieDumpName = dummy;
+    if (sscanf(line, "RedshiftDumpName     = %s", dummy) == 1) 
+      MetaData.RedshiftDumpName = dummy;
+
+    if (sscanf(line, "TimeActionType[%d] = %d", &dim, &int_dummy) == 2) {
+      ret++; TimeActionType[dim] = int_dummy;
+      if (dim >= MAX_TIME_ACTIONS) {
+	fprintf(stderr, "Time action %d > maximum allowed.\n", dim);
+	return FAIL;
+      }
+    }
+    if (sscanf(line, "TimeActionRedshift[%d] = ", &dim) == 1)
+      ret += sscanf(line, "TimeActionRedshift[%d] = %"PSYM, &dim, 
+		    TimeActionRedshift+dim);
+    if (sscanf(line, "TimeActionTime[%d] = ", &dim) == 1)
+      ret += sscanf(line, "TimeActionTime[%d] = %"PSYM, &dim, 
+		    TimeActionTime+dim);
+    if (sscanf(line, "TimeActionParameter[%d] = ", &dim) == 1)
+      ret += sscanf(line, "TimeActionParameter[%d] = %"FSYM, &dim, 
+		    TimeActionParameter+dim);
+    
+    ret += sscanf(line, "StaticHierarchy = %d", &MetaData.StaticHierarchy);
+
+    ret += sscanf(line, "TopGridRank       = %d", &MetaData.TopGridRank);
+    ret += sscanf(line, "TopGridDimensions = %d %d %d", MetaData.TopGridDims, 
+		  MetaData.TopGridDims+1, MetaData.TopGridDims+2);
+
+    ret += sscanf(line, "TopGridGravityBoundary = %d", 
+		  &MetaData.GravityBoundary);
+
+    ret += sscanf(line, "ParticleBoundaryType   = %d", 
+		  &MetaData.ParticleBoundaryType);
+    ret += sscanf(line, "NumberOfParticles      = %d", 
+		  &MetaData.NumberOfParticles);
+
+    ret += sscanf(line, "CourantSafetyNumber    = %"FSYM,
+		  &MetaData.CourantSafetyNumber);
+    ret += sscanf(line, "PPMFlatteningParameter = %d", 
+		  &MetaData.PPMFlatteningParameter);
+    ret += sscanf(line, "PPMDiffusionParameter  = %d", 
+		  &MetaData.PPMDiffusionParameter);
+    ret += sscanf(line, "PPMSteepeningParameter = %d", 
+		  &MetaData.PPMSteepeningParameter);
+
+    /* read global Parameters */
+
+    ret += sscanf(line, "ProblemType            = %d", &ProblemType);
+    ret += sscanf(line, "HydroMethod            = %d", &HydroMethod);
+    ret += sscanf(line, "huge_number            = %"FSYM, &huge_number);
+    ret += sscanf(line, "tiny_number            = %"FSYM, &tiny_number);
+    ret += sscanf(line, "Gamma                  = %"FSYM, &Gamma);
+    ret += sscanf(line, "PressureFree           = %d", &PressureFree);
+    ret += sscanf(line, "RefineBy               = %d", &RefineBy);
+    ret += sscanf(line, "MaximumRefinementLevel = %d", 
+		  &MaximumRefinementLevel);
+    ret += sscanf(line, "MaximumGravityRefinementLevel = %d", 
+		  &MaximumGravityRefinementLevel);
+    ret += sscanf(line, "MaximumParticleRefinementLevel = %d", 
+		  &MaximumParticleRefinementLevel);
+    ret += sscanf(line, "CellFlaggingMethod     = %d %d %d %d %d", 
+	     CellFlaggingMethod+0, CellFlaggingMethod+1, CellFlaggingMethod+2,
+	     CellFlaggingMethod+3, CellFlaggingMethod+4);
+    ret += sscanf(line, "FluxCorrection         = %d", &FluxCorrection);
+    ret += sscanf(line, "InterpolationMethod    = %d", &InterpolationMethod);
+    ret += sscanf(line, "ConservativeInterpolation = %d", 
+		  &ConservativeInterpolation);
+    ret += sscanf(line, "MinimumEfficiency      = %"FSYM, &MinimumEfficiency);
+    ret += sscanf(line, "NumberOfBufferZones    = %d", &NumberOfBufferZones);
+
+    ret += sscanf(line, "DomainLeftEdge        = %"PSYM" %"PSYM" %"PSYM, DomainLeftEdge,
+		  DomainLeftEdge+1, DomainLeftEdge+2);
+    ret += sscanf(line, "DomainRightEdge       = %"PSYM" %"PSYM" %"PSYM, DomainRightEdge,
+		  DomainRightEdge+1, DomainRightEdge+2);
+    ret += sscanf(line, "GridVelocity          = %"FSYM" %"FSYM" %"FSYM, GridVelocity,
+		  GridVelocity+1, GridVelocity+2);
+    ret += sscanf(line, "RefineRegionLeftEdge  = %"PSYM" %"PSYM" %"PSYM, 
+		  RefineRegionLeftEdge, RefineRegionLeftEdge+1, 
+		  RefineRegionLeftEdge+2);
+    ret += sscanf(line, "RefineRegionRightEdge = %"PSYM" %"PSYM" %"PSYM, 
+		  RefineRegionRightEdge, RefineRegionRightEdge+1,
+		  RefineRegionRightEdge+2);
+
+    if (sscanf(line, "DataLabel[%d] = %s\n", &dim, dummy) == 2)
+      DataLabel[dim] = dummy;
+    if (sscanf(line, "DataUnits[%d] = %s\n", &dim, dummy) == 2)
+      DataUnits[dim] = dummy;
+
+    ret += sscanf(line, "UniformGravity          = %d", &UniformGravity);
+    ret += sscanf(line, "UniformGravityDirection = %d", 
+		  &UniformGravityDirection);
+    ret += sscanf(line, "UniformGravityConstant  = %"FSYM, 
+		  &UniformGravityConstant);
+
+    ret += sscanf(line, "PointSourceGravity         = %d",&PointSourceGravity);
+    ret += sscanf(line, "PointSourceGravityPosition = %"PSYM" %"PSYM" %"PSYM, 
+		  PointSourceGravityPosition, PointSourceGravityPosition+1, 
+		  PointSourceGravityPosition+2);
+    ret += sscanf(line, "PointSourceGravityConstant = %"FSYM, 
+		  &PointSourceGravityConstant);
+    ret += sscanf(line, "PointSourceGravityCoreRadius = %"FSYM, 
+		  &PointSourceGravityCoreRadius);
+
+    ret += sscanf(line, "SelfGravity           = %d", &SelfGravity);
+    ret += sscanf(line, "GravitationalConstant = %"FSYM, &GravitationalConstant);
+    ret += sscanf(line, "S2ParticleSize        = %"FSYM, &S2ParticleSize);
+    ret += sscanf(line, "GravityResolution     = %"FSYM, &GravityResolution);
+    ret += sscanf(line, "ComputePotential      = %d", &ComputePotential);
+    ret += sscanf(line, "BaryonSelfGravityApproximation = %d",
+		  &BaryonSelfGravityApproximation);
+
+    ret += sscanf(line, "GreensFunctionMaxNumber   = %d", 
+		  &GreensFunctionMaxNumber);
+    ret += sscanf(line, "GreensFunctionMaxSize     = %d",
+		  &GreensFunctionMaxSize);
+
+    ret += sscanf(line, "DualEnergyFormalism     = %d", &DualEnergyFormalism);
+    ret += sscanf(line, "DualEnergyFormalismEta1 = %"FSYM, 
+		  &DualEnergyFormalismEta1);
+    ret += sscanf(line, "DualEnergyFormalismEta2 = %"FSYM, 
+		  &DualEnergyFormalismEta2);
+    ret += sscanf(line, "ParticleCourantSafetyNumber = %"FSYM,
+		  &ParticleCourantSafetyNumber);
+    ret += sscanf(line, "RadiativeCooling = %d", &RadiativeCooling);
+    ret += sscanf(line, "MultiSpecies = %d", &MultiSpecies);
+    ret += sscanf(line, "RadiationFieldType = %d", &RadiationFieldType);
+    ret += sscanf(line, "RadiationFieldLevelRecompute = %d", 
+		  &RadiationFieldLevelRecompute);
+    ret += sscanf(line, "RadiationSpectrumNormalization = %"FSYM,
+		  &CoolData.f3);
+    ret += sscanf(line, "RadiationSpectrumSlope = %"FSYM, &CoolData.alpha0);
+
+    ret += sscanf(line, "ZEUSQuadraticArtificialViscosity = %"FSYM,
+		  &ZEUSQuadraticArtificialViscosity);
+    ret += sscanf(line, "ZEUSLinearArtificialViscosity = %"FSYM,
+		  &ZEUSLinearArtificialViscosity);
+
+    ret += sscanf(line, "UseMinimumPressureSupport = %d",
+		  &UseMinimumPressureSupport);
+    ret += sscanf(line, "MinimumPressureSupportParameter = %"FSYM,
+		  &MinimumPressureSupportParameter);
+    ret += sscanf(line, "RefineByJeansLengthSafetyFactor = %"FSYM,
+		  &RefineByJeansLengthSafetyFactor);
+    
+    if (sscanf(line, "StaticRefineRegionLevel[%d] = %d",&dim,&int_dummy) == 2){
+      ret++;
+      StaticRefineRegionLevel[dim] = int_dummy;
+    }
+    if (sscanf(line, "StaticRefineRegionLeftEdge[%d] = ", &dim) == 1)
+      ret += sscanf(line, 
+		    "StaticRefineRegionLeftEdge[%d] = %"PSYM" %"PSYM" %"PSYM,
+		    &dim, StaticRefineRegionLeftEdge[dim],
+		    StaticRefineRegionLeftEdge[dim]+1,
+		    StaticRefineRegionLeftEdge[dim]+2);
+    if (sscanf(line, "StaticRefineRegionRightEdge[%d] = ", &dim) == 1)
+      ret += sscanf(line, 
+		    "StaticRefineRegionRightEdge[%d] = %"PSYM" %"PSYM" %"PSYM,
+		    &dim, StaticRefineRegionRightEdge[dim],
+		    StaticRefineRegionRightEdge[dim]+1,
+		    StaticRefineRegionRightEdge[dim]+2);
+
+    ret += sscanf(line, "ParallelRootGridIO = %d", &ParallelRootGridIO);
+
+    ret += sscanf(line, "ParallelParticleIO = %d", &ParallelParticleIO);
+
+    ret += sscanf(line, "Unigrid = %d", &Unigrid);
+
+    ret += sscanf(line, "ExtractFieldsOnly = %d", &ExtractFieldsOnly);
+
+    ret += sscanf(line, "MinimumOverDensityForRefinement  = %"FSYM" %"FSYM" %"FSYM" %"FSYM" %"FSYM, 
+	  MinimumOverDensityForRefinement+0, MinimumOverDensityForRefinement+1,
+	  MinimumOverDensityForRefinement+2, MinimumOverDensityForRefinement+3,
+	  MinimumOverDensityForRefinement+4);
+    ret += sscanf(line, "MinimumMassForRefinement  = %"FSYM" %"FSYM" %"FSYM" %"FSYM" %"FSYM, 
+	  MinimumMassForRefinement+0, MinimumMassForRefinement+1,
+	  MinimumMassForRefinement+2, MinimumMassForRefinement+3,
+	  MinimumMassForRefinement+4);
+    ret += sscanf(line, "MinimumMassForRefinementLevelExponent = %"FSYM" %"FSYM" %"FSYM" %"FSYM" %"FSYM, 
+		  MinimumMassForRefinementLevelExponent+0, 
+		  MinimumMassForRefinementLevelExponent+1,
+		  MinimumMassForRefinementLevelExponent+2, 
+		  MinimumMassForRefinementLevelExponent+3,
+		  MinimumMassForRefinementLevelExponent+4);
+    ret += sscanf(line, "MinimumSlopeForRefinement = %"FSYM, 
+		  &MinimumSlopeForRefinement);
+    ret += sscanf(line, "MinimumPressureJumpForRefinement = %"FSYM, 
+		  &MinimumPressureJumpForRefinement);
+    ret += sscanf(line, "MinimumEnergyRatioForRefinement = %"FSYM, 
+		  &MinimumEnergyRatioForRefinement);
+    ret += sscanf(line, "ComovingCoordinates = %d",&ComovingCoordinates);
+    ret += sscanf(line, "StarParticleCreation = %d", &StarParticleCreation);
+    ret += sscanf(line, "StarParticleFeedback = %d", &StarParticleFeedback);
+    ret += sscanf(line, "NumberOfParticleAttributes = %d", 
+		  &NumberOfParticleAttributes);
+
+    /* read data which defines the boundary conditions */
+
+    ret += sscanf(line, "LeftFaceBoundaryCondition  = %d %d %d", 
+		  MetaData.LeftFaceBoundaryCondition,
+		  MetaData.LeftFaceBoundaryCondition+1,
+		  MetaData.LeftFaceBoundaryCondition+2);
+    ret += sscanf(line, "RightFaceBoundaryCondition = %d %d %d",
+		  MetaData.RightFaceBoundaryCondition,
+		  MetaData.RightFaceBoundaryCondition+1,
+		  MetaData.RightFaceBoundaryCondition+2);
+    if (sscanf(line, "BoundaryConditionName         = %s", dummy) == 1)
+      MetaData.BoundaryConditionName = dummy;
+
+    /* Check version number. */
+
+    if (sscanf(line, "VersionNumber = %"FSYM, &TempFloat) == 1) {
+      ret++;
+      if (fabs(TempFloat - VERSION) >= 1.0e-3)
+	fprintf(stderr, "Warning: Incorrect version number.\n");
+    }
+
+    /* Read star particle parameters. */
+
+    ret += sscanf(line, "StarMakerOverDensityThreshold = %"FSYM,
+		  &StarMakerOverDensityThreshold);
+    ret += sscanf(line, "StarMakerMassEfficiency = %"FSYM,
+		  &StarMakerMassEfficiency);
+    ret += sscanf(line, "StarMakerMinimumMass = %"FSYM, &StarMakerMinimumMass);
+    ret += sscanf(line, "StarMakerMinimumDynamicalTime = %"FSYM,
+                  &StarMakerMinimumDynamicalTime);
+    ret += sscanf(line, "StarMassEjectionFraction = %"FSYM, 
+		  &StarMassEjectionFraction);
+    ret += sscanf(line, "StarMetalYield = %"FSYM, &StarMetalYield);
+    ret += sscanf(line, "StarEnergyToThermalFeedback = %"FSYM, 
+		  &StarEnergyToThermalFeedback);
+    ret += sscanf(line, "StarEnergyToStellarUV = %"FSYM, &StarEnergyToStellarUV);
+    ret += sscanf(line, "StarEnergyToQuasarUV = %"FSYM, &StarEnergyToQuasarUV);
+
+    ret += sscanf(line, "MultiMetals = %d", &MultiMetals);
+
+    /* If the dummy char space was used, then make another. */
+
+    if (*dummy != 0) {
+      dummy = new char[MAX_LINE_LENGTH];
+      ret++;
+    }
+
+    /* check to see if the line belongs to one of the test problems */
+
+    if (strstr(line, "ShockTube")           ) ret++;
+    if (strstr(line, "WavePool" )           ) ret++;
+    if (strstr(line, "ShockPool")           ) ret++;
+    if (strstr(line, "DoubleMach")          ) ret++;
+    if (strstr(line, "ZeldovichPancake")    ) ret++;
+    if (strstr(line, "PressurelessCollapse")) ret++;
+    if (strstr(line, "AdiabaticExpansion")  ) ret++;
+    if (strstr(line, "CosmologySimulation") ) ret++;
+    if (strstr(line, "TestGravity"        ) ) ret++;
+    if (strstr(line, "SphericalInfall"    ) ) ret++;
+    if (strstr(line, "TestGravitySphere"  ) ) ret++;
+    if (strstr(line, "CollapseTest"       ) ) ret++;
+    if (strstr(line, "Cosmology")           ) ret++;
+    if (strstr(line, "SupernovaRestart")    ) ret++;
+
+    /* if the line is suspicious, issue a warning */
+
+    if (ret == 0 && strstr(line, "=") != NULL && line[0] != '#')
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "warning: the following parameter line was not interpreted:\n%s", line);
+
+  }
+
+  /* clean up */
+
+  delete dummy;
+  rewind(fptr);
+
+  /* If we have turned on Comoving coordinates, read cosmology parameters. */
+
+  if (ComovingCoordinates) {
+    if (CosmologyReadParameters(fptr, &MetaData.StopTime, &MetaData.Time) 
+	== FAIL) {
+      fprintf(stderr, "Error in ReadCosmologyParameters.\n");;
+      return FAIL;
+    }
+    rewind(fptr);
+  }
+
+  /* If set, initialize the RadiativeCooling and RateEquations data. */
+
+  if (MultiSpecies > 0)
+    if (InitializeRateData(MetaData.Time) == FAIL) {
+      fprintf(stderr, "Error in InitializeRateData.\n");
+      return FAIL;
+    }
+
+  if (MultiSpecies == 0 && RadiativeCooling > 0)
+    if (InitializeEquilibriumCoolData(MetaData.Time) == FAIL) {
+      fprintf(stderr, "Error in InitializeEquilibriumCoolData.\n");
+      return FAIL;
+    }
+
+  /* If using the internal radiation field, initialize it. */
+
+  if (RadiationFieldType >= 10 && RadiationFieldType <= 11)
+    if (InitializeRadiationFieldData(MetaData.Time) == FAIL) {
+	fprintf(stderr, "Error in InitializeRadiationFieldData.\n");
+	return FAIL;
+      }
+  
+  /* Turn off DualEnergyFormalism for zeus hydro (and a few other things). */
+
+  if (HydroMethod == Zeus_Hydro) {
+    ConservativeInterpolation = FALSE;
+    DualEnergyFormalism       = FALSE;
+    //    FluxCorrection            = FALSE;
+  }
+
+  /* Set the number of particle attributes, if left unset. */
+
+  if (NumberOfParticleAttributes == INT_UNDEFINED)
+    if (StarParticleCreation || StarParticleFeedback)
+      NumberOfParticleAttributes = 3;
+    else
+      NumberOfParticleAttributes = 0;
+
+#ifdef UNUSED  
+  if (MaximumGravityRefinementLevel == INT_UNDEFINED)
+    MaximumGravityRefinementLevel = (RadiativeCooling && SelfGravity
+				     && HydroMethod == Zeus_Hydro) ?  
+       max(MaximumRefinementLevel-2, 5) : MaximumRefinementLevel; 
+#else
+  if (MaximumGravityRefinementLevel == INT_UNDEFINED)
+    MaximumGravityRefinementLevel = MaximumRefinementLevel;
+#endif
+
+  MaximumGravityRefinementLevel =
+    min(MaximumGravityRefinementLevel, MaximumRefinementLevel);
+
+  /* Use the value in MaximumParticleRefinementLevel to set the smoothing
+     radius for the particles, to be used to Grid_DepositPositions. */
+
+  if (MaximumParticleRefinementLevel >= 0)
+    DepositPositionsParticleSmoothRadius =
+      (DomainRightEdge[0] - DomainLeftEdge[0])/
+      (float(MetaData.TopGridDims[0])*
+       POW(float(RefineBy), float(MaximumParticleRefinementLevel)));
+
+//  PPMDiffusion causes an out-of-bounds condition as currently written
+//  The following is an over-ride to force PPMDiffusion OFF
+
+  printf("WARNING! Setting MetaData.PPMDiffusionParameter = 0\n");
+  MetaData.PPMDiffusionParameter = 0;
+
+  return SUCCESS;
+}

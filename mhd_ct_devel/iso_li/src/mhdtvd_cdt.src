@@ -1,0 +1,80 @@
+      subroutine mhdtvd_cdt(is,ie,js,je,ks,ke,
+     + idim,jdim,kdim,dx,dy,dz,d,vx,vy,vz,
+     + bxc,byc,bzc,pre,e,gamma,diffd1,diffd2,diffd3)
+
+       implicit none
+c
+c     arguments
+c
+
+      integer is,ie,js,je,ks,ke
+      integer idim,jdim,kdim
+      real gamma
+
+      real d(idim,jdim,kdim),dx,dy,dz
+      real vx(idim,jdim,kdim),vy(idim,jdim,kdim),vz(idim,jdim,kdim)
+      real bxc(idim,jdim,kdim),byc(idim,jdim,kdim),bzc(idim,jdim,kdim)
+      real e(idim,jdim,kdim),pre(idim,jdim,kdim)
+      real diffd1(idim,jdim,kdim)
+      real diffd2(idim,jdim,kdim)
+      real diffd3(idim,jdim,kdim)
+      integer fcinb
+
+c
+c     internal varialbes
+c
+
+      integer i,j,k
+      real vis
+      real diffpara1(idim,jdim,kdim),diffpara2(idim,jdim,kdim)
+      real diffpara3(idim,jdim,kdim)
+   
+      vis = 0.1
+    
+       do j=js,je
+         do k=ks,ke
+           do i=is,ie
+           diffpara1(i,j,k) = vis * 
+     +      (sqrt(gamma*pre(i,j,k)/d(i,j,k))+abs(vx(i,j,k)))*dx**3 
+     +      /(4*max(pre(fcinb(i+1,idim),j,k),pre(i,j,k),
+     +  pre(fcinb(i-1,idim),j,k))) * (pre(fcinb(i+1,idim),j,k)
+     +          -pre(fcinb(i-1,idim),j,k))/dx**2
+           diffpara2(i,j,k) = vis *
+     +         (sqrt(gamma*pre(i,j,k)/d(i,j,k))+abs(vy(i,j,k))) 
+c     +         * dy**3 /(4*pre(i,j,k)) * (pre(i,fcinb(j+1,jdim),k)
+c     +          -pre(i,fcinb(j-1,jdim),k))/dy**2  
+           diffpara3(i,j,k) = vis *
+     +         (sqrt(gamma*pre(i,j,k)/d(i,j,k))+abs(vz(i,j,k))) 
+c     +        *  dz**3 /(4*pre(i,j,k)) * (pre(i,j,fcinb(k+1,kdim))
+c     +           -pre(i,j,fcinb(k-1,kdim)))/dz**2
+
+           diffd1(i,j,k) = diffpara1(i,j,k)*
+     +       (d(fcinb(i+1,idim),j,k)-d(fcinb(i-1,idim),j,k))/(2*dx)*
+     + abs(pre(fcinb(i+1,idim),j,k)-2*pre(i,j,k)
+     +  +pre(fcinb(i-1,idim),j,k)/
+     + (pre(fcinb(i+1,idim),j,k)+2*pre(i,j,k)
+     +   +pre(fcinb(i-1,idim),j,k)))
+           diffd2(i,j,k) = diffpara2(i,j,k)*
+     +       (d(i,fcinb(j+1,jdim),k)-d(i,fcinb(j-1,jdim),k))/(2*dy)*
+     + abs(pre(i,fcinb(j+1,jdim),k)-2*pre(i,j,k)
+     +  +pre(i,fcinb(j-1,jdim),k)/    
+     + (pre(i,fcinb(j+1,jdim),k)+2*pre(i,j,k)
+     +  +pre(i,fcinb(j-1,jdim),k)))  
+           diffd3(i,j,k) = diffpara3(i,j,k)*
+     +       (d(i,j,fcinb(k+1,kdim))-d(i,j,fcinb(k-1,kdim)))/(2*dz)*
+     + abs(pre(i,j,fcinb(k+1,kdim))-2*pre(i,j,k)
+     +   +pre(i,j,fcinb(k-1,kdim))/ 
+     + (pre(i,j,fcinb(k+1,kdim))+2*pre(i,j,k)
+     +   +pre(i,j,fcinb(k-1,kdim)))) 
+ 
+       diffd1(i,j,k) = 0.0001
+       diffd2(i,j,k) = 0.0001
+       diffd3(i,j,k) = 0.0001
+           enddo
+         enddo
+       enddo
+     
+    
+
+      end
+

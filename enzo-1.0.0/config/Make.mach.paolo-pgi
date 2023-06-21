@@ -1,0 +1,57 @@
+TEXT_ARCH = $(TEXT_MACH_PAOLO_PGI)
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DGNU
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+F90_ARCH   = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    = $(MPI_HOME)/bin/mpicc
+CXX_MPI_ARCH   = $(MPI_HOME)/bin/mpiCC
+FC_MPI_ARCH    = $(MPI_HOME)/bin/mpif77
+F90_MPI_ARCH   = $(MPI_HOME)/bin/mpif90
+LD_MPI_ARCH    = $(MPI_HOME)/bin/mpiCC
+
+CC_NOMPI_ARCH  = pgcc
+CXX_NOMPI_ARCH = pgCC
+FC_NOMPI_ARCH  = pgf77
+F90_NOMPI_ARCH = pgf90
+LD_NOMPI_ARCH  = pgCC
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = 
+CXXFLAGS_ARCH =
+FFLAGS_ARCH   = 
+F90FLAGS_ARCH = 
+LDFLAGS_ARCH  = 
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = 
+
+
+
+

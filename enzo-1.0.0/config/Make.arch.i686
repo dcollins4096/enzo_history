@@ -1,0 +1,125 @@
+#======================================================================
+#
+# Make.arch for Intel Itanium
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-17  Created
+#
+#======================================================================
+
+TEXT_ARCH = $(TEXT_ARCH_I686)
+
+#======================================================================
+# Pre-processor cpp
+#======================================================================
+
+CPP_ARCH      = /usr/bin/cpp
+CPPFLAGS_ARCH = -P -traditional
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DI686
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = icc
+CXX_ARCH   = icc
+FC_ARCH    = ifc
+F90_ARCH   = ifc
+LD_ARCH    = icc
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    =
+CXX_MPI_ARCH   =
+FC_MPI_ARCH    =
+F90_MPI_ARCH   =
+LD_MPI_ARCH    =
+
+CC_NOMPI_ARCH  =
+CXX_NOMPI_ARCH =
+FC_NOMPI_ARCH  =
+F90_NOMPI_ARCH =
+LD_NOMPI_ARCH  =
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = -w2
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -O2
+FLAGS_OPT_AGGRESSIVE_ARCH = -O3
+
+#======================================================================
+# Architecture-dependent compiler and linker flags 
+#======================================================================
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = 
+CXXFLAGS_ARCH =
+FFLAGS_ARCH   =
+F90FLAGS_ARCH =
+LDFLAGS_ARCH  = 
+
+#----------------------------------------------------------------------
+# General link flags
+#----------------------------------------------------------------------
+
+LIBS_ARCH = 
+
+#----------------------------------------------------------------------
+# Precision-related compiler flags
+#----------------------------------------------------------------------
+
+FFLAGS_PRECISION_SINGLE_ARCH = -r4
+FFLAGS_PRECISION_DOUBLE_ARCH = -r8
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -lF90 -lCEPCF90 -lIEPCF90 -lPEPCF90 -lPOSF90 -lintrins
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = -I/usr/local/vmi/mpich/include
+LIBS_MPI_ARCH = -L/usr/local/vmi/mpich/lib/intel -lmpich -lvmi -lpthread -ldl
+
+#======================================================================
+# HDF5 libraries
+#======================================================================
+
+HDF4_DIR = /usr/apps/hdf/4.1r5-intel
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /usr/apps/hdf5/5-1.4.4-intel
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5 $(LIBS_HDF4_ARCH)
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = /usr/apps/tools/papi
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI
+FLAGS_PERF_PAPI_ARCH = -I$(PERF_PAPI_DIR)/include
+LIBS_PERF_PAPI_ARCH = -L$(PERF_PAPI_DIR)/lib -lpapi

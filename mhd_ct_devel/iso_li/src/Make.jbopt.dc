@@ -1,0 +1,26 @@
+#======================================================================
+#
+# Make.jbopt for all optimizations, including untested ones
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-07-31  Created
+#
+#======================================================================
+
+TEXT_JBOPT = "dcc Move dt"
+
+#DEFINES_JBOPT_1 = -DDC_OPT_SIBSUB_II_off -DJB_OPT_FAST_NEIGHBOR_SEARCH_off 
+#DEFINES_JBOPT_2 = -DNSS  -DATHENA -qcheck=bounds -qinitauto=FF
+DEFINES_JBOPT_2 =  -DATHENA  -DINITS64 -DUSESTRANG  -DHAOXU -DNSS
+DEFINES_JBOPT_3 =   -DDC_COSMOLOGY_FLUX  -DNEW_DIVB_off  -DHAOXU_NOMULTI
+
+#-qflttrap=zero:ov:und:en 
+
+# -DPRGIO_HACK
+#
+# 
+# -DUSESTRANG
+#DEFINES_JBOPT_1 = -DOLD_CENTER
+
+DEFINES_JBOPT = $(DEFINES_JBOPT_1) $(DEFINES_JBOPT_2)  $(DEFINES_JBOPT_3) 

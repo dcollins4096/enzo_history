@@ -1,0 +1,52 @@
+<html>
+<a href="General.html"> Back To Giant Abstraction </a>
+<br>
+<br>
+Here are the main Enzo Structures.  This page is substantially less fancy than the others.
+<br><br>
+<font size = "+1">
+<a href="html/Grid.h.html"> Grid </a>  This houses all the data and lots of the meta data. 
+<br><br>
+<a href="html/Fluxes.h.html"> Fluxes </a><br> Pretty self explanitory.  Here's the code:
+</font>
+<font size = "-1">
+<br>struct fluxes <br>
+{<br>
+  long_int LeftFluxStartGlobalIndex[MAX_DIMENSION][MAX_DIMENSION];<br>
+  long_int LeftFluxEndGlobalIndex[MAX_DIMENSION][MAX_DIMENSION];<br>
+  long_int RightFluxStartGlobalIndex[MAX_DIMENSION][MAX_DIMENSION];<br>
+  long_int RightFluxEndGlobalIndex[MAX_DIMENSION][MAX_DIMENSION];<br>
+  float *LeftFluxes[MAX_NUMBER_OF_BARYON_FIELDS][MAX_DIMENSION];<br>
+  float *RightFluxes[MAX_NUMBER_OF_BARYON_FIELDS][MAX_DIMENSION];<br>
+};<br>
+
+<font size = "+1">
+
+<a href="html/Hierarchy.h.html"> HierarchyEntry.  </a>Pointers to this grid, its neighbor on 
+this level, and its child. Here's the code:
+<br><br>
+</font><font size="-1">
+struct HierarchyEntry <br>
+{<br>
+HierarchyEntry *NextGridThisLevel; /* pointer to the next grid on level */ <br>
+  HierarchyEntry *NextGridNextLevel; /* pointer to first child of this grid */<br>
+  HierarchyEntry *ParentGrid;        /* pointer to this grid's parent */<br>
+  grid           *GridData;          /* pointer to this grid's data */<br>
+};<br>
+
+  <br>
+<br>
+<font size = "+1">
+<a href="html/LevelHierarchy.h.html"> LevelHierarchyEntry.  <a>
+Pointer to this grid and its neighbor on this level Here's the code: <br>
+</font><font size="-1">
+struct LevelHierarchyEntry <br>
+{<br>
+  LevelHierarchyEntry *NextGridThisLevel;  /* next entry on this level */<br>
+  grid                *GridData;           /* pointer to this entry's grid */<br>
+  HierarchyEntry      *GridHierarchyEntry; /* pointer into hierarchy */<br>
+};<br>
+
+
+</html>
+<a href="General.html"> Back To Giant Abstraction </a>

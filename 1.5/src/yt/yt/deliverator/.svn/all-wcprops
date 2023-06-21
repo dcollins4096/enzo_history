@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator
+END
+prod.cfg
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/prod.cfg
+END
+start-deliverator.py
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/start-deliverator.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/setup.py
+END
+deliverator.wsdl
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/deliverator.wsdl
+END
+README.txt
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/README.txt
+END
+dev.cfg
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/yt/!svn/ver/666/branches/yt-1.0/yt/deliverator/dev.cfg
+END

@@ -1,0 +1,43 @@
+#======================================================================
+#
+# Make.mach for cosmos.ucsd.edu
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-06-06  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_COSMOS)
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+COMPILER_MPI_HOME = /usr/local/bin
+
+CC_MPI_ARCH    = $(COMPILER_MPI_HOME)/mpicc
+CXX_MPI_ARCH   = $(COMPILER_MPI_HOME)/mpiCC
+FC_MPI_ARCH    = $(COMPILER_MPI_HOME)/mpif77
+LD_MPI_ARCH    = $(COMPILER_MPI_HOME)/mpiCC
+
+COMPILER_NOMPI_HOME = /opt/SUNWspro/bin
+
+CC_NOMPI_ARCH  = $(COMPILER_NOMPI_HOME)/cc
+CXX_NOMPI_ARCH = $(COMPILER_NOMPI_HOME)/CC
+FC_NOMPI_ARCH  = $(COMPILER_NOMPI_HOME)/f77
+LD_NOMPI_ARCH  = $(COMPILER_NOMPI_HOME)/CC
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_DEBUG_ARCH      = -g0
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = -I/usr/local/mpi/include
+LIBS_MPI_ARCH = -L/usr/local/mpi/lib-sun -lmpich
+

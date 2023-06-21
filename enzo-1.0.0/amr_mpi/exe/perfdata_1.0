@@ -1,0 +1,40 @@
+elapsed wall time is 8.669779e-01f .
+communication time is 0.000000e+00f .
+comm. time for transferring region is 0.000000e+00f (0 times).
+comm. time for sending particles is 0.000000e+00f (0 times).
+comm. time for transferring particles is 0.000000e+00f (0 times).
+comm. time for UpdateStarParticleCount is 0.000000e+00f (0 times).
+comm. time for transferring Fluxes is 0.000000e+00f (0 times).
+comm. time for ShareGrids is 0.000000e+00f (0 times).
+comm. time for Transpose is 0.000000e+00f (0 times).
+comm. time for BroadcastValue is 0.000000e+00f (0 times).
+comm. time for MinValue is 0.000000e+00f (0 times).
+total time used for RebuildHierarchy is 7.693613e+10f (70 times).
+total interval time used between RebuildHierarchy is 7.693613e+10f (70 times).
+total time used for loadbalancing is 0.000000e+00f (0 times).
+total number of successful loadbalancing is 0/0 (LOAD_BALANCE_RATIO=0.000000).
+total number of flagging cells is 0.000000e+00f (0 times).
+total size of region transferred is 0.000000e+00f (0 times). 
+total size of particles sended is 0.000000e+00f (0 times). 
+total size of particles transferred is 0.000000e+00f (0 times). 
+global communication time is 0.000000e+00f .
+MPI_Recv communication time is 0.000000e+00f .
+average percentage of flagging cells is 0.
+average percentage of moving cells is 0.
+***********************************
+square time for transferring region is 0.000000e+00f (0 times).
+square time for sending particles is 0.000000e+00f (0 times).
+square time for transferring particles is 0.000000e+00f (0 times).
+square time for UpdateStarParticleCount is 0.000000e+00f (0 times).
+square time for transferring Fluxes is 0.000000e+00f (0 times).
+square time for ShareGrids is 0.000000e+00f (0 times).
+square time for Transpose is 0.000000e+00f (0 times).
+square time for BroadcastValue is 0.000000e+00f (0 times).
+square time for MinValue is 0.000000e+00f (0 times).
+square time used for RebuildHierarchy is 8.455955e+19f (70 times).
+square interval time used between RebuildHierarchy is 8.455955e+19f (70 times).
+square time used for loadbalancing is 0.000000e+00f (0 times).
+square number of flagging cells is 0.000000e+00f (0 times).
+square size of region transferred is 0.000000e+00f (0 times). 
+square size of particles sended is 0.000000e+00f (0 times). 
+square size of particles transferred is 0.000000e+00f (0 times). 

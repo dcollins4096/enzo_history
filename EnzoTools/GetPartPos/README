@@ -1,0 +1,14 @@
+There are too many versions of this routine.  Hopefully the taxonomy
+below will clarify what's what:
+
+GetPartPos.C:  The original version of GetPartPos.  Reads in normal
+  (i.e. not packed) AMR hierarchies and writes out a 3-column ASCII file
+  with x,y,z positions in Enzo's internal position units.
+
+GetPartPosInd.C:  a slightly modified version of GetPartPos.C, which 
+  reads in normal AMR hierarchies and writes out an ascii text file that 
+  contains the x,y,z position AND the particle index number.
+
+GetPartPos_Binary.C:  This outputs a big binary file that has position, 
+  velocity and index information in it.  This is in Katrin's "cosmo" 
+  format.

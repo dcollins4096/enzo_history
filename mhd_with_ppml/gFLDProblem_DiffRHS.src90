@@ -1,0 +1,412 @@
+!=======================================================================
+!
+! Copyright 2006 Daniel R. Reynolds
+! Copyright 2006 Laboratory for Computational Astrophysics
+! Copyright 2006 Regents of the University of California
+!
+! This software is released under the terms of the "Enzo Public License"
+! in the accompanying LICENSE file.
+!
+!=======================================================================
+subroutine gFLDProblem_DiffRHS(rhs, EgCur, EgOld, Temp, sigmaA, sigmaS, &
+                               LimImp, a, dx, dy, dz, Nx, Ny, Nz, NGxl, &
+                               NGxr, NGyl, NGyr, NGzl, NGzr, ier)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       September, 2006
+!  modified1:
+!
+!  PURPOSE: Computes the spatially-diffusive component of the 
+!           nonlinear rhs for the Gray FLD problem,
+!              -1/a*Div(D(Eg)*Grad(Eg))
+!           where D(Eg) is a nonlinear flux-limiter depending on Eg.  
+!           We define the values
+!              R_i = |Grad(Eg)_i|/sigT/omega/Eg,
+!              omega = (sigA*B + sigS*E)/(sigT*E)
+!              sigA = absorption coefficient
+!              sigS = scattering coefficient
+!              sigT = total extinction coefficient.
+!           The '_i' subscript implies the gradient in the ith 
+!           direction; these quantities are all required at cell faces, 
+!           as that is the location of the divergence calculations.
+!           With these components, we allow any of the following three 
+!           forms of the limiter, 
+!             [Levermore-Pomraning, 1981],
+!                 D_i(Eg) = c/sigT/R_i/omega*[coth(R_i)-1/R_i],
+!             [rational approx. to above, Levermore-Pomraning, 1981],
+!                 D_i(Eg) = c/sigT/omega*(2+R_i)/(6+3*R_i+R_i**2),
+!             [Reynolds approximation to LP],
+!                 D_i(Eg) = 2/pi*c/sigT/R_i/omega*atan(R_i*pi/6),
+!           Each of the above three forms has relative merits:
+!             - The original LP formulation has been well-tested in 
+!               the community; however it involves subtracting two
+!               large numbers when R is close to 0, allowing for 
+!               possibly large roundoff errors.  Additionally, the 
+!               coth = sinh/cosh function may be costly to perform 
+!               repeatedly.
+!             - The rational approximation alleviates the cost of 
+!               intrinsic functions and catastrophic floating-point 
+!               cancellation errors, but introduces a 7.2% error 
+!               away from the original limiter.
+!             - The new approximation also alleviates any catastrophic 
+!               floating-point cancellation errors, and introduces 
+!               only a 4.8% error away from the original limiter; 
+!               however it still involves the use of possibly-expensive 
+!               intrinsic functions.
+!           The limiter type is determined through pre-processor 
+!           directives:
+!               DLIM_LPR    rational approx. to LP lim. (LP, 1981)
+!               DLIM_DRR    Reynolds approx to LP lim.
+!               DLIM_NONE   turns of limiter (constant of 1/3)
+!               (default)   standard Levermore-Pomraning lim. (LP, 1981)
+!
+!  INPUTS:
+!     EgCur      - Gray radiation energy density
+!     EgOld      - Gray radiation energy density (old time step)
+!     Temp       - fluid temperature
+!     sigmaA     - absorption coefficient in cell
+!     sigmaS     - scattering coefficient in cell
+!     LimImp     - integer flag denoting implicitness of flux limiter:
+!                       0 -> fully lagged to previous time step
+!                       1 -> fully lagged to previous newton iterate
+!                       2 -> lag only temperature dependence
+!     a          - cosmological expansion parameter
+!     dx,dy,dz   - mesh spacing in each direction
+!     Nx,Ny,Nz   - active mesh size in each direction
+!     NG*l/NG*r  - left/right ghost cells in each direction
+!
+!     Note: the vector inputs are of size (Nx + NGxl + NGxr) in 
+!     the x-direction, others are similar.
+!
+!  OUTPUT ARGUMENTS: 
+!     rhs        - diffusive nonlinear rhs for the radiation 
+!                  energy equation
+!     ier        - success/failure output flag (0->failure, 1->success)
+!
+!  EXTERNALS: 
+!
+!  LOCALS:
+!
+!=======================================================================
+#include "fortran.def"
+  implicit none
+
+  !--------------
+  ! argument declarations
+  integer, intent(in) :: LimImp, Nx, NGxl, NGxr
+  integer, intent(in) :: Ny, NGyl, NGyr
+  integer, intent(in) :: Nz, NGzl, NGzr
+  integer, intent(out) :: ier
+  REALSUB, intent(in)  :: a
+  REALSUBR, intent(in)  :: dx, dy, dz
+  REALSUBR, intent(in), target,                                 &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)  &
+       :: EgCur, EgOld, Temp
+  REALSUBR, intent(in),                                         &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)  &
+       :: sigmaA, sigmaS
+  REALSUBR, intent(out)                                     &
+       :: rhs(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)
+
+  !--------------
+  ! locals
+  integer :: i, j, k
+  REALSUBR :: c, pi, dxi, dyi, dzi
+  REALSUBR :: Egf, B, omega, R, sigA, sigS, sigT, AGradEg, StBz
+  REALSUBR, dimension(3) :: GradEgL, GradEgR, DEgL, DEgR
+  REALSUBR, pointer :: Eg(:,:,:)
+  REALSUBR :: fltzero
+
+  !=======================================================================
+
+!!$  write(*,*) 'Entering gFLDProblem::DiffRHS routine'
+
+  ! initialize output to zero, flag to success
+  rhs = 0.d0
+  ier = 1
+
+  ! set shortcut values
+  dxi = 1.d0/dx/a
+  dyi = 1.d0/dy/a
+  dzi = 1.d0/dz/a
+  c = 2.99792458d10  ! speed of light [cm/s]
+  pi = 4.d0*datan(1.d0)
+  StBz = 5.6074d-5   ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
+#undef tiny
+  ! get rid of bad macro (1e-20??: >> min, << roundoff, nonsensical)
+  fltzero = tiny(fltzero)  ! use f90 built-in function for min instead
+
+
+  ! set Eg to point at appropriate array for limiter evaluation
+  select case (LimImp)
+  case(1)       ! fully lagged to previous newton iterate
+     Eg=>EgCur
+  case(2)       ! lag only temperature dependence
+     Eg=>EgCur
+  case default  ! fully lagged to previous time step
+     Eg=>EgOld
+  end select
+
+
+  ! compute radiation energy gradient over domain
+  do k=1,Nz,1
+     do j=1,Ny,1
+        do i=1,Nx,1
+
+           !--------------
+           ! x-directional limiter, lower face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k) - Eg(i-1,j,k))*dxi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i-1,j,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i-1,j,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i-1,j,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i-1,j,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           DEgL(1) = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           DEgL(1) = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+#elif DLIM_DRR
+           DEgL(1) = 2.d0/pi*c/omega/sigT*datan(R*pi/6.d0)/R
+#elif DLIM_NONE
+!!$           DEgL(1) = 1.d0/3.d0
+           DEgL(1) = c/omega/sigT/3.d0
+#else
+           DEgL(1) = c/omega/sigT*(cosh(R)/sinh(R)-1.d0/R)/R
+#endif
+
+!!$           write(*,*) '  location =',i,j,k,',  x-left face:'
+!!$           write(*,*) '      Temp =',(Temp(i,j,k)+Temp(i-1,j,k))*0.5d0
+!!$           write(*,*) '         a =',a
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         B =',B
+!!$           write(*,*) '         R =',R
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '      sigA =',sigA
+!!$           write(*,*) '      sigS =',sigS
+!!$           write(*,*) '      Dlim =',DEgL(1)
+!!$           write(*,*) '   '
+
+           !--------------
+           ! x-directional limiter, upper face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i+1,j,k) - Eg(i,j,k))*dxi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i+1,j,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i+1,j,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i+1,j,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i+1,j,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           DEgR(1) = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           DEgR(1) = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+#elif DLIM_DRR
+           DEgR(1) = 2.d0/pi*c/omega/sigT*datan(R*pi/6.d0)/R
+#elif DLIM_NONE
+!!$           DEgR(1) = 1.d0/3.d0
+           DEgR(1) = c/omega/sigT/3.d0
+#else
+           DEgR(1) = c/omega/sigT*(cosh(R)/sinh(R)-1.d0/R)/R
+#endif
+
+           !--------------
+           ! y-directional limiter, lower face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k) - Eg(i,j-1,k))*dyi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j-1,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j-1,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j-1,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j-1,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           DEgL(2) = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           DEgL(2) = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+#elif DLIM_DRR
+           DEgL(2) = 2.d0/pi*c/omega/sigT*datan(R*pi/6.d0)/R
+#elif DLIM_NONE
+!!$           DEgL(2) = 1.d0/3.d0
+           DEgL(2) = c/omega/sigT/3.d0
+#else
+           DEgL(2) = c/omega/sigT*(cosh(R)/sinh(R)-1.d0/R)/R
+#endif
+
+           !--------------
+           ! y-directional limiter, upper face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j+1,k) - Eg(i,j,k))*dyi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j+1,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j+1,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j+1,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j+1,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           DEgR(2) = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           DEgR(2) = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+#elif DLIM_DRR
+           DEgR(2) = 2.d0/pi*c/omega/sigT*datan(R*pi/6.d0)/R
+#elif DLIM_NONE
+!!$           DEgR(2) = 1.d0/3.d0
+           DEgR(2) = c/omega/sigT/3.d0
+#else
+           DEgR(2) = c/omega/sigT*(cosh(R)/sinh(R)-1.d0/R)/R
+#endif
+
+           !--------------
+           ! z-directional limiter, lower face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k) - Eg(i,j,k-1))*dzi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j,k-1))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j,k-1))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j,k-1))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j,k-1))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           DEgL(3) = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           DEgL(3) = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+#elif DLIM_DRR
+           DEgL(3) = 2.d0/pi*c/omega/sigT*datan(R*pi/6.d0)/R
+#elif DLIM_NONE
+!!$           DEgL(3) = 1.d0/3.d0
+           DEgL(3) = c/omega/sigT/3.d0
+#else
+           DEgL(3) = c/omega/sigT*(cosh(R)/sinh(R)-1.d0/R)/R
+#endif
+
+           !--------------
+           ! z-directional limiter, upper face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k+1) - Eg(i,j,k))*dzi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j,k+1))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j,k+1))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j,k+1))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j,k+1))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           DEgR(3) = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           DEgR(3) = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+#elif DLIM_DRR
+           DEgR(3) = 2.d0/pi*c/omega/sigT*datan(R*pi/6.d0)/R
+#elif DLIM_NONE
+!!$           DEgR(3) = 1.d0/3.d0
+           DEgR(3) = c/omega/sigT/3.d0
+#else
+           DEgR(3) = c/omega/sigT*(cosh(R)/sinh(R)-1.d0/R)/R
+#endif
+
+           !--------------
+           ! compute gradients of current Eg
+           GradEgL(1) = (EgCur(i,j,k) - EgCur(i-1,j,k))*dxi
+           GradEgR(1) = (EgCur(i+1,j,k) - EgCur(i,j,k))*dxi
+           GradEgL(2) = (EgCur(i,j,k) - EgCur(i,j-1,k))*dyi
+           GradEgR(2) = (EgCur(i,j+1,k) - EgCur(i,j,k))*dyi
+           GradEgL(3) = (EgCur(i,j,k) - EgCur(i,j,k-1))*dzi
+           GradEgR(3) = (EgCur(i,j,k+1) - EgCur(i,j,k))*dzi
+
+           ! put it all together (negative Laplace, hence L-R)
+           rhs(i,j,k) = (DEgL(1)*GradEgL(1)       &
+                        -DEgR(1)*GradEgR(1))*dxi  &
+                      + (DEgL(2)*GradEgL(2)       &
+                        -DEgR(2)*GradEgR(2))*dyi  &
+                      + (DEgL(3)*GradEgL(3)       &
+                        -DEgR(3)*GradEgR(3))*dzi
+
+        enddo
+     enddo
+  enddo
+
+  ! nullify pointers
+  nullify(Eg)
+
+  return
+end subroutine gFLDProblem_DiffRHS
+!=======================================================================

@@ -1,0 +1,136 @@
+#ifndef JBPERF_DEF
+#define JBPERF_DEF
+
+/*
+**  Recognized defines:
+**
+**  NO_GNU_CPP:  Don't use GNU cpp
+**       _IBM_:  IBM compiler
+**
+**  Macros defined:
+**
+**    FINC_FUN:  Fortran interface function in C file
+**    XINC_FUN:  Private function in C file
+**    FINF_FUN:  Fortran interface function in Fortran file
+**    XINF_FUN:  Private function in Fortran file
+**
+*/
+
+#ifdef __cplusplus
+#define HEADER(body) extern "C" { body; } body
+#else
+#define HEADER(body) body;
+#endif
+
+#ifdef NO_GNU_CPP
+#  if defined(_IBM_)
+#    define FINC_FUN(foo)      jbperf_/**/foo
+#    define XINC_FUN(foo) x/**/jbperf_/**/foo
+#    define FINF_FUN(foo)      jbperf_    foo
+#    define XINF_FUN(foo) x    jbperf_    foo
+#  else 
+#    define FINC_FUN(foo)      jbperf_/**/foo/**/_
+#    define XINC_FUN(foo) x/**/jbperf_/**/foo/**/_
+#    define FINF_FUN(foo)      jbperf_    foo    
+#    define XINF_FUN(foo) x    jbperf_    foo    
+#  endif
+#else
+#  if defined(_IBM_)
+#    define FINC_FUN(foo)    jbperf_##foo
+#    define XINC_FUN(foo) x##jbperf_##foo
+#    define FINF_FUN(foo)    jbperf_  foo
+#    define XINF_FUN(foo) x  jbperf_  foo
+#  else 
+#    define FINC_FUN(foo)    jbperf_##foo##_
+#    define XINC_FUN(foo) x##jbperf_##foo##_
+#    define FINF_FUN(foo)    jbperf_  foo  
+#    define XINF_FUN(foo) x  jbperf_  foo  
+#  endif
+#endif
+
+#define MAX_PATH_LENGTH  100
+#define JBPERF_DIR "JBPERF"
+
+#define JB_MODE_NONE     0
+#define JB_MODE_NEXT     1
+#define JB_MODE_ADVANCE  2
+#define JB_MODE_CATEGORY 4
+#define JB_MODE_TRACE    8
+#define JB_MODE_ALL      15
+
+#define JB_STATE_NEW     0
+#define JB_STATE_STARTED 1
+#define JB_STATE_STOPPED 2
+
+#define NUM_EVENTS 6
+
+#define IND_EVENT 0
+#define IND_VIRT 1
+#define IND_REAL 2
+#define IND_CALLS 3
+#define IND_START 4
+#define IND_LOG 5
+
+#define IND_INCL   0
+#define IND_EXCL   NUM_EVENTS
+#define IND_BEGIN  2*NUM_EVENTS
+
+#define IND_ADJUST NUM_EVENTS
+#define IND_THIS   0
+
+#define MAX_F77_REGION_LENGTH 80
+
+/*----------------------------------------------------------------------*/
+#ifdef TRACE_JBPERF
+#  define _TRACE_JBPERF(X) \
+    printf ("TRACE_JBPERF %s:%d " X "()\n",__FILE__,__LINE__); \
+    fflush(stdout);
+#  define _TRACE_JBPERF1(X,A) \
+    printf ("TRACE_JBPERF %s:%d " X "(%s)\n",__FILE__,__LINE__,A); \
+    fflush(stdout);
+#else
+#  define _TRACE_JBPERF(X) ;
+#  define _TRACE_JBPERF1(X,A) ;
+#endif
+/*----------------------------------------------------------------------*/
+#ifdef TRACE_STATE
+#  define _TRACE_STATE \
+  printf ("TRACE_STATE: %s:%d %s %s\n",__FILE__,__LINE__,region.c_str(), \
+        state_[region] == JB_STATE_NEW ? "new" : \
+             (state_[region] == JB_STATE_STARTED ? "started" : \
+                (state_[region] == JB_STATE_STOPPED ? "stopped" : "illegal")));
+#else
+#  define _TRACE_STATE ;
+#endif
+/*----------------------------------------------------------------------*/
+#ifdef TRACE_PAPI
+#  define _TRACE_PAPI(DESCRIPTION) \
+    printf ("TRACE_PAPI %s:%d PAPI_" DESCRIPTION "()\n",__FILE__,__LINE__); \
+    fflush(stdout);
+#else
+#  define _TRACE_PAPI(DESCRIPTION) ;
+#endif
+/*----------------------------------------------------------------------*/
+#ifdef CHECK_PAPI
+#  define _CHECK_PAPI(RETVAL,DESCRIPTION,EXPECTED_VAL) \
+    if (RETVAL != EXPECTED_VAL) { \
+      fprintf (stderr,"JBPERF ERROR: %s:%d PAPI_%s() ERROR:%s\n", \
+   	     __FILE__,__LINE__,DESCRIPTION,PAPI_strerror(RETVAL)); \
+      fflush(stderr); \
+    }
+#else
+#  define _CHECK_PAPI(RETVAL,DESCRIPTION,EXPECTED_VAL) ;
+#endif
+/*----------------------------------------------------------------------*/
+#if defined(USE_PAPI)
+#  define _CALL_PAPI(CALL,DESCRIPTION,EXPECTED_VAL) \
+  { int retval = CALL; \
+    _TRACE_PAPI(DESCRIPTION); \
+    _CHECK_PAPI(retval,DESCRIPTION,EXPECTED_VAL); \
+  }
+#else
+#  define _CALL_PAPI(CALL,DESCRIPTION,EXPECTED_VAL) ;
+#endif
+
+
+#endif

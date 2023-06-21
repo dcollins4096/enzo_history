@@ -1,0 +1,98 @@
+Getting Enzo to compile on a mac.
+
+Last modified: 1/4/2007, by BWO
+
+-------- compiling on thunderhead.lanl.gov ---------
+
+This is a dual-processor, dual-core Power Mac G5 (power pc chips) running 
+OS X 10.4.8 and using gcc v4.1.0 and gfortran v4.1.0 (v4.1.0 is the most 
+current "stable" branch of gcc/gfortran) installed via fink. The version 
+of fink that I am using is 0.8.0.rsync, and the package manager version is 
+0.24.26.  In addition, I had to install lam MPI (and all of the development 
+libraries) via fink and also hdf4 and hdf5. These libraries were installed 
+_after_ gcc was updated to v4.1.0, and I compiled them from source rather 
+than downloading the binary.  Note that, for whatever reason, the lam 
+libraries are in /sw/lib instead of /sw/lib/lammpi.  I find this odd, 
+since they are in /sw/lib/lammpi on my laptop (which uses the 4.2.0 
+compilers - more on that later).  Anyway, the libraries are all apparently 
+stock libraries.
+
+I got the code to compile using 64-bit internal precision throughout, and 
+tested it with a Zeldovich Pancake and with a small cosmology test.  
+Results seem reasonable.  Some small modifications were necessary to the 
+code in order to get it to compile, as detailed below.  A good number have 
+to do with fortran issues.
+
+hdf4.h:  This had to be modified with a new definition type (OSX) so that 
+some of the typedefs, such as float32 and float64, could work. This was 
+done simply by adding this chunk of code at the end:
+
+#if defined(OSX)
+typedef void         *VOIDP;
+typedef float        float32;
+typedef double       float64;
+typedef long double  float128;
+#endif
+
+Makefile.thunderhead:  This is modified such that all of the fortran90 
+stuff is commented out.  Apparently gfortran can't handle some of the syntax 
+in fft90.src90.  This is simply dealt with by going to the fortran-66 FFT.  
+Additionally, the version of lam on my desktop machine doesn't seem to define 
+some fortran MPI calls correctly, so I had to change a couple fortran routines that
+call mpi.  The copied, modified version of those routines are discussed below, and 
+those are compiled instead of their non-thunderhead versions.  This version of 
+Enzo needs to be compiled with "make -f Makefile.fnord" in the amr_mpi/src 
+directory.
+
+mpi_error_file-thunderhead.src:  This is a modified version of mpi_error_File.src.  
+The call to mpi_comm_rank is commented out.  This is, strictly speaking, a very bad 
+idea because the code will not die gracefully if something happens in the fortran 
+routines.  However, I don't intend to use this particular compilation of the code 
+for anything other than development, so whatever.
+
+stop_all_cpus-thunderhead.src: this is a modified version of stop_all_cpus.src.  
+The call to mpi_comm_ran is commented out here as well.  Instead, it just calls 
+'exit', which will work fine on one processor.  See above re: only doing 
+development on my mac. Blah blah blah.
+
+fortfft3d-mac.src: This has been modified so that it calls the fortran-66 
+version of the FFT rather than the f90 version, due to the above-mentioned 
+compiler issues.  It probably makes little difference in performance.
+
+A note on Macs:  the default memory limits on my Mac (as shown by the 'limit' 
+command) are ridiculously low.  When running problems of any reasonable size, 
+I have to type the following:
+    set datasize unlimited
+    set stacksize unlimited
+    set memoryuse unlimited
+
+and then things work fine, for the most part.
+
+A note on gfortran:  The standard -p4/-p8 -r4/-r8 -i4/-i8 syntax does not work in
+gfortran.  Instead, you have to use -fdefault-double-8, etcetera.  The makefile
+(both the main makefile and the thunderhead-specific makefile) have this instead
+of the r?/p?/i? crap.
+
+-------- compiling on fnord.lanl.gov ---------
+
+Interestingly enough, getting Enzo64-Brian to compile on my laptop ultimately
+required fewer changes than on my desktop machine.  My laptop is a G4 PowerPC
+running OS X 10.4.8, and using gcc v4.2.0 and gfortran 4.2.0, installed via 
+fink (Package manager version 0.26.0, fink distribution version 0.8.1.rsync for the
+powerpc).  Note that I use a different version of the gnu compilers here - this 
+corresponds to the "unstable" branch of fink.  lammpi and hdf4/hdf5 were installed
+(upgraded, actually) using the source code versions after the compilers were updated
+to the most current version.  Files that needed to be modified:
+
+hdf4.h:  see above - it's the same modification, so the file is unchanged.
+
+Makefile.fnord, Make.darwin-fnord.mpi:  laptop-specific makefiles.  This version
+has to be comiled with "make -f Makefile.fnord" in the amr_mpi/src directory.
+The f90 stuff is commented out.
+
+fortfft3d-mac.src: see above for comments.  This now uses the f66 FFT instead of
+the f90 one, for reasons detailed above.
+
+It's interesting that this version of lam doesn't have the fortran problems that
+my desktop saw.  Oh well.
+

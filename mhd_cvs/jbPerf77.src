@@ -1,0 +1,71 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 James Bordner                                              *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+#include "jbPerf.def"
+
+C
+C     interfacef.F
+C
+C     This file contains Fortran interface functions that require
+C     special handling.  Specifically, functions that need to
+C     pass a string to C functions
+C
+      SUBROUTINE FINF_FUN(papi) (region)
+      IMPLICIT NONE
+      CHARACTER region*(*)
+      CALL XINF_FUN(papi) (region,LEN(region))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(user) (region)
+      IMPLICIT NONE
+      CHARACTER region*(*)
+      CALL XINF_FUN(user) (region,LEN(region))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(start) (region)
+      IMPLICIT NONE
+      CHARACTER region*(*)
+      CALL XINF_FUN(start) (region,LEN(region))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(stop) (region)
+      IMPLICIT NONE
+      CHARACTER region*(*)
+      CALL XINF_FUN(stop) (region,LEN(region))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(next) (region)
+      IMPLICIT NONE
+      CHARACTER region*(*)
+      CALL XINF_FUN(next) (region,LEN(region))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(increment) (event,value)
+      IMPLICIT NONE
+      CHARACTER event*(*)
+      INTEGER value
+      CALL XINF_FUN(increment) (event,LEN(event),value)
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(category) (region,value)
+      IMPLICIT NONE
+      CHARACTER region*(*),value*(*)
+      CALL XINF_FUN(category) (region,LEN(region),value,LEN(value))
+      RETURN
+      END
+

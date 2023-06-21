@@ -1,0 +1,91 @@
+#
+# macros for IBM SP
+#
+# -----------------------------------------------------------------------
+
+# -----------------------------------------------------------------------
+# jbPerf settings
+# -----------------------------------------------------------------------
+
+# Edit: 
+
+JBPERF_LEVEL = JBPERF_LEVEL_2
+JBPERF_PAPI := yes
+
+JBPERF_HOME = $(HOME)/jbPerf
+PAPI_HOME   = /usr/common/usg/papi/3.2.1
+PAPI_LINK   = $(PAPI) # Defined using "module papi"
+
+# Do not edit:
+ 
+#DEFINES_JBPERF = -DUSE_JBPERF -D$(JBPERF_LEVEL)
+#INCLUDE_JBPERF = -I$(JBPERF_HOME)/include
+#LIBS_JBPERF    = -L$(JBPERF_HOME)/lib -ljbperf -ljbperfMPI 
+
+DEFINES_JBPERF = 
+INCLUDE_JBPERF = 
+LIBS_JBPERF    = 
+
+ifeq ($(JBPERF_PAPI),yes)
+  DEFINES_PAPI = -DUSE_PAPI
+  INCLUDE_PAPI = -I$(PAPI_HOME)/include
+  LIBS_PAPI = $(PAPI_LINK)
+endif
+
+DEFINES_PERF = $(DEFINES_JBPERF) $(DEFINES_PAPI)
+INCLUDE_PERF = $(INCLUDE_JBPERF) $(INCLUDE_PAPI)
+LIBS_PERF = $(LIBS_JBPERF) $(LIBS_PAPI)
+
+# -----------------------------------------------------------------------
+
+# HDF5_DIR defined by module add hdf5
+
+#HDF5_INSTALL = $(HDF5_DIR)
+#SZIP_INSTALL = $(HDF_DIR)
+#ZLIB_INSTALL = $(HDF_DIR)
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /usr/local/apps64/hdf5
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+#PROF         = -pg
+PROF =
+CPP          = /usr/ccs/lib/cpp
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = mpxlf90_r
+FC_OPT       = -O3 $(PROF) -qstrict
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed
+DEFINES      = -DSP2 -DUSE_MPI -DIO_LOG -DMEM_TRACE $(DEFINES_PERF)
+
+## C Compiler
+CC           = mpcc_r
+CC_OPT       = -O $(DEFINES) $(PROF) -qstrict
+CFLAGS       =
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = mpCC_r
+CCxx_OPT     = -O $(DEFINES) $(PROF) -qstrict
+CCxxFLAGS    =
+
+## Linker/loader
+LDR          = mpCC_r $(PROF)
+#LDR_OPT      = /usr/local/lib/libmpitrace.a
+#LDR_OPT      = $(HOME)/apps64/mpi_trace/mpi_trace.o
+
+#LDR          = xlC128 -qldbl128 -binitfini:poe_remote_main -lmpi -lvtd -v -L/usr/lpp/ppe.poe/lib -L/usr/lpp/ppe.poe/lib/ip
+#LDR          = xlC128 -qldbl128 -lm
+
+LIB          = -L${HDF5_INSTALL}/lib -lhdf5 \
+               $(SZIP_INSTALL)/lib/libsz.a \
+               $(ZLIB_INSTALL)/lib/libz.a \
+               -lxlf90_r -lessl \
+               $(LIBS_PERF)
+
+OPTS         = -c -I${HDF5_INSTALL}/include $(INCLUDE_PERF)
+DEBUG        = 

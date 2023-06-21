@@ -1,0 +1,265 @@
+c#include "error.def"
+      subroutine passivemhd_computer_b(density,newvx, newvy, newvz,
+     +     oldvx,oldvy,oldvz,ge,
+     +     bx, by, bz,
+     +     dx, dy, dz, idim, jdim, kdim, dtIn,ProjectE,
+     +     i1,i2,j1,j2,k1,k2,
+     +     a,biermann
+     + )
+
+c-----------------------------------------------------------------------
+c  Passive MHD, computer Electric field from velocities and magnetic
+c
+c  Input the cell center velocity and face center magnetic field
+c-----------------------------------------------------------------------
+      implicit none
+c
+c
+c     input variables 
+      real dtIn
+      integer idim,jdim,kdim
+      integer i1,i2,j1,j2,k1,k2,ProjectE,biermann
+  
+      real density(idim,jdim,kdim)
+      real newvx(idim,jdim,kdim)
+      real newvy(idim,jdim,kdim)
+      real newvz(idim,jdim,kdim)
+      real oldvx(idim,jdim,kdim)
+      real oldvy(idim,jdim,kdim)
+      real oldvz(idim,jdim,kdim)
+      real ge(idim,jdim,kdim)
+      real bx(idim,jdim,kdim)
+      real by(idim,jdim,kdim)
+      real bz(idim,jdim,kdim)     
+      real dx,dy,dz
+      real a    
+
+
+      integer i, j, k, is, ie, js, je, ks, ke
+      real vx(idim,jdim,kdim), vy(idim,jdim,kdim), vz(idim,jdim,kdim)     
+      real dt
+      real exc(idim,jdim,kdim)
+      real eyc(idim,jdim,kdim)
+      real ezc(idim,jdim,kdim)
+      real exf_y(idim,jdim,kdim)
+      real exf_z(idim,jdim,kdim)   
+      real eyf_x(idim,jdim,kdim)
+      real eyf_z(idim,jdim,kdim)   
+      real ezf_x(idim,jdim,kdim)
+      real ezf_y(idim,jdim,kdim)
+       
+
+      real c1_temp(idim,jdim,kdim)
+      real c2_temp(idim,jdim,kdim)
+      real c3_temp(idim,jdim,kdim)
+      real ex(idim,jdim+1, kdim+1)
+      real ey(idim+1,jdim, kdim+1)
+      real ez(idim+1,jdim+1, kdim)
+      real pre(idim,jdim,kdim)
+      real gradient_p_1(idim,jdim,kdim)
+      real gradient_p_2(idim,jdim,kdim)
+      real gradient_p_3(idim,jdim,kdim)
+      real eta
+       
+     
+
+      real zero, one, two, onehalf, four, gam1r
+      
+      zero = 0.0
+      one = 1.0
+      two = 2.0
+      four = 4.0
+      onehalf = 0.5
+      eta = -0.1
+c      eta = -0.1e-5
+
+c set the strt and end index
+      is=i1-2
+      ie=i2+4
+      js=j1-2
+      je=j2+4
+      ks=k1-2
+      ke=k2+4
+       
+       if( ProjectE .eq. 1 ) then
+         dt = dtIn
+      else
+         dt = 1.0
+      endif
+
+
+c----------------------------------------------------------------------
+c time center velocities
+c---------------------------------------------------------------------
+       do i=1,idim
+         do j=1,jdim
+           do k=1,kdim
+         vx(i,j,k) = onehalf*(newvx(i,j,k)+oldvx(i,j,k))
+         vy(i,j,k) = onehalf*(newvy(i,j,k)+oldvy(i,j,k))
+         vz(i,j,k) = onehalf*(newvz(i,j,k)+oldvz(i,j,k))
+           enddo
+         enddo
+       enddo
+
+c-----------------------------------------------------------------------
+c Compute Pressure
+c----------------------------------------------------------------------
+        do i=1,idim
+         do j=1,jdim
+           do k=1,kdim
+         pre(i,j,k) = ge(i,j,k)*density(i,j,k)
+           enddo
+         enddo
+       enddo
+
+c----------------------------------------------------------------------
+c Compute the Electric fields in the cell center
+c---------------------------------------------------------------------
+         do k=1,kdim
+         do j=1,jdim
+            do i=1,idim
+               
+            ex(i,j,k) =-( vy(i,j,k)*bz(i,j,k)-vz(i,j,k)*by(i,j,k) )
+            ey(i,j,k) =-( vz(i,j,k)*bx(i,j,k)-vx(i,j,k)*bz(i,j,k) )
+            ez(i,j,k) =-( vx(i,j,k)*by(i,j,k)-vy(i,j,k)*bx(i,j,k) )
+
+          enddo
+         enddo
+      enddo
+
+c----------------------------------------------------------------------
+c Average Electric fields to get it on the cell face
+c---------------------------------------------------------------------
+       do i=is,ie
+         do j=js+1,je
+           do k=ks,ke
+           exf_z(i,j,k)=onehalf*(ex(i,j,k)+ex(i,j-1,k))
+           ezf_x(i,j,k)=onehalf*(ez(i,j,k)+ez(i,j-1,k))
+           enddo
+         enddo
+       enddo 
+
+       do i=is,ie  
+         do j=js,je
+           do k=ks+1,ke  
+           exf_y(i,j,k)=onehalf*(ex(i,j,k)+ex(i,j,k-1))
+           eyf_x(i,j,k)=onehalf*(ey(i,j,k)+ey(i,j,k-1))
+           enddo
+         enddo
+       enddo
+
+        do i=is+1,ie
+         do j=js,je
+           do k=ks,ke
+           eyf_z(i,j,k)=onehalf*(ey(i,j,k)+ey(i-1,j,k))
+           ezf_y(i,j,k)=onehalf*(ez(i,j,k)+ez(i-1,j,k))
+           enddo
+         enddo
+       enddo
+
+       
+c--------------------------------------------------------
+c include the biermann battery terms
+c--------------------------------------------------------
+         if(biermann .eq. 2) then
+           do i=is+1,ie-1
+             do j=js,je
+               do k=ks,ke
+                gradient_p_1(i,j,k)= 0.5*
+     +        (pre(i+1,j,k)-pre(i-1,j,k))/dx
+               enddo
+             enddo
+           enddo
+
+           do i=is,ie
+             do j=js+1,je-1    
+               do k=ks,ke    
+                gradient_p_2(i,j,k)= 0.5*
+     +        (pre(i,j+1,k)-pre(i,j-1,k))/dy
+               enddo
+             enddo
+           enddo
+
+           do i=is,ie
+             do j=js,je    
+               do k=ks+1,ke-1    
+                gradient_p_3(i,j,k)= 0.5*
+     +        (pre(i,j,k+1)-pre(i,j,k-1))/dz
+               enddo
+             enddo
+           enddo
+
+         do k=ks+2,ke-1
+         do j=js+2,je-1
+            do i=is+1,ie-1
+               ex(i,j,k) = ex(i,j,k)+.25*dt*(
+     +     gradient_p_1(i,j,k)/density(i,j,k)
+     +   +  gradient_p_1(i,j-1,k)/density(i,j-1,k)
+     +   +  gradient_p_1(i,j,k-1)/density(i,j,k-1)
+     +   +  gradient_p_1(i,j-1,k-1)/density(i,j-1,k-1))/(a*a)
+          enddo
+         enddo
+      enddo
+
+         do k=ks+2,ke-1   
+         do j=js+1,je-1
+            do i=is+2,ie-1
+               ey(i,j,k) = ey(i,j,k)+.25*dt*(
+     +     gradient_p_2(i,j,k)/density(i,j,k)
+     +   +  gradient_p_2(i-1,j,k)/density(i-1,j,k)
+     +   +  gradient_p_2(i,j,k-1)/density(i,j,k-1)  
+     +   +  gradient_p_2(i-1,j,k-1)/density(i-1,j,k-1))/(a*a)
+          enddo
+         enddo 
+      enddo         
+
+         do k=ks+1,ke-1 
+         do j=js+2,je-1
+            do i=is+2,ie-1  
+               ez(i,j,k) = ez(i,j,k)+.25*dt*(
+     +     gradient_p_3(i,j,k)/density(i,j,k)
+     +   +  gradient_p_3(i-1,j,k)/density(i-1,j,k)
+     +   +  gradient_p_3(i,j-1,k)/density(i,j-1,k)
+     +   +  gradient_p_3(i-1,j-1,k)/density(i-1,j-1,k))/(a*a)
+          enddo
+         enddo
+      enddo
+
+         endif
+
+
+c-------------------------------------------------------------
+c  Computer the new magnetic fields in the cell center
+c-------------------------------------------------------------
+      do k=ks+1, ke-1
+         do j=js+1, je-1
+            do i=is+1, ie-1
+               by(i,j,k)=by(i,j,k)
+     +                -(dt*(exf_y(i,j,k+1) - exf_y(i,j,k))/(a*dz)
+     +                - dt*(ezf_y(i+1,j,k) - ezf_y(i,j,k))/(a*dx))        
+            enddo
+         enddo 
+      enddo
+
+      do k=ks+1, ke-1
+         do j=js+1, je-1
+            do i=is+1, ie-1
+            bx(i,j,k)=bx(i,j,k)
+     +            - (dt*(ezf_x(i,j+1,k)- ezf_x(i,j,k))/(a*dy)
+     +            - dt*(eyf_x(i,j,k+1)- eyf_x(i,j,k))/(a*dz))
+            enddo   
+         enddo                 
+      enddo 
+
+      do k=ks+1, ke-1
+         do j=js+1, je-1
+            do i=is+1, ie-1
+             bz(i,j,k)=bz(i,j,k)
+     +                -(dt*(eyf_z(i+1,j,k) - eyf_z(i,j,k))/(a*dx)
+     +                -dt*(exf_z(i,j+1,k) - exf_z(i,j,k))/(a*dy))
+            enddo
+         enddo
+      enddo
+
+
+       end

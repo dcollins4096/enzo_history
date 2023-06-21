@@ -1,0 +1,46 @@
+#include "jbPerf.def"
+
+C
+C     interfacef.F
+C
+C     This file contains Fortran interface functions that require
+C     special handling.  Specifically, functions that need to
+C     pass a string to C functions
+C
+      SUBROUTINE FINF_FUN(event) (string)
+      IMPLICIT NONE
+      CHARACTER string*(*)
+      CALL XINF_FUN(event) (string,LEN(string))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(start) (string,update)
+      IMPLICIT NONE
+      CHARACTER string*(*)
+      INTEGER update
+      CALL XINF_FUN(start) (string,LEN(string),update)
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(stop) (string,update)
+      IMPLICIT NONE
+      INTEGER update
+      CHARACTER string*(*)
+      CALL XINF_FUN(stop) (string,LEN(string),update)
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(next) (string)
+      IMPLICIT NONE
+      CHARACTER string*(*)
+      CALL XINF_FUN(next) (string,LEN(string))
+      RETURN
+      END
+C     ------------------------------------------------------------------
+      SUBROUTINE FINF_FUN(category) (string)
+      IMPLICIT NONE
+      CHARACTER string*(*)
+      CALL XINF_FUN(category) (string,LEN(string))
+      RETURN
+      END
+

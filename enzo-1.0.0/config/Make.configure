@@ -1,0 +1,35 @@
+#======================================================================
+#
+# Make.config
+#
+# This makefile include generates variables such as $(OBJS), etc, 
+# using variables set in the configuration files Make.arch, etc.
+
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-14  Created
+#
+#======================================================================
+
+CPP = $(CPP_ARCH)
+CC  = $(CC_ARCH) $(CC_MPI)
+CXX = $(CXX_ARCH) $(CXX_MPI)
+FC  = $(FC_ARCH) $(FC_MPI)
+F90 = $(F90_ARCH) $(F90_MPI)
+LD  = $(LD_ARCH) $(LD_MPI)
+
+DEFINES  = $(DEFINES_PRECISION) $(DEFINES_PARTICLES) \
+           $(DEFINES_MPI) $(DEFINES_ARCH) \
+           $(DEFINES_MAIN) $(DEFINES_PABLO) $(DEFINES_IO) \
+           $(DEFINES_PERF) $(DEFINES_OPT) $(DEFINES_JBOPT) \
+           $(DEFINES_TEST)
+
+CPPFLAGS = $(CPPFLAGS_ARCH)
+CFLAGS   = $(CFLAGS_ARCH) $(FLAGS_OPT) $(FLAGS_MPI) $(FLAGS_PERF) $(FLAGS_IO) $(FLAGS_MAIN) $(FLAGS_OBJ)
+CXXFLAGS = $(CXXFLAGS_ARCH) $(FLAGS_OPT) $(FLAGS_MPI) $(FLAGS_PERF) $(FLAGS_IO) $(FLAGS_MAIN) $(FLAGS_OBJ)
+FFLAGS   = $(FFLAGS_ARCH) $(FLAGS_OPT) $(FLAGS_MPI) $(FLAGS_PERF) $(FLAGS_IO) $(FFLAGS_PRECISION) $(FLAGS_MAIN) $(FLAGS_OBJ)
+F90FLAGS = $(F90FLAGS_ARCH) $(FLAGS_OPT) $(FLAGS_MPI) $(FLAGS_PERF) $(FLAGS_IO) $(FFLAGS_PRECISION) $(FLAGS_MAIN) $(FLAGS_OBJ)
+LDFLAGS  = $(LDFLAGS_ARCH) $(FLAGS_OPT) $(LDFLAGS_OPT) $(LDFLAGS_PRECISION) $(FLAGS_OBJ)
+
+OBJS = $(OBJS_MAIN) $(OBJS_IO)
+LIBS = $(LIBS_ARCH) $(LIBS_MPI) $(LIBS_PERF) $(LIBS_IO) $(LIBS_F77_ARCH)

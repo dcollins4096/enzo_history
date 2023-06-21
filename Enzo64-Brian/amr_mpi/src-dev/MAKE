@@ -1,0 +1,105 @@
+#!/bin/tcsh
+
+# Script to compile enzo5u and enzo5 on the following machines:
+#   sdsc-datastar    SDSC DataStar
+#   nersc-bassi      NERSC Bassi
+#  
+# Usage: MAKE [machine]
+#
+# Author: jbordner@cosmos.ucsd.edu
+
+# ----------------------------------------------------------------------
+# Get command-line parameters or display usage
+# ----------------------------------------------------------------------
+
+if ($#argv != 2) then
+   echo "Usage: $0:t [unigrid|adaptive] [sdsc-datastar|nersc-bassi]"
+   exit 1
+else
+   set mode    = $argv[1]; shift argv
+   set machine = $argv[1]; shift argv
+endif
+
+# ----------------------------------------------------------------------
+# Set machine-specific settings
+# ----------------------------------------------------------------------
+
+if ($machine == "sdsc-datastar") then
+   setenv SZIP_INSTALL /usr/local/apps64/hdf4
+   setenv ZLIB_INSTALL /usr/local/apps64/hdf4
+   setenv OBJECT_MODE 64
+else if ($machine == "nersc-bassi") then
+   module add hdf5 hdf papi
+   setenv SZIP_INSTALL $HDF_DIR
+   setenv ZLIB_INSTALL $HDF_DIR
+   setenv OBJECT_MODE 64
+else
+   echo "$0:t Unknown machine $machine\!"
+   exit 1
+endif
+
+# ----------------------------------------------------------------------
+# Select Makefile based on executable
+# ----------------------------------------------------------------------
+
+if ($mode == "unigrid")  set makefile = Make_Unigrid_Only
+if ($mode == "adaptive") set makefile = Make_AMR_FastSib
+
+# ----------------------------------------------------------------------
+# Save existing Make.aix64.mpi: restored at end
+# ----------------------------------------------------------------------
+
+set MAKE_PATH = ../../MakeMacros/Parallel/
+cp $MAKE_PATH/Make.aix64.mpi $MAKE_PATH/Make.aix64.mpi.backup
+cp $MAKE_PATH/Make.aix64.$machine $MAKE_PATH/Make.aix64.mpi
+
+unsetenv ENZO_ARCH
+unsetenv ENZO_MESS
+
+# ----------------------------------------------------------------------
+# Create bin directory if it doesn't exist
+# ----------------------------------------------------------------------
+
+set bin = ../../bin
+if (! -e $bin) mkdir $bin
+
+# ----------------------------------------------------------------------
+# Compile Enzo
+# ----------------------------------------------------------------------
+
+echo "Making enzo-$mode Enzo..."
+
+
+gmake clean >& /dev/null
+rm -f enzo5* >& /dev/null
+
+gmake -j16 -f $makefile >& out.$makefile
+
+set exec = enzo5*
+
+if (-e $exec) then
+   echo "Success\!"
+   mv -f $exec $bin/enzo-$mode
+else
+   echo "D'oh\!"
+endif
+
+# ----------------------------------------------------------------------
+# Copy compile state information to $bin
+# ----------------------------------------------------------------------
+
+printenv                          >& $bin/out.enzo-$mode.printenv
+module list                       >& $bin/out.enzo-$mode.modules
+cat out.$makefile                 >& $bin/out.enzo-$mode.make-output
+cat $makefile                     >& $bin/out.enzo-$mode.makefile
+cat $MAKE_PATH/Make.aix64.mpi     >& $bin/out.enzo-$mode.makefile-include
+cksum *.C *.h *.src *.h *.c *.def >& $bin/out.enzo-$mode.cksum
+cat ../../VERSION                 >& $bin/out.enzo-$mode.version
+date                              >& $bin/out.enzo-$mode.date
+
+# ----------------------------------------------------------------------
+# Restore original Make.aix64.mpi
+# ----------------------------------------------------------------------
+
+mv $MAKE_PATH/Make.aix64.mpi.backup $MAKE_PATH/Make.aix64.mpi
+

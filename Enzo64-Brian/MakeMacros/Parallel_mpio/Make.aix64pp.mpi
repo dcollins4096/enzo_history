@@ -1,0 +1,47 @@
+#
+# macros for sp2
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL_PP = /usr/local/apps/apps64/hdf5pp
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL_PP)/include
+
+CPP          = /usr/ccs/lib/cpp
+DEFINES      = -D${PRECISION} -DUSE_MPI -DIO_LOG -DSP2 -DPARALLEL_HDF5
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = mpxlf90_r
+FC_OPT       = -O3
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed
+
+## C Compiler
+CC           = mpcc_r
+CC_OPT       = -O -DSP2 -DPARALLEL_HDF5
+CFLAGS       =
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = mpCC_r
+CCxx_OPT     = -O -DSP2 -DUSE_MPI -DIO_LOG -DPARALLEL_HDF5
+CCxxFLAGS    =
+
+#CCxx	     = xlC128
+#CCxx_OPT    = -O -DSP2 -DUSE_MPI -qldbl128
+
+## Linker/loader
+LDR          = mpCC_r
+LDR_OPT      = 
+#LDR_OPT      = $(HOME)/apps64/mpi_trace/mpi_trace.o
+
+LIB          = -L$(HDF5_INSTALL_PP)/lib -lhdf5 \
+               $(SZIP_INSTALL)/lib/libsz.a \
+               $(ZLIB_INSTALL)/lib/libz.a \
+               -lxlf90_r -lessl
+
+OPTS         = -c -I${HDF5_INSTALL_PP}/include
+DEBUG        = 

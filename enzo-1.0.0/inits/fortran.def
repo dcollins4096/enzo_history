@@ -1,0 +1,15 @@
+/* Handle real and imag parts for either single or double precision */
+
+#define REAL_PART real
+#define IMAG_PART imag
+
+#ifdef r4
+#define REAL_PART real
+#define IMAG_PART aimag
+#endif
+
+#ifdef r8
+#define REAL_PART dble
+#define IMAG_PART dimag
+#endif
+

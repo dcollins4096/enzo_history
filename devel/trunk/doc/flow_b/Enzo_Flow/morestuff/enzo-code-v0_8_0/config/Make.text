@@ -1,0 +1,52 @@
+TEXT_ARCH_ALPHAEV68 = DEC Alpha
+TEXT_ARCH_I686      = Intel Pentium
+TEXT_ARCH_IA64      = Intel Itanium
+TEXT_ARCH_MIPS      = MIPS SGI
+TEXT_ARCH_POWERPC   = IBM PowerPC
+TEXT_ARCH_SPARC     = SUN UltraSPARC
+
+TEXT_ENDIAN_BIG    = Big-endian
+TEXT_ENDIAN_LITTLE = Little-endian
+
+TEXT_IO_HDF4 = HDF4
+TEXT_IO_HDF5 = HDF5
+
+TEXT_MACH_COSMOS       = LCA Cosmos with MPICH
+TEXT_MACH_COPPER       = NCSA Copper
+TEXT_MACH_DIAPASON     = Bordner's Intel Pentium4 laptop
+TEXT_MACH_FNORD        = O'Shea's G4 GNU laptop
+TEXT_MACH_GNU          = Intel Linux GNU
+TEXT_MACH_HORIZON      = SDSC Blue Horizon
+TEXT_MACH_NONE         = generic
+TEXT_MACH_TITAN_PABLO  = NCSA Titan with HDF5 Pablo Profiling
+TEXT_MACH_TG_NCSA      = NCSA TeraGrid
+TEXT_MACH_TG_SDSC      = SDSC TeraGrid
+TEXT_MACH_AMR2003      = U. Chicago AMR workshop SGI Altix
+
+TEXT_MPI_OFF = Off
+TEXT_MPI_ON  = On
+
+TEXT_PERF_OFF    = Off
+TEXT_PERF_JBPERF = jbPerf
+TEXT_PERF_JBMEM  = jbMem
+TEXT_PERF_PAPI   = jbPerf + PAPI
+
+TEXT_JBOPT_OFF    = Off
+TEXT_JBOPT_ON     = On (excludes un-tested optimizations)
+TEXT_JBOPT_BETA   = Beta (includes un-tested optimizations)
+
+TEXT_OBJ_32  = 32-bit objects
+TEXT_OBJ_64  = 64-bit objects
+
+TEXT_OPT_CHECK      = Check + Debug
+TEXT_OPT_DEBUG      = Debug
+TEXT_OPT_WARN       = Debug + Warn + Optimize
+TEXT_OPT_HIGH       = Debug + Optimize
+TEXT_OPT_AGGRESSIVE = Aggressive
+
+TEXT_PARTICLES_SINGLE = Single
+TEXT_PARTICLES_DOUBLE = Double
+TEXT_PARTICLES_QUAD   = Quad
+
+TEXT_PRECISION_SINGLE = Single
+TEXT_PRECISION_DOUBLE = Double

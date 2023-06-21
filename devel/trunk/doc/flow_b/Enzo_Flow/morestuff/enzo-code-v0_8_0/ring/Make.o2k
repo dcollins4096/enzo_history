@@ -1,0 +1,14 @@
+#NCSA
+HDF4_INSTALL = /afs/ncsa/packages/hdf/4.1r5-irix64-64
+HDF5_INSTALL = /afs/ncsa/packages/hdf5/5-1.4.4-irix64pp
+
+CCxx         = CC -mips4
+CCxx_OPT     = -prelink -DMPI_NO_CPPBIND -O2 -DHDF5_BE
+
+LDR          = CC
+LDR_OPT      =
+
+LIB          = $(HDF5_INSTALL)/lib/libhdf5.a $(HDF4_INSTALL)/lib/libz.a \
+               -lm -lC -lmpi
+
+OPTS         = -c -I$(HDF5_INSTALL)/include

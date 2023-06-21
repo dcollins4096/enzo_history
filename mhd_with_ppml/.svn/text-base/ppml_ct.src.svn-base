@@ -1,0 +1,150 @@
+      subroutine ppml_ct(nx,ny,nz,ngz, dt,dx,dy,dz,F,G,H,Bx,By,Bz, 
+     +     Rank)
+      implicit none
+c     array sizes, number of ghost zones
+      integer nx,ny,nz,ngz, rank
+
+c     X,Y,Z flux (input) and field (output)
+      real F(nx,ny,nz,7),G(nx,ny,nz,7),H(nx,ny,nz,7)
+      real Bx(nx,ny,nz),By(nx,ny,nz),Bz(nx,ny,nz)
+
+c     Warning! If dx!=dy!=dz, problmes can arrise.
+      real dt,dx,dy,dz, dtr
+
+c     internal variables 
+      real F11, F12, F21, F22
+      real G11, G12, G21, G22
+      real H11, H12, H21, H22
+c     array counters
+      integer i,j,k
+
+c     dbg
+      if(  (abs( dx - dy ) .gt. 1e-6*dx) ) then
+         write(*,*) "Warning: ppml_ct requires dx==dy==dz"
+         write(*,*) "Warning: ppml_ct requires dx==dy==dz"
+         write(*,*) "Warning: ppml_ct requires dx==dy==dz"
+         write(*,*) "Warning: ppml_ct requires dx==dy==dz"
+         write(*,*) "Warning: ppml_ct requires dx==dy==dz"
+         write(*,*) "Warning: ppml_ct requires dx==dy==dz"
+      endif
+      dtr = dt/dx
+      if( ( rank .eq. 3 ) .and. 
+     +     ( (abs( dx - dz ) .gt. 1e-6*dx) .or.
+     +     (abs( dz - dy ) .gt. 1e-6*dy) )) then
+         write(*,*) "Warning: ppml_ct requires dx==dy"
+      endif
+c     /dbg
+      if( rank .eq. 3 ) then
+      do k=ngz+1,Nz-ngz
+         do j=ngz+1,Ny-ngz
+            do i=ngz+1,Nx-ngz
+               
+
+               
+	 F11=(2.*F(I,J,K,6)+F(I,J+1,K,6)+F(I,J-1,K,6)-G(I+1,J,K,5)
+     1                  -G(I,J,K,5)-G(I+1,J-1,K,5)-G(I,J-1,K,5))/8.
+	 F12=(2.*F(I-1,J,K,6)+F(I-1,J+1,K,6)+F(I-1,J-1,K,6)-G(I,J,K,5)
+     1                  -G(I-1,J,K,5)-G(I,J-1,K,5)-G(I-1,J-1,K,5))/8.
+
+	 F21=(2.*F(I,J,K,7)+F(I,J,K+1,7)+F(I,J,K-1,7)-H(I+1,J,K,5)
+     1                  -H(I,J,K,5)-H(I+1,J,K-1,5)-H(I,J,K-1,5))/8.
+	 F22=(2.*F(I-1,J,K,7)+F(I-1,J,K+1,7)+F(I-1,J,K-1,7)-H(I,J,K,5)
+     1                  -H(I-1,J,K,5)-H(I,J,K-1,5)-H(I-1,J,K-1,5))/8.
+
+	 G11=(2.*G(I,J,K,5)+G(I+1,J,K,5)+G(I-1,J,K,5)-F(I,J+1,K,6)
+     1                  -F(I,J,K,6)-F(I-1,J+1,K,6)-F(I-1,J,K,6))/8.
+	 G12=(2.*G(I,J-1,K,5)+G(I+1,J-1,K,5)+G(I-1,J-1,K,5)-F(I,J,K,6)
+     1                  -F(I,J-1,K,6)-F(I-1,J,K,6)-F(I-1,J-1,K,6))/8.
+
+	 G21=(2.*G(I,J,K,7)+G(I,J,K+1,7)+G(I,J,K-1,7)-H(I,J+1,K,6)
+     1                  -H(I,J,K,6)-H(I,J+1,K-1,6)-H(I,J,K-1,6))/8.
+	 G22=(2.*G(I,J-1,K,7)+G(I,J-1,K+1,7)+G(I,J-1,K-1,7)-H(I,J,K,6)
+     1                  -H(I,J-1,K,6)-H(I,J,K-1,6)-H(I,J-1,K-1,6))/8.
+
+	 H11=(2.*H(I,J,K,5)+H(I+1,J,K,5)+H(I-1,J,K,5)-F(I,J,K+1,7)
+     1                  -F(I,J,K,7)-F(I-1,J,K+1,7)-F(I-1,J,K,7))/8.
+	 H12=(2.*H(I,J,K-1,5)+H(I+1,J,K-1,5)+H(I-1,J,K-1,5)-F(I,J,K,7)
+     1                  -F(I,J,K-1,7)-F(I-1,J,K,7)-F(I-1,J,K-1,7))/8.
+
+	 H21=(2.*H(I,J,K,6)+H(I,J+1,K,6)+H(I,J-1,K,6)-G(I,J,K+1,7)
+     1                  -G(I,J,K,7)-G(I,J-1,K+1,7)-G(I,J-1,K,7))/8.
+
+	 H22=(2.*H(I,J,K-1,6)+H(I,J+1,K-1,6)+H(I,J-1,K-1,6)-G(I,J,K,7)
+     1                  -G(I,J,K-1,7)-G(I,J-1,K,7)-G(I,J-1,K-1,7))/8.
+
+
+c     update componets of the magnetic field
+
+c     original code:
+c         QH(5)=QU(I,J,K,5)-DTR*(G11-G12+H11-H12)
+c         QH(6)=QU(I,J,K,6)-DTR*(F11-F12+H21-H22)
+c         QH(7)=QU(I,J,K,7)-DTR*(F21-F22+G21-G22)
+c     new
+         Bx(I,J,K)= Bx(I,J,K)-DTR*(G11-G12+H11-H12)
+         By(I,J,K)= By(I,J,K)-DTR*(F11-F12+H21-H22)
+         Bz(I,J,K)= Bz(I,J,K)-DTR*(F21-F22+G21-G22)
+
+      enddo
+      enddo
+      enddo
+
+      endif !rank == 0
+
+      if( rank .eq. 2 ) then
+
+      do k=1,Nz
+         do j=ngz+1,Ny-ngz
+            do i=ngz+1,Nx-ngz
+
+c     I took some horrible code shortcuts he	re:
+c     All references to k-1, k+1 have been collapsed to k.
+c     Marked with  !'s.
+
+	 F11=(2.*F(I,J,K,6)+F(I,J+1,K,6)+F(I,J-1,K,6)-G(I+1,J,K,5)
+     1                  -G(I,J,K,5)-G(I+1,J-1,K,5)-G(I,J-1,K,5))/8.
+	 F12=(2.*F(I-1,J,K,6)+F(I-1,J+1,K,6)+F(I-1,J-1,K,6)-G(I,J,K,5)
+     1                  -G(I-1,J,K,5)-G(I,J-1,K,5)-G(I-1,J-1,K,5))/8.
+
+c                                 !!           !!
+	 F21=(2.*F(I,J,K,7)+F(I,J,K  ,7)+F(I,J,K  ,7)-H(I+1,J,K,5)
+c                                            !!           !!
+     1                  -H(I,J,K,5)-H(I+1,J,K  ,5)-H(I,J,K  ,5))/8.
+
+c                                      !!             !!
+	 F22=(2.*F(I-1,J,K,7)+F(I-1,J,K  ,7)+F(I-1,J,K  ,7)-H(I,J,K,5)
+c                                            !!             !!
+     1                  -H(I-1,J,K,5)-H(I,J,K  ,5)-H(I-1,J,K  ,5))/8.
+
+
+	 G11=(2.*G(I,J,K,5)+G(I+1,J,K,5)+G(I-1,J,K,5)-F(I,J+1,K,6)
+     1                  -F(I,J,K,6)-F(I-1,J+1,K,6)-F(I-1,J,K,6))/8.
+	 G12=(2.*G(I,J-1,K,5)+G(I+1,J-1,K,5)+G(I-1,J-1,K,5)-F(I,J,K,6)
+     1                  -F(I,J-1,K,6)-F(I-1,J,K,6)-F(I-1,J-1,K,6))/8.
+
+c                                  !!           !!                   
+	 G21=(2.*G(I,J,K,7)+G(I,J,K  ,7)+G(I,J,K  ,7)-H(I,J+1,K,6)
+c                                            !!           !!           
+     1                  -H(I,J,K,6)-H(I,J+1,K  ,6)-H(I,J,K  ,6))/8.
+
+c                                      !!             !!              
+	 G22=(2.*G(I,J-1,K,7)+G(I,J-1,K  ,7)+G(I,J-1,K  ,7)-H(I,J,K,6)
+c                                            !!             !!        
+     1                  -H(I,J-1,K,6)-H(I,J,K  ,6)-H(I,J-1,K  ,6))/8.
+
+c     H11,H12,H21,H22 all dissapear.
+
+c     update componets of the magnetic field
+
+         Bx(I,J,K)= Bx(I,J,K)-DTR*(G11-G12) 
+         By(I,J,K)= By(I,J,K)-DTR*(F11-F12)
+         Bz(I,J,K)= Bz(I,J,K)-DTR*(F21-F22+G21-G22)
+
+      enddo
+      enddo
+      enddo
+      endif                     !rank == 2
+
+
+      end
+
+      

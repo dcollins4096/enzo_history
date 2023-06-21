@@ -1,0 +1,219 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+#include "fortran.def"
+c=======================================================================
+c//////////////////////  SUBROUTINE MAKE_FIELD  \\\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine make_field_kpreserving(field, nx, ny, nz, 
+     &                      in, jn, kn, itype, iseed, box,
+     &                      PSTable, PSMin, PSStep, kfcutoff)
+c
+c  COMPUTES RANDOM GAUSSIAN FIELD FROM SPECIFIED POWER SPECTRUM
+c
+c     written by: Greg Bryan
+c     date:       June, 1997
+c
+c  PURPOSE: 
+c
+c  INPUTS:
+c        i,j,kn      = real dimensions of green
+c        nx,ny,nz    = active dimensions of green
+c        itype       = field type (0 - density, 1/2/3 - x/y/z displacement)
+c        iseed       = random number seed (negative)
+c        box         = size
+c        PSTable     = Table of precomputed PS values
+c        PSMin       = minimum x value in PSTable
+c        PSStep      = x step in PSTable
+c        kfcutoff    = high k filter (sharp) in units of the fundamental
+c
+c  Outputs:
+c        field       = gaussian random field
+c
+c  LOCALS:
+c        num_dim     = number of dimensions to be used for force law
+c        nx,y,zmid   = midpoint (+1) of the grid in each axis
+c        nx,y,zd2    = number of grid points divided by 2 for each axis
+c
+c  EXTERNALS: 
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c  arguments
+c
+      integer in, jn, kn, nx, ny, nz, nxmax, nymax, nzmax, 
+     &        itype, iseed, kfcutoff
+      real    field(in, jn, kn), box, 
+     &        PSMin, PSPart, PSStep, PSTable(1)
+c
+c  locals
+c
+      integer i, i1, j, j1, n, n1
+      real    dummy, ran1, twopi, kcutoffsq, dk
+      complex z
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////////
+c=======================================================================
+c
+c     Set constants
+c
+      twopi  = 8.0*atan(1.0)
+      dk     = twopi/box
+      kcutoffsq = 1.0e30
+      if (kfcutoff .gt. 0) kcutoffsq = (kfcutoff*dk)**2
+c
+c     Initialize random # generator with random seed
+c
+      n = iseed
+      dummy = ran1(n)
+c
+c     Loop over k-box sizes, so that we fill k-space from low-k outwards
+c
+      do n=1,nx/2
+c
+         do i=-n+1, n
+            do j=-n+1, n
+c
+               i1 = mod(i+nx,nx)+1
+               j1 = mod(j+nx,nx)+1
+               n1 = mod(1-n+nx,nx)+1
+c
+c              1) +i plane
+c
+               call processk(n,i,j, dk, PSMin, PSStep, PSTable, 
+     &                  itype, z, kcutoffsq, box)
+               field((n+1)*2-1,i1,j1) = REAL_PART(z)
+               field((n+1)*2  ,i1,j1) = IMAG_PART(z)
+c
+c              2) +j and -j plane
+c                 (the i .ne. n is to avoid overlapping with (1))
+c
+               if (i .ge. 0 .and. i .ne. n) then
+c
+                  call processk(i,n,j, dk, PSMin, PSStep, PSTable, 
+     &                  itype, z, kcutoffsq, box)
+                  field(i1*2-1,n+1,j1) = REAL_PART(z)
+                  field(i1*2  ,n+1,j1) = IMAG_PART(z)
+c
+                  call processk(i,1-n,j, dk, PSMin, PSStep, PSTable,
+     &                  itype, z, kcutoffsq, box)
+                  field(i1*2-1,n1,j1) = REAL_PART(z)
+                  field(i1*2  ,n1,j1) = IMAG_PART(z)
+c
+               endif
+c
+c              3) +k and -k plane
+c                 (the logic involving j is to avoid overlapping with (2))
+c
+               if (i .ge. 0 .and. i .ne. n .and. 
+     &             j .ne. -n+1 .and. j .ne. n) then
+c
+                  call processk(i,j,n, dk, PSMin, PSStep, PSTable,
+     &                  itype, z, kcutoffsq, box)
+                  field(i1*2-1,j1,n+1) = REAL_PART(z)
+                  field(i1*2  ,j1,n+1) = IMAG_PART(z)
+c
+                  call processk(i,j,1-n, dk, PSMin, PSStep, PSTable,
+     &                  itype, z, kcutoffsq, box)
+                  field(i1*2-1,j1,n1) = REAL_PART(z)
+                  field(i1*2  ,j1,n1) = IMAG_PART(z)
+c
+               endif
+c
+            enddo
+         enddo
+c
+      enddo
+c
+      do i=1, in
+         do j=1, jn
+            do n=1, kn
+               field(i,j,n) = field(i,j,n) * real(nx*ny*nz)
+            enddo
+         enddo
+      enddo
+c
+c     Clear the zero wavenumber position
+c
+      field(1,1,1) = 0.0
+      field(2,1,1) = 0.0
+c
+c     Adjust the field to satisfy the conjugate relations that
+c      are implied by a zero imaginary part.
+c
+      call adjfft(field, nx, ny, nz, in, jn)
+c
+      return
+      end
+
+
+c
+c===================================================================
+c
+      subroutine processk(i, j, k, dk, PSMin, PSStep, PSTable, 
+     &                    itype, z, kcutoffsq, box)
+c
+      implicit none
+c
+      integer i, j, k, itype, index
+      real    dk, PSMin, PSStep, PSTable(1), psval, kdir, klog,
+     &        ang, amp, ran1, kcutoffsq, twopi, kmodsq, box
+      complex z
+      parameter (twopi=2.0*3.1415927)
+c
+c  Define table lookup function
+c
+      real    Table1, Table2, Step, Min, Tablex, TableLookUp
+      integer Tablei
+      TableLookUp(Table1, Table2, Step, Min, Tablei, Tablex) = 
+     &          Table1 + (Tablex - real(Tablei-1)*Step - Min) 
+     &          / Step * (Table2 - Table1)
+c
+c ------------------------------------------------------------------
+c
+      kmodsq = max(i**2 + j**2 + k**2, 1)*dk**2
+      klog   = 0.5*log(kmodsq)
+      index = int((klog - PSMin)/PSStep)
+      psval = TableLookUp(PSTable(index), PSTable(index+1),
+     &                    PSStep, PSMin, index, klog)
+      psval = psval * dk**3
+      if (kmodsq .gt. kcutoffsq) psval = 0.0
+c
+c     Generate a complex number with random phase and amplitude
+c      gaussian distributed with a mean of sqrt(psval) with the
+c      Box-Muller method.  Note we have supressed a factor of
+c      sqrt(2) since we must also divide by this factor to account
+c      for the dreary fact that we are really generating two random
+c      fields (if we were doing a complex-to-complex transform
+c      this would show up when we discared the perfectly
+c      good imaginary component of the transformed field).  whew.
+c
+      ang = twopi*ran1(0)
+      amp = sqrt(-log(max(ran1(0),1.0e-37)) * psval)
+      z   = cmplx(cos(ang), sin(ang)) * amp
+c
+c     Process this on the basis of itype:
+c      0) density field - just leave it be.
+c      1-3) displacement field - multiply by vec(k)/k^2
+c           (and then convert from Mpc to fraction of box).
+c              
+      if (itype .ne. 0) then
+         if (itype .eq. 1) kdir = real(i)*dk
+         if (itype .eq. 2) kdir = real(j)*dk
+         if (itype .eq. 3) kdir = real(k)*dk
+         z = z * cmplx(0.0,1.0) * kdir / (kmodsq * box)
+      endif
+c
+      return
+      end

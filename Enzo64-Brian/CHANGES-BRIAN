@@ -1,0 +1,332 @@
+3/9/2007
+1) added makefiles for Coyote and Pink (LANL clusters).  Also modified
+   the Makefile and Makefile.* files in amr_mpi/src so that -D SYSCALL
+   is the default.
+
+
+1/5/2007
+
+1) inits compiles on fnord (my G4 mac laptop).  This took very few 
+   modifications - as with Enzo itself, the f90 FFT doesn't work
+   correctly, and I had to add some new makefiles.  Modified files:
+        MakeMacros/Single/Make.darwin.nompi
+        inits64/Makefile.fnord      <------ NEW FILE
+        inits64/fortfft3d-mac.src   <------ NEW FILE
+
+2) inits now runs on thunderhead (dual-core G5 desktop).  Only a 
+   couple of makefile mods.  Modified files:
+        MakeMacros/Single/Make.darwin.nompi  <------ REMOVED
+        MakeMacros/Single/Make.darwin-fnord.nompi <------ NEW FILE
+        MakeMacros/Single/Make.darwin-thunderhead.nompi <------ NEW FILE
+        inits64/Makefile.thunderhead <------ NEW FILE
+
+1/4/2007
+
+1) Enzo now compiles on thunderhead (my G5 mac desktop) and fnord (my G4 mac
+   laptop).  Notes on compiling are in the file comp_enzo_mac.txt in the
+   top-level directory.  Modified files:
+        comp_enzo_mac.txt                                <------ NEW FILE
+        MakeMacros/Parallel/Make.darwin-thunderhead.mpi  <------ NEW FILE
+        amr_mpi/src/Makefile
+        amr_mpi/src/Makefile.thunderhead     <------ NEW FILE
+        amr_mpi/src/fortfft3d-mac.src        <------ NEW FILE
+        amr_mpi/src/hdf4.h
+        amr_mpi/src/mpi_error_file-thunderhead.src  <------ NEW FILE
+        amr_mpi/src/stop_all_cpus-thunderhead.src   <------ NEW FILE
+
+2) Files added so that the code will run on my laptop (submitted to
+   CVS separately):
+        MakeMacros/Parallel/Make.darwin-fnord.mpi  <------ NEW FILE
+        amr_mpi/src/Makefile.fnord                 <------ NEW FILE
+        comp_enzo_mac.txt
+
+3) Updated amr_mpi/anyl/Grid.h so that it agrees with the version in the
+   source directory.  Changed file:
+        amr_mpi/anyl/Grid.h
+	amr_mpi/anyl/orig.Grid.h <----- NEW FILE
+
+4) Updated original makefile so that dcollins' original flux fix is turned
+   off by default.  modified file:
+        amr_mpi/src/Makefile
+
+5) Added directory amr_mpi/anyl_mod, which is where I will be adding a ton
+   of new stuff soon.
+
+6) Modified src-dev so that it mirrors the contents of src (for the moment).
+
+12/1/2006
+
+1) Added new directory: amr_mpi/src-dev, as well as copied all files over from
+   the src directory.  This is for convenience when I add a bunch of Greg's new
+   modifications to my version of the code.  Woohoo.
+
+11/8/2006
+
+1) fixed the packed AMR format so that it can restart dark matter-only calcs.
+   Files
+
+11/3/2006
+
+1) Got rid of all of the extra makefiles.  Files modified:
+	Make_AMR_FastSib         (removed)
+	Make_Unigrid_Only        (removed)
+	Make_Unigrid_TaskMap     (removed)
+
+
+2) Added isolated gravity boundary conditions plus a test problem.  This is
+   all code from Greg Bryan.  All new code can be turned off in the makefile
+   by changing the ISO_GRAV flag from "yes" to "no".  Note that when this is
+   turned on the periodic stuff still works - this is basically so that I can 
+   completely revert to old routines for debugging purposes.  Modified files:
+        Makefile
+	PrepareIsolatedGreensFunction.C     <----- NEW FILE
+	Grid_SetIsolatedPotentialBoundary.C <----- NEW FILE
+	Grid.h
+	CommunicationTranspose.C
+	UnigridCommunicationTranspose.C
+	ComputePotentialFieldLevelZero.C
+	MPICH_ComputePotentialFieldLevelZero.C
+	Grid_MoveSubgridParticlesFast.C
+	Grid_TestGravityCheckResults.C
+	Grid_TestOrbitInitializeGrid.C      <----- NEW FILE
+	TestOrbitInitialize.C               <----- NEW FILE
+
+
+11/2/2006
+
+1) completely removed all DC_OPT_SIBSUB stuff at Dave's direction.  Apparently 
+   this is BAD in many ways.  Modified files:
+	FastSiblingLocator.h
+	Grid.h
+	CreateSUBlingListFast.C
+	FastSib_EvolveLevel.C
+	FastSIb_RebuildHierarchy.C
+	Grid_FastSiblingLocatorAddGrid.C
+	Grid_FastSiblingLocatorFindSiblings.C
+
+2) FLUX_FIX is now turned on in the file Makefile by default.  SAB is turned off, 
+   and DC_OPT_SIBSUB is also removed.  Note this is all in the AMR_OPT compiler
+   options.  This appears to be the most stable set, though FLUX_FIX may also be
+   suspect.  This is yet to be determined.  Modified files:
+	Makefile
+
+3) Added Stephen Skory's star particle fix.  This bug was causing enzo star 
+   particles to be given identical numbers to some dark matter particles.
+   Though non-critical for most applications, it was causing a merger tree
+   tool to completely go to hell.  Modified files:
+	XX_InitializeGrid.C
+   	CosmologySimulationInitialize.C
+	NestedCosmologySimulationInitialize.C
+
+4) Added Greg Bryan's modifications to eliminate some code which deliberately
+   smoothes the potential.  Modified files are:
+	Grid_SolveForPotential.C (one line fix)
+	Grid_ComputeAccelerationField.C
+
+5) commented out a check in ReadParameterFile.C that prevented the
+   PPMDiffusionParameter from being used in anything other than turbulence
+   calculations (ProblemType = 60).  This can now be used for any type of
+   hydro calculation, according to alexei.  Modified files:
+	ReadParameterFile.C
+
+10/31/2006
+
+1) made galli and palla cooling default in cool1d_multi.src
+
+2) added change to CosmologySimulationInitializeGrid.C which allows enzo to 
+   natively do simulations with 64 cells per dark matter particle (and calc.
+   the masses correctly).
+
+3) updated my default makefile to turn off some of the flux correction stuff
+   that Dave Collins wrote, but which apparently doesn't always work.
+
+4) added a few small changes to FlagCellsToBeRefinedByMustRefineRegion.  It's
+   not clear that this actually works yet.
+
+8/8/2006
+
+1)  committed minor changes in Grid_StarParticleHandler.C (removed unused
+    comments), HDF5_ReadFile.C (put errorful lines in the parallel IO back in
+    but commented out, with notes next to them, in case we ever have to go back
+    and check that stuff), and HDF5_ReadIntFile.C (same as HDF5_ReadFile.C).
+
+2)  Added new refinement criteria, FlagCellsToBeRefinedByMustRefineRegion (wow,
+    what a mouthful).  Modified routines:
+      	Grid_FlagCellsToBeRefinedByMustRefineRegion.C   <-- new routine
+      	Grid_SetFlaggingField.C
+	SetDefaultGlobalValues.C
+	ReadParameterFile.C
+	WriteParameterFile.C
+      	Grid.h
+      	global_data.h
+      	Makefile
+	Make_AMR_FastSib
+	Make_Unigrid_Only
+	Make_Unigrid_TaskMap
+
+
+3) Added a second new refinement criteria, FlagCellsToBeRefinedByMetallicity.
+   Modified routines include:
+	Grid_FlagCellsToBeRefinedByMetallicity.C <-- new routine
+      	Grid_SetFlaggingField.C
+	SetDefaultGlobalValues.C
+	ReadParameterFile.C
+	WriteParameterFile.C
+      	Grid.h
+      	global_data.h
+      	Makefile
+	Make_AMR_FastSib
+	Make_Unigrid_Only
+	Make_Unigrid_TaskMap
+
+6/5/2006
+
+1)  Added loop fix go Grid_CopyBaryonFieldToOldBaryonField.C
+
+2)  Added most of mturk's PPM overflow fixes.  Some were not modified - this
+    is because a few are compiler-specific things (for example, the "if(a .ne.a)
+    trick) and there are some which are not in accord with enzo programming
+    specifics and/or generally good programming practices (for example, explicitly
+    promoting some fortran variables to real*8 and leaving others real is within
+    the fortran standard, but practically speaking some compilers hate it).
+    Modified routines:
+       euler.src
+       inteuler.src
+       intvar.src
+       twoshock.src
+
+------------------------------------
+
+5/25/2006
+
+1)  Fixed up some movie format stuff - added default global values, etc.
+      (this is to follow up on screwup yesterday)
+
+2)  Added Matt Turk's interpolated data output fix.  Modded files:
+      GG_SRB_WriteAllData.C
+      SRB_WriteAllData.C
+      TaskMap_GG_SRB_WriteAllData.C
+      TaskMap_SRB_WriteAllData.C
+
+3)  Modified various Gadget files so that they agree with our printf/scanf
+    standard:
+      GadgetReadIonizeParams.C
+      Grid_GadgetCalculateCooling.C
+      Grid_GadgetCoolingTime.C
+      Grid_GadgetEquilibriumCooling.C
+      Grid_Gadgetconvertutotemp.C
+      Grid_Gadgetfindabundancesandrates.C
+
+4)  Added star_maker5.src and calls to it in Grid_StarParticleHandler.C.  This
+    version will be the Springel & Hernquist version at some point - right now it's
+    simply a shell.
+      star_maker5.src <---- new
+      Grid_StarParticleHandler.C  <---- modded
+
+
+------------------------------------
+
+5/23/2006
+
+1)  Added amr_mpi/src-original and differ.bat
+
+2)  changed CEN_METALS in fortran.def to NO_CEN_METALS - so CEN_METALS is now
+    off by default.
+
+3)  changed Grid_FlagCellsToBeRefinedBySlope.C to have a setting for ProblemType=30,
+    where it refines just on density and total energy.
+
+4)  added a new star maker (star_maker4.src) with Kravtsov star formation.
+      Grid_StarParticleHandler.C -- added new defines and calls for star_maker4
+        and star_feedback4
+      star_maker4.src -- new file
+      Make_AMR_FastSib     -- added call to star_maker4.src
+      Make_Unigrid_Only    -- added call to star_maker4.src
+      Make_Unigrid_TaskMap -- added call to star_maker4.src
+
+5)  changed total number of cell flagging methods from 5 to 7
+      ReadParameterFile.C
+      WriteParameterFile.C
+      macros_and_parameters.h
+
+6)  modified solve_rate.src to increase max number of iterations, and also turn
+    off a particularly messy warning output (since it's creating too many huge
+    files)
+
+7)  modified Grid_TracerParticleCreateParticles.C to have a small but nonzero particle
+    mass.
+
+8)  modified tracer particle output to also put out velocities (controlled by compile flag
+    TP_VELOCITY) 
+      Grid_TracerParticleOutputData.C
+      WriteTracerParticleData.C
+      X_Main.C
+      Make_AMR_FastSib
+      Make_Unigrid_Only
+      Make_Unigrid_TaskMap
+
+9)  Put in John Wise movie format:
+      Grid_WriteNewMovieData.C                 <-- NEW FILE
+      WriteStreamData.C                        <-- NEW FILE
+      CosmologySimulationInitialize.C
+      NestedCosmologySimulationInitialize.C
+      EvolveHierarchy.C
+      MPICH_EvolveHierarchy.C
+      TaskMap_MPICH_EvolveHierarchy.C
+      FastSib_EvolveLevel.C
+      Unigrid_EvolveLevel.C
+      ReadParameterFile.C
+      WriteDataHierarchy.C
+      WriteParameterFile.C
+      GG_SRB_WriteAllData.C
+      SRB_WriteAllData.C
+      TaskMap_GG_SRB_WriteAllData.C
+      TaskMap_SRB_WriteAllData.C
+      SetDefaultGlobalValues.C
+      Grid.h
+      TopGridData.h
+      global_data.h
+      macros_and_parameters.h
+      Make_AMR_FastSib
+      Make_Unigrid_Only
+      Make_Unigrid_TaskMap
+
+10) put in Gadget equilibrium cooling code
+      Gadget.C                                   <-- NEW FILE
+      Gadget.h                                   <-- NEW FILE
+      GadgetInitCool.C                           <-- NEW FILE
+      GadgetInitCoolMemory.C                     <-- NEW FILE
+      GadgetIonizeParams.C                       <-- NEW FILE
+      GadgetIonizeParamsTable.C                  <-- NEW FILE
+      GadgetMakeCoolingTable.C                   <-- NEW FILE
+      GadgetReadIonizeParams.C                   <-- NEW FILE
+      Grid_GadgetCalculateCooling.C              <-- NEW FILE
+      Grid_GadgetComputeTemperature.C            <-- NEW FILE
+      Grid_GadgetComputeTemperatureDEF.C         <-- NEW FILE
+      Grid_GadgetCoolingRate.C                   <-- NEW FILE
+      Grid_GadgetCoolingRateFromU.C              <-- NEW FILE
+      Grid_GadgetCoolingTime.C                   <-- NEW FILE
+      Grid_GadgetEquilibriumCooling.C            <-- NEW FILE
+      Grid_GadgetIonizeParamsFunction.C          <-- NEW FILE
+      Grid_Gadgetconvertutotemp.C                <-- NEW FILE
+      Grid_Gadgetfindabundancesandrates.C        <-- NEW FILE
+      InitializeGadgetEquilibriumCoolData.C      <-- NEW FILE
+      TREECOOL         <-- NEW FILE (data file - added in directory above)
+      Grid_ComputeCoolingTime.C
+      Grid_COmputeTemperatureField.C
+      Grid_SolveRadiativeCOoling.C
+      ReadParameterFile.C
+      SetDefaultGlobalValues.C
+      WriteParameterFile.C
+      X_Main.C
+      Grid.h
+      global_data.h
+      Make_AMR_FastSib
+      Make_Unigrid_Only
+      Make_Unigrid_TaskMap
+
+  ***  note that outside of the files that have the name 'Gadget' explicitly 
+       in them, just grep for the word 'Gadget' - it's not that intrusive.  ***
+
+------------------------------------
+

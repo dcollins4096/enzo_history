@@ -1,0 +1,14 @@
+#======================================================================
+#
+# Make.opt for high optimization level
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_OPT = $(TEXT_OPT_HIGH)
+
+FLAGS_OPT = $(FLAGS_OPT_DEBUG_ARCH) $(FLAGS_OPT_FAST_ARCH)
+

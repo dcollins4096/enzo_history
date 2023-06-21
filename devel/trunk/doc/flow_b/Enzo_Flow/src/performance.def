@@ -1,0 +1,19 @@
+#ifndef PERFORMANCE_DEF
+#define PERFORMANCE_DEF
+
+#ifdef USE_JBPERF
+
+#   define JBPERF_START(REGION) \
+     CALL jbPerf_Start (REGION,0)
+
+#   define JBPERF_STOP(REGION) \
+     CALL jbPerf_Stop (REGION,0)
+
+#else
+
+#   define JBPERF_START(REGION) 
+#   define JBPERF_STOP(REGION) 
+
+#endif
+
+#endif

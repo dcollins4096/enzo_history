@@ -1,0 +1,3 @@
+cp amr_mpi/exe/AnalyzeClusterParameterFile .
+
+mpirun -np 1 ./enzo_anyl output_0008 AnalyzeClusterParameterFile

@@ -1,0 +1,113 @@
+=======================================================================
+enzo-code/arch
+=======================================================================
+
+This directory contains makefile includes for all enzo components
+(inits, analysis tools, main compute engine,...).  See the "Enzo
+Specification Document" and "Enzo Design Document" for details.
+
+The MAKE.INCLUDE file is the main make include file.  It in turn
+includes the following, in order:
+
+  Make.arch:         Architecture
+  Make.mach:         Machine
+  Make.mpi:          MPI library
+  Make.perf:         MPI library
+  Make.io:           IO library
+  Make.precision:    Global precision
+  Make.particles:    Particles precision
+  Make.obj:          Object file types
+  Make.opt:          Optimization level
+  Make.endian:       Endian mode (big or little)
+
+These files are created by make, or by ./configure, by
+copying corresponding Make.*.* files.  These are described
+below, along with the make targets used to do the copying.
+
+-----------------------------------------------------------------------
+
+Make.arch:
+
+   Extensions * in Make.arch.* must be that returned by the
+   "config.guess" autoconf utility.  Simpler aliases are available
+   for "make arch-*" configuration targets.
+
+   Make.arch.powerpc    arch-powerpc     IBM Power4 (e.g. Copper)
+   Make.arch.i686       arch-i686        Pentium Cluster (e.g. Platinum)
+   Make.arch.ia64       arch-ia64        Itanium Cluster (e.g. Titan)
+   Make.arch.mips       arch-mips        Origin2000 (e.g. modi4)
+   Make.arch.alphaev68  arch-alphaev68   DEC Alpha Cluster (e.g. TCS)
+   Make.arch.sparc      arch-sparc       SUN SPARC (e.g. cosmos)
+
+-----------------------------------------------------------------------
+
+Make.mach:
+
+   Make.mach.copper       mach-copper        NCSA's Copper IBM Power4 cluster
+   Make.mach.cosmos-mpich mach-cosmos-mpich  LCA's SUN server
+   Make.mach.horizon      mach-horizon       SDSC's Blue Horizon IBM-SP
+   Make.mach.none         mach-none          Default generic machine
+   Make.mach.titan-pablo  mach-titan-pablo   NCSA's Titan Linux ia64 cluster
+                                             Pablo performance hooks
+
+-----------------------------------------------------------------------
+
+Make.mpi:
+
+   Make.mpi.off          mpi-off         Don't use MPI
+   Make.mpi.on           mpi-on          Use MPI
+
+-----------------------------------------------------------------------
+
+Make.perf:
+
+   Make.perf.off         perf-off        Don't record performance info
+   Make.perf.jbperf      perf-jbperf     Record timings using jbPerf
+   Make.perf.papi        perf-papi       Record hardware counter data using
+                                         jbPerf with PAPI
+
+-----------------------------------------------------------------------
+
+Make.io:
+
+   Make.io.hdf4          io-hdf4         Use legacy HDF4 support
+   Make.io.hdf5          io-hdf5         Use HDF5
+
+-----------------------------------------------------------------------
+
+Make.precision:
+
+   Make.precision.single precision-single Use single precision globally
+   Make.precision.double precision-double Use double precision globally
+
+-----------------------------------------------------------------------
+
+Make.particles:
+
+   Make.particles.single particles-single Use single precision for particles
+   Make.particles.double particles-double Use double precision for particles
+   Make.particles.quad   particles-quad   Use quad precision for particles
+
+-----------------------------------------------------------------------
+
+Make.obj
+
+   Make.obj.32           obj-32           Use 32-bit object files
+   Make.obj.64           obj-64           Use 64-bit object files
+
+-----------------------------------------------------------------------
+
+Make.opt
+
+   Make.opt.debug        opt-debug        debugging; low optimization
+   Make.opt.high         opt-high         debugging; high optimization
+   Make.opt.fast         opt-fast         no debugging; high optimization
+
+-----------------------------------------------------------------------
+
+Make.endian
+
+   Make.endian.little    endian-little    Compile for little-endian
+   Make.endian.big       endian-big       Compile for big-endian
+
+

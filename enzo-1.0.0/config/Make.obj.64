@@ -1,0 +1,20 @@
+#======================================================================
+#
+# Make.obj for 64-bit object files
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-09-10  Created
+#
+#======================================================================
+
+TEXT_OBJ = $(TEXT_OBJ64)
+
+OBJECT_MODE = 64
+
+HDF4_DIR_OBJ = $(HDF4_DIR_OBJ64_ARCH)$(HDF4_DIR_ARCH)
+HDF5_DIR_OBJ = $(HDF5_DIR_OBJ64_ARCH)$(HDF5_DIR_ARCH)
+
+PERF_PAPI_DIR_OBJ = $(PERF_PAPI_DIR_OBJ64_ARCH)$(PERF_PAPI_DIR_ARCH)
+
+FLAGS_OBJ = $(FLAGS_OBJ64_ARCH)

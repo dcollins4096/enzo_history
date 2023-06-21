@@ -1,0 +1,125 @@
+========================================================================
+Enzo CHANGES
+========================================================================
+
+2006-04-19 v1_0_2-patch1 [jbordner]
+
+      Fixed bug in performance.h so that Enzo compiles w/o -DUSE_JBPERF
+      Added date stamp in MAKE script
+
+2006-04-12 v1_0_2 [jbordner]
+
+      Updated MAKE since Make_AMR_FastSib now generates enzo5u not enzo5
+      Changed jbPerf dump frequency from 10 to 1
+      Added JB_PERF_LEVELS flag to performance.h to control whether
+         to collect jbPerf data by levels (more expensive and not that
+         useful).  Currently off.
+
+2006-03-22 v1_0_1-patch1,insight3 [jbordner]
+
+      Reverted Make_AMR_FastSib to be "unigrid" from change in
+         v1_0_1-pre3 because "adaptive" is obsolete.
+      Revised MAKE to save current compilation state.  No code changes.
+
+2006-03-22 v1_0_1,insight2 [jbordner]
+
+      Changed jbPerf dump frequency from 100 to 10
+      Changed MAX_NUMBER_OF_SUBGRIDS from 200000 to 1000000 to lower
+          memory requirement.
+      Fixed jbPerf restart bug in *EvolveHierarchy.C
+
+2006-03-20 v1_0_1-pre7,insight1 [jbordner]
+
+      Tagged version for initial insight benchmark (version in run
+         will still say v1_0_1-pre6)
+      Consolidated MAKE.nersc-bassi and MAKE.sdsc-datastar into MAKE
+         for Enzo, inits5, Zring
+      Fixed bug in jbPerf instrumentation in *EvolveLevel.C
+
+2006-03-18 v1_0_1-pre6 [jbordner]
+
+      Updating jbPerf/PAPI in Make.aix64.<machine> files
+      Added OLD_HDF5 around H5Sselect_hyperslab in amr_mpi/src/extern_hdf5.h
+      Adding JBPERF_LEVEL_? to control how invasive JBPERF is
+      Updated README
+      Added MAKE.sdsc-datastar to inits,ring,enzo
+      Added OLD_HDF5 to Make.aix64.sdsc-datastar (nompi and mpi)
+      Added MAKE.nersc-bassi to make bin/enzo5 and bin/enzo5u
+      Reverting Make_AMR_FastSib to be r4 instead of r8 (v1_0_1-pre3)
+         to be consistent with other Make_* makefiles
+      Added amr_mpi/src/MAKE.nersc-bassi
+
+2006-03-17 v1_0_1-pre5 [jbordner]
+
+      Added memory load and store counters in addition to flop counts
+         to jbPerf since POWER5 supports them 
+      Added Make.aix64.sdsc-datastar and Make.aix64.nersc-bassi
+      Added #ifdef OLD_HDF5 around all #define hssize_t hsize_t
+
+2006-03-16 v1_0_1-pre4 [jbordner]
+
+      Fixed bug in jbPerf instrumentation in OutputLevelInformation().
+         Function needs to be called by all processors, but EvolveHierarchy()
+         only called it if processor was root.
+
+2006-03-16 v1_0_1-pre3 [jbordner]
+
+      Added "CellsTotal" argument to Grid::CollectGridInformation()
+         for jbPerf
+      Added Grid::isLocal() inline function to easily test whether
+         the grid data is on this processor or another one
+      Modified Make_AMR_FastSib to be AMR ;-) and r8 instead of r4
+      Added jbPerf counter updates to OutputLevelInformation()
+      Updated performance stuff in MakeMacros/Parallel/Make.aix64.mpi
+      Fixed bug in performance.h: EvolveLevel.C wouldn't compile
+         with USE_JBPERF not defined.
+
+2006-03-15 v1_0_1-pre2 [jbordner ppaschos]
+
+      Modified ring64/macros_and_parameters.h to compile (removed
+         #define hssize_t hsize_t)
+      Reverted inits64 changes in v1_0_1-pre1, and removed
+         #define hssize_t hsize_t from macros_and_parameters.h
+      Added ppaschos changes to RadiationFieldCalculateRates.C,
+         ReadParameterFile.C, SetDefaultGlobalValues.C,
+         WriteParameterFile.C, global_data.h
+      Added doc/README.v101-new-parameters documenting
+         Pascal's changes
+
+------------------------------------------------------------------------
+2006-03-13 v1_0_1-pre1 [jbordner]
+
+      Updated Parallel/Make.aix64.mpi for jbPerf
+      Updated Single/Make.aix64.nompi to fix DataStar HDF5 library
+      Modified inits64/[Makefile|XChunk_WriteField.C|
+               XChunk_WriteIntField.C|extern_hdf5.h] to compile
+               on DataStar (HDF5-related issues)
+      Instrumented X_Main.C
+      Instrumented *EvolveHierarchy.C with jbPerf
+      Instrumented *EvolveLevel.C with jbPerf
+      Updated Enzo Make_* to add performance.C
+      Added performance.[h|C]
+
+------------------------------------------------------------------------
+2006-03-13 v1_0_0
+------------------------------------------------------------------------
+
+2006-03-09 v1_0_0-pre3 [jbordner]
+  
+      Updated version output from X_Main and Options
+      Updated Makefile to look for MakeMacros in $TOPDIR
+      Added Make.llnl.thunder
+      Adding jbPerf
+      Added #define MAX_NUMBER_OF_TASKS 2048 to macros_and_parameters.h
+      Commented out #define hssize_t hsize_t
+
+2006-03-06 v1_0_0-pre2 [jbordner]
+
+      Created doc/ ; updated README accordingly.  Moved version.def 
+      from top to amr_mpi/src and added sym-link.  Added 
+      writing of version info to X_Main.C
+
+2006-01-31 v1_0_0-pre1,start [jbordner]
+
+      Harkness "ENZO_31Jan06" version, plus top-level
+      organization docs (README BUGS VERSION CHANGES, etc.)

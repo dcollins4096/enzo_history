@@ -1,0 +1,21 @@
+#======================================================================
+#
+# Make.obj for 32-bit object files
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-09-10  Created
+#
+#======================================================================
+
+TEXT_OBJ = $(TEXT_OBJ32)
+
+OBJECT_MODE = 32
+
+HDF4_DIR_OBJ = $(HDF4_DIR_OBJ32_ARCH)$(HDF4_DIR_ARCH)
+HDF5_DIR_OBJ = $(HDF5_DIR_OBJ32_ARCH)$(HDF5_DIR_ARCH)
+
+PERF_PAPI_DIR_OBJ = $(PERF_PAPI_DIR_OBJ32_ARCH)$(PERF_PAPI_DIR_ARCH)
+
+
+FLAGS_OBJ = $(FLAGS_OBJ32_ARCH)

@@ -1,0 +1,40 @@
+#
+# macros for ia64
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(HOME)/hdf5/5-1.6.2-ia64
+endif
+
+ifeq ($(INTEL_INSTALL),$(null))
+INTEL_INSTALL = /usr/local/apps/intel/compiler8
+endif
+
+ifeq ($(VMI2_INSTALL),$(null))
+VMI2_INSTALL = /garbage
+endif
+
+CPP          = /usr/bin/cpp
+DEFINES      = -I$(VMI2_INSTALL)/include -D${PRECISION} -DIA64 -DUSE_MPI
+
+## Fortran compiler
+FC           = $(VMI2_INSTALL)/bin/mpif90
+FC_OPT       = -O3 -ftz
+
+## C Compiler
+CC           = $(VMI2_INSTALL)/bin/mpicc
+CC_OPT       = -O2 -ftz -DIA64
+
+## C++ Compiler
+CCxx         = $(VMI2_INSTALL)/bin/mpiCC
+CCxx_OPT     = -O2 -ftz -DIA64 -DUSE_MPI
+
+## Linker/loader
+LDR          = $(VMI2_INSTALL)/bin/mpiCC -Wl,-noinhibit-exec -lifcore -lifport -lpthread -ldl
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib -lz -ljpeg
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I$(VMI2_INSTALL)/include
+
+OPTS         = -c -ftz -DIA64 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

@@ -1,0 +1,63 @@
+#
+# macros for ia64
+#
+
+GLOBUS_LOCATION=/usr/local/globus-2.2.4/
+GSI_INSTALL_TYPE=gcc64
+AUTH_INCLUDE += $(GLOBUS_LOCATION)/include/$(GSI_INSTALL_TYPE)
+LIB_GSI_AUTH = \
+        -L $(GLOBUS_LOCATION)/lib \
+        -lglobus_gss_assist_$(GSI_INSTALL_TYPE) \
+        -lglobus_gssapi_gsi_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_credential_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_proxy_core_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_callback_$(GSI_INSTALL_TYPE) \
+        -lglobus_oldgaa_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_sysconfig_$(GSI_INSTALL_TYPE) \
+        -lglobus_gsi_cert_utils_$(GSI_INSTALL_TYPE) \
+        -lglobus_openssl_error_$(GSI_INSTALL_TYPE) \
+        -lglobus_openssl_$(GSI_INSTALL_TYPE) \
+        -lglobus_proxy_ssl_$(GSI_INSTALL_TYPE) \
+        -lssl_$(GSI_INSTALL_TYPE) \
+        -lcrypto_$(GSI_INSTALL_TYPE) \
+        -lglobus_common_$(GSI_INSTALL_TYPE)
+
+SRBI=/home/ncsa/srb/CVS/SRB2_0_0rel
+
+SRBCOPTS = -DPORTNAME_linux -DADDR_64BIT -L$(SRBI)/obj -lSrbClient $(SRBI)/utilities/obj/srbClientUtil.o -I$(SRBI)/src/include -I$(SRBI)/src/catalog/include -I$(SRBI)/utilities/include $(LIB_GSI_AUTH)
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(HOME)/hdf5/5-1.4.3-ia64
+endif
+
+ifeq ($(VMI_INSTALL),$(null))
+VMI_INSTALL = /usr/local/mpich/mpich-vmi1-intel
+endif
+
+CPP          = /usr/bin/cpp
+DEFINES      = -I$(VMI_INSTALL)/include -D${PRECISION} -DIA64 -DUSE_MPI
+
+## Fortran compiler
+FC           = efc
+FC_OPT       = -O3 -ftz
+
+## C Compiler
+CC           = ecc
+CC_OPT       = -O2 -ftz -DIA64 $(SRBCOPTS)
+
+## C++ Compiler
+CCxx         = ecc
+CCxx_OPT     = -O2 -ftz -DIA64 -DUSE_MPI
+
+## Linker/loader
+LDR          = ecc -Wl,-noinhibit-exec
+LDR_OPT      = -Wl,-rpath=$(HDF5_INSTALL)/lib
+LIB          = $(SRBCOPTS) \
+               -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib -lz -ljpeg \
+               -L$(VMI_INSTALL)/lib -lmpich -lvmi -lpthread -ldl \
+               -L$(INTEL_INSTALL)/lib -lF90 -lIEPCF90 -lPEPCF90 -lintrins
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I$(VMI_INSTALL)/include
+
+OPTS         = -c -ftz -DIA64 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

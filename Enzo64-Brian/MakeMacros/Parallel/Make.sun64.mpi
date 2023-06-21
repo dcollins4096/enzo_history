@@ -1,0 +1,35 @@
+#
+# macros for sun
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(WORK)/hdf5/5-1.4.3-sol-64
+endif
+
+CPP          = /usr/lib/cpp
+DEFINES      = -DSUN -D$(PRECISION) -DUSE_MPI
+
+## Fortran compiler
+FC           = /opt/SUNWhpc/HPC4.0/bin/mpf95 -xarch=v9
+FC_OPT       = -O3
+
+## C Compiler
+CC           = /opt/SUNWhpc/HPC4.0/bin/mpcc -xarch=v9
+CC_OPT       = -O2 -DSUN
+
+## C++ Compiler
+CCxx	     = /opt/SUNWhpc/HPC4.0/bin/mpCC -xarch=v9
+CCxx_OPT     = -O3 -DSUN -DUSE_MPI -features=no%conststrings,no%localfor
+
+## Linker/loader
+LDR          = /opt/SUNWhpc/HPC4.0/bin/mpCC -xarch=v9 -xlang=f95 -lmpi
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 \
+               $(SZIP_INSTALL)/lib/libsz.a \
+               $(ZLIB_INSTALL)/lib/libz.a \
+               -L/usr/local/lib -lM77 -lF77 -lsunmath -lnsl -lm -lsocket
+
+INCLUDE      = -I$(HDF5_INSTALL)/include
+
+OPTS         = -c -I/opt/SUNWhpc/include -DSUN ${INCLUDE}
+DEBUG        = -g

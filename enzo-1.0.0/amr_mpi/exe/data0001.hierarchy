@@ -1,0 +1,20 @@
+
+Grid = 1
+GridRank          = 1
+GridDimension     = 106 
+GridStartIndex    = 3 
+GridEndIndex      = 102 
+GridLeftEdge      = 0 
+GridRightEdge     = 1 
+Time              = 0.251
+SubgridsAreStatic = 0
+NumberOfBaryonFields = 3
+FieldType = 0 1 4 
+BaryonFileName = data0001.grid0001
+CourantSafetyNumber    = 0.800000
+PPMFlatteningParameter = 0
+PPMDiffusionParameter  = 0
+PPMSteepeningParameter = 0
+NumberOfParticles   = 0
+Pointer: Grid[1]->NextGridThisLevel = 0
+Pointer: Grid[1]->NextGridNextLevel = 0

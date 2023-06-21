@@ -1,0 +1,487 @@
+#======================================================================
+#
+# ENZO Makefile: amr_mpi/src/Makefile.in
+#
+#======================================================================
+#
+# Autoconf variable values:
+#
+#    top_srcdir    = ../..
+#
+#---------------------------------------------------------------------
+#
+# Targets:
+#
+#    all:          (default) make enzo executable
+#    enzo:         make enzo executable
+#    install:      install enzo executable
+#    clean:        clean object files
+#    distclean:    clean object files, executable, and configuration
+#
+# Also, all configuration targets available in config/MAKE.CONFIG
+#
+#---------------------------------------------------------------------
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  jb  added target_* variables
+#
+#======================================================================
+
+TOP_DIR = ../..
+
+EXES = enzo emon
+
+all: $(patsubst %,%.exe,$(EXES))
+
+OBJS_MAIN = \
+	AdiabaticExpansionInitialize.o \
+	CheckEnergyConservation.o \
+	CheckForOutput.o \
+	CheckForTimeAction.o \
+	CollapseTestInitialize.o \
+	CommunicationBroadcastValue.o \
+	CommunicationBufferedSend.o \
+	CommunicationCombineGrids.o \
+	CommunicationInitialize.o \
+	CommunicationLoadBalanceGrids.o \
+	CommunicationParallelFFT.o \
+	CommunicationPartitionGrid.o \
+	CommunicationReceiveFluxes.o \
+	CommunicationSendFluxes.o \
+	CommunicationShareGrids.o \
+	CommunicationTransferParticles.o \
+	CommunicationTranspose.o \
+	CommunicationUpdateStarParticleCount.o \
+	CommunicationUtilities.o \
+	ComputePotentialFieldLevelZero.o \
+	ComputeTable.o \
+	CopyOverlappingParticleMassFields.o \
+	CopyOverlappingZones.o \
+	CosmologyComputeExpansionFactor.o \
+	CosmologyComputeExpansionTimestep.o \
+	CosmologyComputeTimeFromRedshift.o \
+	CosmologyGetUnits.o \
+	CosmologyReadParameters.o \
+	CosmologySimulationInitialize.o \
+	CosmologyWriteParameters.o \
+	DeleteFluxes.o \
+	DepositBaryons.o \
+	DepositParticleMassField.o \
+	DoubleMachInitialize.o \
+	EvolveHierarchy.o \
+	EvolveLevel.o \
+	EvolveLevelRoutinesOptimized.o \
+	ExternalBoundary_constructor.o \
+	ExternalBoundary_IdentifyPhysicalQuantities.o \
+	ExternalBoundary_InitializeExternalBoundaryFace.o \
+	ExternalBoundary_Prepare.o \
+	ExternalBoundary_ReadExternalBoundaryHDF4.o \
+	ExternalBoundary_ReadExternalBoundaryHDF5.o \
+	ExternalBoundary_SetDoubleMachBoundary.o \
+	ExternalBoundary_SetExternalBoundary.o \
+	ExternalBoundary_SetExternalBoundaryParticles.o \
+	ExternalBoundary_SetShockPoolBoundary.o \
+	ExternalBoundary_SetWavePoolBoundary.o \
+	ExternalBoundary_WriteExternalBoundaryHDF4.o \
+	ExternalBoundary_WriteExternalBoundaryHDF5.o \
+	ExtractSection.o \
+	FastFourierTransform.o \
+	FCol32.o \
+	FCol.o \
+	FindField.o \
+	FindSubgrids.o \
+	GravityEquilibriumTestInitialize.o \
+	Grid_AddBaryonsToGravitatingMassField.o \
+	Grid_AddExternalAcceleration.o \
+	Grid_AddFieldMassToMassFlaggingField.o \
+	Grid_AddOverlappingParticleMassField.o \
+	Grid_AddToBoundaryFluxes.o \
+	Grid_AllocateGrids.o \
+	Grid_AnalyzeTrackPeaks.o \
+	Grid_ApplyTimeAction.o \
+	Grid_CalculateAngularMomentum.o \
+	Grid_CheckForOverlap.o \
+	Grid_CleanUpMovedParticles.o \
+	Grid_CleanUp.o \
+	Grid_ClearBoundaryFluxes.o \
+	Grid_ClearFlaggingField.o \
+	Grid_ClearGravitatingMassField.o \
+	Grid_ClearGravitatingMassFieldParticles.o \
+	Grid_ClearMassFlaggingField.o \
+	Grid_ClearParticleAccelerations.o \
+	Grid_CoalesceSubgrids.o \
+	Grid_CollapseTestInitializeGrid.o \
+	Grid_CollectGridInformation.o \
+	Grid_CommunicationMoveGrid.o \
+	Grid_CommunicationReceiveRegion.o \
+	Grid_CommunicationSendParticles.o \
+	Grid_CommunicationSendRegion.o \
+	Grid_CommunicationTransferParticles.o \
+	Grid_ComovingExpansionTerms.o \
+	Grid_ComovingGravitySourceTerm.o \
+	Grid_ComputeAccelerationFieldExternal.o \
+	Grid_ComputeAccelerationField.o \
+	Grid_ComputeAccelerations.o \
+	Grid_ComputeCoolingTime.o \
+	Grid_ComputeElementalDensity.o \
+	Grid_ComputeEnergy.o \
+	Grid_ComputeGammaField.o \
+	Grid_ComputePressureDualEnergyFormalism.o \
+	Grid_ComputePressure.o \
+	Grid_ComputeTemperatureField.o \
+	Grid_ComputeTimeStep.o \
+	Grid_ComputeXrayEmissivity.o \
+	Grid_constructor.o \
+	Grid_ConvertTotalEnergyToGasEnergy.o \
+	Grid_CopyBaryonFieldToOldBaryonField.o \
+	Grid_CopyOverlappingMassField.o \
+	Grid_CopyParentToGravitatingFieldBoundary.o \
+	Grid_CopyPotentialField.o \
+	Grid_CopyZonesFromGridCountOnly.o \
+	Grid_CopyZonesFromGrid.o \
+	Grid_CorrectForRefinedFluxes.o \
+	Grid_CosmologySimulationInitializeHDF4.o \
+	Grid_CosmologySimulationInitializeHDF5.o \
+	Grid_DebugCheck.o \
+	Grid_DeleteAllFields.o \
+	Grid_DeleteFlaggingField.o \
+	Grid_DepositBaryons.o \
+	Grid_DepositParticlePositions.o \
+	Grid_DepositPositions.o \
+	Grid_destructor.o \
+	Grid_DoubleMachInitializeGrid.o \
+	Grid_FinishFFT.o \
+	Grid_FlagBufferZones.o \
+	Grid_FlagCellsToBeRefinedByCoolingTime.o \
+	Grid_FlagCellsToBeRefinedByJeansLength.o \
+	Grid_FlagCellsToBeRefinedByMass.o \
+	Grid_FlagCellsToBeRefinedByShocks.o \
+	Grid_FlagCellsToBeRefinedBySlope.o \
+	Grid_GetProjectedBoundaryFluxes.o \
+	Grid_GravityEquilibriumTestInitializeGrid.o \
+	Grid_IdentifyNewSubgrids.o \
+	Grid_IdentifyNewSubgridsSmall.o \
+	Grid_IdentifyPhysicalQuantities.o \
+	Grid_IdentifySpeciesFields.o \
+	Grid_InheritProperties.o \
+	Grid_InitializeGravitatingMassField.o \
+	Grid_InitializeGravitatingMassFieldParticles.o \
+	Grid_InitializeUniformGrid.o \
+	Grid_InterpolateAccelerations.o \
+	Grid_InterpolateBoundaryFromParent.o \
+	Grid_InterpolateFieldValues.o \
+	Grid_InterpolateParticlePositions.o \
+	Grid_InterpolatePositions.o \
+	Grid_MoveAllParticles.o \
+	Grid_MoveSubgridParticlesFast.o \
+	Grid_MoveSubgridParticles.o \
+	Grid_OutputAsParticleData.o \
+	Grid_OutputGridMovieData.o \
+	Grid_OutputStarParticleInformation.o \
+	Grid_PrepareFFT.o \
+	Grid_PrepareGreensFunction.o \
+	Grid_PrepareGridDerivedQuantities.o \
+	Grid_PrepareGrid.o \
+	Grid_PreparePeriodicGreensFunction.o \
+	Grid_PreparePotentialField.o \
+	Grid_PressurelessCollapseInitialize.o \
+	Grid_ProjectSolutionToParentGrid.o \
+	Grid_ProjectToPlane.o \
+	Grid_RadiationComputeDensities.o \
+	Grid_ReadGridHDF4.o \
+	Grid_ReadGridHDF5.o \
+	Grid_RestoreEnergyConsistency.o \
+	Grid_ReturnFluxDims.o \
+	Grid_ReturnGridInfo.o \
+	Grid_SetExternalBoundaryValues.o \
+	Grid_SetFlaggingField.o \
+	Grid_SetFlaggingFieldStaticRegions.o \
+	Grid_SetMinimumSupport.o \
+	Grid_ShockTubeInitializeGrid.o \
+	Grid_SolveForPotential.o \
+	Grid_SolveHydroEquations.o \
+	Grid_SolveRadiativeCooling.o \
+	Grid_SolveRateEquations.o \
+	Grid_SortParticlesByNumber.o \
+	Grid_SphericalInfallGetProfile.o \
+	Grid_SphericalInfallInitializeGrid.o \
+	Grid_StarParticleHandler.o \
+	Grid_SupernovaRestartInitialize.o \
+	Grid_TestGravityCheckResults.o \
+	Grid_TestGravityInitializeGrid.o \
+	Grid_TestGravityMotionInitializeGrid.o \
+	Grid_TestGravitySphereCheckResults.o \
+	Grid_TestGravitySphereInitializeGrid.o \
+	Grid_UpdateParticlePosition.o \
+	Grid_UpdateParticleVelocity.o \
+	Grid_WriteGridFortran.o \
+	Grid_WriteGridHDF5.o \
+	Grid_WriteGridHDFDFSD.o \
+	Grid_WriteGridHDFSD.o \
+	Grid_WriteGridInterpolate.o \
+	Grid_WriteGridRaw.o \
+	Grid_WriteGridX.o \
+	Grid_ZeldovichPancakeInitializeGrid.o \
+	Grid_ZeroSolutionUnderSubgrid.o \
+	Hierarchy_DeleteHierarchyEntry.o \
+	ICol.o \
+	IdentifyNewSubgridsBySignature.o \
+	InitializeEquilibriumCoolData.o \
+	InitializeNew.o \
+	InitializeRadiationFieldData.o \
+	InitializeRateData.o \
+	InterpretCommandLine.o \
+	LevelHierarchy_AddLevel.o \
+	ListIO.o \
+	MemoryAllocationRoutines.o \
+	MultigridSolver.o \
+	OutputAsParticleDataHDF4.o \
+	OutputAsParticleDataHDF5.o \
+	OutputAsParticleData.o \
+	OutputLevelInformation.o \
+	PCol.o \
+	PrepareGravitatingMassField.o \
+	PressurelessCollapseInitialize.o \
+	ProjectToPlane.o \
+	ProtoSubgrid_AcceptableGrid.o \
+	ProtoSubgrid_CleanUp.o \
+	ProtoSubgrid_ComputeSecondDerivative.o \
+	ProtoSubgrid_ComputeSignature.o \
+	ProtoSubgrid_constructor.o \
+	ProtoSubgrid_CopyFlaggedZonesFromGrid.o \
+	ProtoSubgrid_CopyToNewSubgrid.o \
+	ProtoSubgrid_FindGridsByZeroSignature.o \
+	ProtoSubgrid_ReturnNthLongestDimension.o \
+	ProtoSubgrid_ShrinkToMinimumSize.o \
+	QuickSortAndDrag.o \
+	RadiationFieldCalculateRates.o \
+	RadiationFieldUpdate.o \
+	ReadAllData.o \
+	ReadAttrHDF5.o \
+	ReadDataHierarchy.o \
+	ReadFileHDF5.o \
+	ReadHDF4File.o \
+	ReadParameterFile.o \
+	ReadRadiationData.o \
+	ReadStarParticleData.o \
+	RebuildHierarchy.o \
+	ReduceFragmentation.o \
+	ReportMemoryUsage.o \
+	ReturnCPUTime.o \
+	SetDefaultGlobalValues.o \
+	ShockInABoxInitialize.o \
+	ShockPoolInitialize.o \
+	ShockTubeInitialize.o \
+	SphericalInfallInitialize.o \
+	SupernovaRestartInitialize.o \
+	TestGravityCheckResults.o \
+	TestGravityInitialize.o \
+	TestGravityMotion.o \
+	TestGravitySphereCheckResults.o \
+	TestGravitySphereInitialize.o \
+	UpdateParticlePositions.o \
+	WavePoolInitialize.o \
+	WriteAllData.o \
+	WriteDataHierarchy.o \
+	WriteGeomviewFile.o \
+	WriteMovieData.o \
+	WriteParameterFile.o \
+	WriteRadiationData.o \
+	WriteStarParticleData.o \
+	WriteStringAttrHDF5.o \
+	ZeldovichPancakeInitialize.o \
+	calcdiss.o \
+	calc_dt.o \
+	calc_photo_rates.o \
+	calc_rad.o \
+	calc_rates.o \
+	chtable.o \
+	cic_deposit.o \
+	cic_interp.o \
+	cicinterp.o \
+	c_message.o \
+	colh2diss.o \
+	coll_rates.o \
+	comp_accel.o \
+	cool1d_multi.o \
+	cool1d.o \
+	cool_multi_time.o \
+	cool_time.o \
+	euler.o \
+	expand_terms.o \
+	f77rand.o \
+	fft_utils.o \
+	flow.o \
+	f_message.o \
+	fortfft.o \
+	fortio.o \
+	grid_cic.o \
+	interp1d.o \
+	interp2d.o \
+	interp3d.o \
+	interpolate.o \
+	inteuler.o \
+	intlgrg.o \
+	int_lin3d.o \
+	intrmp.o \
+	int_spline.o \
+	intvar.o \
+	lgrg.o \
+	main.o \
+	mcooling.o \
+	mg_calc_defect.o \
+	mg_prolong2.o \
+	mg_prolong.o \
+	mg_relax.o \
+	mg_restrict.o \
+	mpi_error_file.o \
+	multi_cool.o \
+	ngpinterp.o \
+	performance.o \
+	pgas2d_dual.o \
+	pgas2d.o \
+	ppm_de.o \
+	ppm_lr.o \
+        prefort.o \
+	project.o \
+	projplane.o \
+	prolong.o \
+	prolong_tsc.o \
+	remap.o \
+	smooth_deposit.o \
+	smooth.o \
+	solve_cool.o \
+	solve_rate.o \
+	tscint1d.o \
+	tscint2d.o \
+	tscint3d.o \
+	twoshock.o \
+	utilities.o \
+	xeuler_sweep.o \
+	xlagrange_sweep.o \
+	yeuler_sweep.o \
+	ylagrange_sweep.o \
+	zeuler_sweep.o \
+	zeus_main.o \
+	zeus_source.o \
+	zeus_utilities.o \
+	zeus_xtransport.o \
+	zeus_ytransport.o \
+	zeus_ztransport.o \
+	zlagrange_sweep.o
+
+OBJS_FLEXIO = \
+	WriteEvolution.o \
+	Commandline.o
+
+#======================================================================
+# Include configuration targets
+#======================================================================
+
+include $(TOP_DIR)/config/MAKE.CONFIG
+
+#======================================================================
+# Override DEFINES and OBJS for Enzo (jbPerf/PAPI)
+#======================================================================
+
+OBJS_ENZO = $(OBJS) $(OBJS_PERF) $(OBJS_FFT)
+DEFINES_MAIN = $(DEFINES_FFT)
+
+#======================================================================
+# MAIN TARGETS
+#======================================================================
+
+enzo.exe: $(OBJS_ENZO)
+	-$(LD) $(LDFLAGS) -o enzo.exe $(OBJS_ENZO) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > enzo.config
+	($(MAKE) show-flags) | grep -v directory > enzo.flags
+
+# WARNING: dependency with config/* internals!
+emon.exe: emon.C
+	-$(CXX_ARCH)$(CXX_NOMPI_ARCH) $(LDFLAGS) -UUSE_MPI -o emon.exe -g -DUSE_CURSES  emon.C -lcurses  $(LIBS_ARCH) $(LIBS_PERF) $(LIBS_IO) $(LIBS_F77_ARCH)
+	($(MAKE) show-config) | grep -v directory > emon.config
+	($(MAKE) show-flags) | grep -v directory > emon.flags
+
+#======================================================================
+# Pattern rules
+#======================================================================
+
+.SUFFIXES: .c .C .src .src90 .f .f90
+
+.c.o:
+	$(CC) -c $(DEFINES) $(CFLAGS) $*.c
+.C.o:
+	$(CXX) -c $(DEFINES) $(CXXFLAGS) $*.C
+.src.f:
+	$(CPP) $(DEFINES) $(CPPFLAGS) $*.src > $*.f
+.src90.f90:
+	$(CPP) $(DEFINES) $(CPPFLAGS) $*.src90 > $*.f90
+.f.o:
+	$(FC) -c $(FFLAGS) $*.f
+	rm -f $*.f
+.f90.o:
+	$(F90) -c $(F90FLAGS) $*.f90
+	rm -f $*.f90
+
+#======================================================================
+# install, clean, and help targets
+#======================================================================
+
+.PHONY: install install-%
+install: $(patsubst %,install-%,$(EXES))
+
+install-%:
+	-@mv $*.exe    $(TOP_DIR)/bin/$*
+	-@mv $*.config $(TOP_DIR)/bin/$*.config
+	-@mv $*.flags  $(TOP_DIR)/bin/$*.flags
+
+#----------------------------------------------------------------------
+
+.PHONY: clean distclean
+
+clean:
+	-@rm -f *.o *.f *~ work.pc
+
+distclean: clean
+	-@rm -f $(patsubst %,%.exe,   $(EXES))
+	-@rm -f $(patsubst %,%.config,$(EXES))
+	-@rm -f $(patsubst %,%.flags, $(EXES))
+
+#----------------------------------------------------------------------
+
+.PHONY: help
+help:
+	@echo ""
+	@echo "ENZO HELP: amr_mpi"
+	@echo ""
+	@echo "   make                Compile enzo"
+	@echo "   make install        Install enzo"
+	@echo "   make help           Show this help information"
+	@echo "   make clean          Clean *.o *.f *~ files"
+	@echo "   make distclean      Clean even more"
+	@echo ""
+	@$(MAKE) -s help-config
+
+#======================================================================
+# Store configuration settings
+#======================================================================
+
+BIN_DIR = $(TOP_DIR)/bin
+CONFIG_FILE = $(BIN_DIR)/CONFIG
+
+.PHONY: config-file
+config-file:
+	rm -f $(CONFIG_FILE)
+	@$(MAKE) -s show-config > $(CONFIG_FILE)
+	@$(MAKE) -s show-flags >> $(CONFIG_FILE)
+
+
+#======================================================================
+# Dependencies
+#======================================================================
+
+dep:
+	makedepend -DENZO_TEST -DUSE_HDF5 -DUSE_HDF4 -DUSE_MPI -DUSE_JBPERF -DUSE_PAPI -DJB_OPT_BETA -fDEPEND -Y -m -- -- *.C *.src *.h
+
+include DEPEND

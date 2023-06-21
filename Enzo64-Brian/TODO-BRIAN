@@ -1,0 +1,11 @@
+To do, as of 2 Nov. 2006
+
+1) Put in Greg Bryan's isolated boundary conditions
+
+2) Put in Dan Whalen's new chemistry routines (maybe)
+
+3) work on GADGET-2 star formation/feedback stuff
+     Note:  Sam is going to implement this!
+
+4) get this working on SDSC, NCSA teragrid machines, Cobalt
+     using Intel 9.0 compilers

@@ -1,0 +1,97 @@
+#======================================================================
+#
+# ENZO Makefile: ring/Makefile.in
+#
+#======================================================================
+#
+# Autoconf variable values:
+#
+#    top_srcdir    = ..
+#
+#---------------------------------------------------------------------
+#
+# Targets:
+#
+#    all:          make executables
+#    install:      install executables in top-level bin
+#    help:         help for make targets
+#    clean:        clean directory
+#    distclean:    clean directory and reset configuration
+#
+# Also, all configuration targets available in config/MAKE.CONFIG
+#
+#---------------------------------------------------------------------
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-20  jb  created
+#
+#======================================================================
+
+TOP_DIR = ..
+
+EXES = ringforce ring Xring
+
+all: $(patsubst %,%.exe,$(EXES))
+
+#======================================================================
+# Include configuration targets
+#======================================================================
+
+include $(TOP_DIR)/config/MAKE.CONFIG
+
+#======================================================================
+# MAIN TARGETS
+#======================================================================
+
+.SUFFIXES: .exe .C
+
+%.exe : %.o
+	-$(CXX) -o $*.exe $(DEFINES) $(CXXFLAGS) $*.o $(LDFLAGS) $(LIBS)
+	($(MAKE) show-config) | grep -v directory > $*.config
+	($(MAKE) show-flags)  | grep -v directory > $*.flags
+
+#======================================================================
+# install, clean, and help targets
+#======================================================================
+
+.PHONY: install install-%
+install: $(patsubst %,install-%,$(EXES))
+
+install-%:
+	-@mv $*.exe    $(TOP_DIR)/bin/$*
+	-@mv $*.config $(TOP_DIR)/bin/$*.config
+	-@mv $*.flags $(TOP_DIR)/bin/$*.flags
+
+#----------------------------------------------------------------------
+
+.PHONY: clean distclean
+clean:
+	-@rm -f *.o *.f *~ work.pc
+distclean: clean
+	-@rm -f $(patsubst %,%.exe,$(EXES))
+	-@rm -f $(patsubst %,%.config,$(EXES))
+	-@rm -f $(patsubst %,%.flags,$(EXES))
+
+# Pattern rules
+#======================================================================
+
+.SUFFIXES: .c .C .src .f
+
+.c.o:
+	$(CC) -c $(DEFINES) $(CFLAGS) $*.c
+.C.o:
+	$(CXX) -c $(DEFINES) $(CXXFLAGS) $*.C
+.src.f:
+	$(CPP) $(DEFINES) $(CPPFLAGS) $*.src $*.f
+.f.o:
+	$(FC) -c $(FFLAGS) $*.f
+	rm -f $*.f
+
+#======================================================================
+# Dependencies
+#======================================================================
+
+rdev.o: macros_and_parameters.h extern_hdf5.h
+ring.o: macros_and_parameters.h extern_hdf5.h
+Xring.o: macros_and_parameters.h extern_hdf5.h

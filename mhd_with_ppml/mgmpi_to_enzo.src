@@ -1,0 +1,532 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2005 Daniel R. Reynolds                                         *
+* Copyright 2005 Laboratory for Computational Astrophysics                  *
+* Copyright 2005 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+#include "fortran.def"
+c=======================================================================
+c/////////////////////  SUBROUTINE MGMPI_TO_ENZO  \\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine mgmpi_to_enzo(mgmpivec, enzovec, mdim1, mdim2, mdim3, 
+     &                         x1Li, x1Ri, x2Li, x2Ri, x3Li, x3Ri,
+     &                         edim1, edim2, edim3, es1, es2, es3, 
+     &                         ef1, ef2, ef3, off1, off2, off3)
+c
+c
+c  written by: Daniel R. Reynolds
+c  date:       November, 2005
+c  modified1:
+c
+c  PURPOSE: Interpolates between MGMPI grids (nodal finite-
+c           difference) and Enzo grids (cell-centered finite-volume) 
+c           in such a way that the interpolated quantity is preserved 
+c           (when used in combination with enzo_to_mgmpi.src).  This 
+c           is based on a simple trilinear interpolation between the 
+c           two grids.
+c
+c  INPUTS:
+c     mgmpivec   - finite-difference grid, with extents over the 
+c                  indices (1:mdim1,1:mdim2,1:mdim3).  These extents 
+c                  include one extra layer per face of ghost cells.
+c
+c     enzovec    - finite-volume grid, with extents over the 
+c                  indices (1:edim1,1:edim2,1:edim3), and with 
+c                  active indices (es1:ef1,es2:ef2,es3:ef3).  This 
+c                  grid is shifted to the right of the mgmpivec grid 
+c                  by the offsets (off1, off2, off3), as well as a 
+c                  half-cell shift corresponding to the cell-
+c                  cornered to cell-centered grid indexing, i.e. 
+c                  enzovec(i,j,k) is the cell center with lower 
+c                  cell corner given by 
+c                  mgmpivec(i+off1,j+off2,k+off3)
+c
+c     x*Li, x*Ri - flag denoting whether the lower face in the given 
+c                  dimension is interior to the domain: 
+c                      0 => exterior face, 
+c                      1 => interior face 
+c
+c     edim*, mdim*, es*, ef*, off* are all described above
+c
+c  OUTPUT ARGUMENTS: 
+c     enzovec      - mgmpivec field interpolated from cell corners to 
+c                    cell centers
+c
+c  EXTERNALS: 
+c
+c  LOCALS:
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer edim1, edim2, edim3, mdim1, mdim2, mdim3
+      integer x1Li, x1Ri, x2Li, x2Ri, x3Li, x3Ri
+      integer es1, es2, es3, ef1, ef2, ef3, off1, off2, off3
+      real    enzovec(edim1, edim2, edim3)
+      real    mgmpivec(mdim1, mdim2, mdim3)
+c
+c  locals
+c
+      integer is, js, ks, ie, je, ke
+      integer i, j, k, il, ir, jl, jr, kl, kr
+      real    factor, x1Lwt, x1Rwt, x2Lwt, x2Rwt, x3Lwt, x3Rwt, totwt
+c
+c=======================================================================
+c
+c
+c     check that the enzo active extents make sense 
+      if ((es1 .lt. 1) .or. (es2 .lt. 1) .or. (es3 .lt. 1)) then
+         write(0,*) 'mgmpi_to_enzo error: active grid begins too low'
+         return
+      endif
+      if ((ef1 .gt. edim1) .or. (ef2 .gt. edim2) 
+     &                     .or. (ef3 .gt. edim3)) then
+         write(0,*) 'mgmpi_to_enzo error: active grid ends too high'
+         return
+      endif
+c
+c     check that mgmpi grid offsets make sense
+      if ((es1+off1 .lt. 1) .or. (es2+off2 .lt. 1) 
+     &                      .or. (es3+off3 .lt. 1)) then
+         write(0,*) 'mgmpi_to_enzo error: offsets too low'
+         return
+      endif
+      if ((ef1+off1+1 .gt. mdim1) .or. (ef2+off2+1 .gt. mdim2) 
+     &                            .or. (ef3+off3+1 .gt. mdim3)) then
+         write(0,*) 'mgmpi_to_enzo error: offsets too high'
+         return
+      endif
+c
+c     set iteration extents for nodes interior to this proc's domain
+c     [usually just 2 and mdim*-1, unless a dim's lower bdry is interior 
+c      to the domain, then we extend the start by 1 due to grid ownership]
+      is = 2 - x1Li
+      ie = mdim1-1
+      js = 2 - x2Li
+      je = mdim2-1
+      ks = 2 - x3Li
+      ke = mdim3-1
+c
+c     set face donation weights (usually 1, but set to 1/2 if this is an 
+c     interior face)
+      x1Lwt = 1.d0 - 0.5d0*x1Li
+      x1Rwt = 1.d0 - 0.5d0*x1Ri
+      x2Lwt = 1.d0 - 0.5d0*x2Li
+      x2Rwt = 1.d0 - 0.5d0*x2Ri
+      x3Lwt = 1.d0 - 0.5d0*x3Li
+      x3Rwt = 1.d0 - 0.5d0*x3Ri
+c
+c
+c     initialize enzovec to have all zero values
+      do k = 1,edim3,1
+         do j = 1,edim2,1
+            do i = 1,edim1,1
+               enzovec(i,j,k) = 0.d0
+            enddo
+         enddo
+      enddo
+c
+c
+c     iterate over the interior mgmpi grid, donating 1/8 of 
+c     each corner's value to the adjacent cells 
+c     [equivalent to trilinear interpolation]
+      do k=ks+1,ke-1,1
+c        get corner indices
+         kl = k-off3-1
+         kr = k-off3
+c         
+         do j = js+1,je-1,1
+c           get corner indices
+            jl = j-off2-1
+            jr = j-off2
+c
+            do i = is+1,ie-1,1
+c              get corner indices
+               il = i-off1-1
+               ir = i-off1
+c
+c              get weighting factor
+               factor = mgmpivec(i,j,k)*1.25d-1
+c
+c              (l,l,l) cell
+               enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+c
+c              (r,l,l) cell
+               enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+c
+c              (l,r,l) cell
+               enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+c
+c              (r,r,l) cell
+               enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+c
+c              (l,l,r) cell
+               enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+c
+c              (r,l,r) cell
+               enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+c
+c              (l,r,r) cell
+               enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+c
+c              (r,r,r) cell
+               enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+c
+            enddo
+         enddo
+      enddo
+c
+c
+c     iterate over mgmpi grid faces, donating 1/4 of 
+c     each corner's value to the adjacent cells 
+      k = ks
+      kr = k-off3
+      totwt = x3Lwt*2.5d-1
+      do j = js+1,je-1,1
+         jl = j-off2-1
+         jr = j-off2
+         do i = is+1,ie-1,1
+            il = i-off1-1
+            ir = i-off1
+            factor = mgmpivec(i,j,k)*totwt
+            enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+            enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+            enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+            enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+         enddo
+      enddo
+c
+      j = js
+      jr = j-off2
+      totwt = x2Lwt*2.5d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         do i = is+1,ie-1,1
+            il = i-off1-1
+            ir = i-off1
+            factor = mgmpivec(i,j,k)*totwt
+            enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+            enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+            enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+            enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+         enddo
+      enddo
+c
+      i = is
+      ir = i-off1
+      totwt = x1Lwt*2.5d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         do j = js+1,je-1,1
+            jl = j-off2-1
+            jr = j-off2
+            factor = mgmpivec(i,j,k)*totwt
+            enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+            enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+            enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+            enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+         enddo
+      enddo
+c
+      i = ie
+      il = i-off1-1
+      totwt = x1Rwt*2.5d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         do j = js+1,je-1,1
+            jl = j-off2-1
+            jr = j-off2
+            factor = mgmpivec(i,j,k)*totwt
+            enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+            enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+            enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+            enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+         enddo
+      enddo
+c
+      j = je
+      jl = j-off2-1
+      totwt = x2Rwt*2.5d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         do i = is+1,ie-1,1
+            il = i-off1-1
+            ir = i-off1
+            factor = mgmpivec(i,j,k)*totwt
+            enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+            enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+            enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+            enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+         enddo
+      enddo
+c
+      k = ke
+      kl = k-off3-1
+      totwt = x3Rwt*2.5d-1
+      do j = js+1,je-1,1
+         jl = j-off2-1
+         jr = j-off2
+         do i = is+1,ie-1,1
+            il = i-off1-1
+            ir = i-off1
+            factor = mgmpivec(i,j,k)*totwt
+            enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+            enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+            enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+            enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+         enddo
+      enddo
+c
+c
+c     iterate over mgmpi grid edges (intersection of 2 faces), 
+c     donating 1/2 of each corner's value to the adjacent cells 
+      j = js
+      k = ks
+      jr = j-off2
+      kr = k-off3
+      totwt = x2Lwt*x3Lwt*5.0d-1
+      do i = is+1,ie-1,1
+         il = i-off1-1
+         ir = i-off1
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+         enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+      enddo
+c
+      j = je
+      k = ks
+      jl = j-off2-1
+      kr = k-off3
+      totwt = x2Rwt*x3Lwt*5.0d-1
+      do i = is+1,ie-1,1
+         il = i-off1-1
+         ir = i-off1
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+         enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+      enddo
+c
+      i = is
+      k = ks
+      ir = i-off1
+      kr = k-off3
+      totwt = x1Lwt*x3Lwt*5.0d-1
+      do j = js+1,je-1,1
+         jl = j-off2-1
+         jr = j-off2
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+         enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+      enddo
+c
+      i = ie
+      k = ks
+      il = i-off1-1
+      kr = k-off3
+      totwt = x1Rwt*x3Lwt*5.0d-1
+      do j = js+1,je-1,1
+         jl = j-off2-1
+         jr = j-off2
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+         enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+      enddo
+c
+      i = is
+      j = js
+      ir = i-off1
+      jr = j-off2
+      totwt = x1Lwt*x2Lwt*5.0d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+         enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + factor
+      enddo
+c
+      i = ie
+      j = js
+      il = i-off1-1
+      jr = j-off2
+      totwt = x1Rwt*x2Lwt*5.0d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+         enzovec(il,jr,kr) = enzovec(il,jr,kr) + factor
+      enddo
+c
+      i = is
+      j = je
+      ir = i-off1
+      jl = j-off2-1
+      totwt = x1Lwt*x2Rwt*5.0d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+         enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + factor
+      enddo
+c
+      i = ie
+      j = je
+      il = i-off1-1
+      jl = j-off2-1
+      totwt = x1Rwt*x2Rwt*5.0d-1
+      do k=ks+1,ke-1,1
+         kl = k-off3-1
+         kr = k-off3
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+         enzovec(il,jl,kr) = enzovec(il,jl,kr) + factor
+      enddo
+c
+      i = is
+      k = ke
+      ir = i-off1
+      kl = k-off3-1
+      totwt = x1Lwt*x3Rwt*5.0d-1
+      do j = js+1,je-1,1
+         jl = j-off2-1
+         jr = j-off2
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+         enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+      enddo
+c
+      i = ie
+      k = ke
+      il = i-off1-1
+      kl = k-off3-1
+      totwt = x1Rwt*x3Rwt*5.0d-1
+      do j = js+1,je-1,1
+         jl = j-off2-1
+         jr = j-off2
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+         enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+      enddo
+c
+      j = js
+      k = ke
+      jr = j-off2
+      kl = k-off3-1
+      totwt = x2Lwt*x3Rwt*5.0d-1
+      do i = is+1,ie-1,1
+         il = i-off1-1
+         ir = i-off1
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jr,kl) = enzovec(il,jr,kl) + factor
+         enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + factor
+      enddo
+c
+      j = je
+      k = ke
+      jl = j-off2-1
+      kl = k-off3-1
+      totwt = x2Rwt*x3Rwt*5.0d-1
+      do i = is+1,ie-1,1
+         il = i-off1-1
+         ir = i-off1
+         factor = mgmpivec(i,j,k)*totwt
+         enzovec(il,jl,kl) = enzovec(il,jl,kl) + factor
+         enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + factor
+      enddo
+c
+c
+c     iterate over mgmpi grid corners (intersection of 3 faces), 
+c     donating each corner's value to the adjacent cell 
+      i = is
+      j = js
+      k = ks
+      ir = i-off1
+      jr = j-off2
+      kr = k-off3
+      totwt = x1Lwt*x2Lwt*x3Lwt
+      enzovec(ir,jr,kr) = enzovec(ir,jr,kr) + totwt*mgmpivec(i,j,k)
+c
+      i = ie
+      j = js
+      k = ks
+      il = i-off1-1
+      jr = j-off2
+      kr = k-off3
+      totwt = x1Rwt*x2Lwt*x3Lwt
+      enzovec(il,jr,kr) = enzovec(il,jr,kr) + totwt*mgmpivec(i,j,k)
+c
+      i = is
+      j = je
+      k = ks
+      ir = i-off1
+      jl = j-off2-1
+      kr = k-off3
+      totwt = x1Lwt*x2Rwt*x3Lwt
+      enzovec(ir,jl,kr) = enzovec(ir,jl,kr) + totwt*mgmpivec(i,j,k)
+c
+      i = ie
+      j = je
+      k = ks
+      il = i-off1-1
+      jl = j-off2-1
+      kr = k-off3
+      totwt = x1Rwt*x2Rwt*x3Lwt
+      enzovec(il,jl,kr) = enzovec(il,jl,kr) + totwt*mgmpivec(i,j,k)
+c
+      i = is
+      j = js
+      k = ke
+      ir = i-off1
+      jr = j-off2
+      kl = k-off3-1
+      totwt = x1Lwt*x2Lwt*x3Rwt
+      enzovec(ir,jr,kl) = enzovec(ir,jr,kl) + totwt*mgmpivec(i,j,k) 
+c
+      i = ie
+      j = js
+      k = ke
+      il = i-off1-1
+      jr = j-off2
+      kl = k-off3-1
+      totwt = x1Rwt*x2Lwt*x3Rwt
+      enzovec(il,jr,kl) = enzovec(il,jr,kl) + totwt*mgmpivec(i,j,k) 
+c
+      i = is
+      j = je
+      k = ke
+      ir = i-off1
+      jl = j-off2-1
+      kl = k-off3-1
+      totwt = x1Lwt*x2Rwt*x3Rwt
+      enzovec(ir,jl,kl) = enzovec(ir,jl,kl) + totwt*mgmpivec(i,j,k) 
+c
+      i = ie
+      j = je
+      k = ke
+      il = i-off1-1
+      jl = j-off2-1
+      kl = k-off3-1
+      totwt = x1Rwt*x2Rwt*x3Rwt
+      enzovec(il,jl,kl) = enzovec(il,jl,kl) + totwt*mgmpivec(i,j,k) 
+c
+c
+      return
+      end
+c
+c=======================================================================

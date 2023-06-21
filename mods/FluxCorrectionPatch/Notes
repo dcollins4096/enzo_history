@@ -1,0 +1,89 @@
+
+Instalation of Improved FluxCorrection package for Enzo.
+Notes by David Collins, July 2005.
+package by David Collins and Rick Wagner, sprint 2005.
+
+(Almost) all modifications to the existing code are contained within #ifdef JB_OPT_FLUXES_FIX.   
+Use that as your guide for the installation.  However, that ifdef is unnecessary, as the fix
+is necessary for proper conservation in an AMR setting.  Don't put it in, people will be
+tempted to turn it off.
+
+I say almost because there may be a variable or two in Grid_CorrectForRefinedFluxes that
+escaped this paradigm. 
+
+If you find this not conserving mass and/or energy, let me know.
+
+David Collins.
+
+
+All files involved:
+---------------------
+EvolveLevel.C
+CreateSUBlingList.C
+DeleteSUBlingList.C
+EvolveLevelRoutinesOptimized.C
+Grid_CheckForSharedFace.C
+Grid_CorrectForRefinedFluxes.C
+Grid.h
+
+New Routines:
+---------------------
+
+1.)CreateSUBlingList.C
+	Populates a linked list with all grids on the 'next finer level' that aren't subgrids,
+	but share a face with a given grid (called SUBlings) Accepts and modifies the new
+	object:
+	
+	   LevelHierarchyEntry **SUBlingList;
+
+	SUBlingList[ n ] is a pointer to a linked list of "SUBlings" for the nth grid on a
+	given level.
+
+	This routine should be called immediately before UpdateFromFinerGrids, in EvolveLevel.
+	See the enclosed Evolve Level for its usage.
+
+	Future versions should accept the FastNeighbor list, to minimize cost.
+
+2.) DeleteSUBlingList.C
+	That's pretty explanitory.  Should be called immediately AFTER UpdateFromFinerGrids,
+	in EvolveLevel.
+
+3.) Grid_CheckForSharedFaces.C
+	Containes grid::CheckForSharedFaces and grid::CheckForSharedFacesHelper.
+	Just like Grid_CheckForOverlap, but only looks for exact edge matches.  
+	Called from CreateSUBlingList.
+
+Modified Routines:
+---------------------
+A copy of each routine has been added here, for reference.	
+
+1.) Grid.h
+	declare grid::CheckForSharedFaces and grid::CheckForSharedFacesHelper.
+
+2.) EvolveLevel.C
+	declare SUBlingList
+	call CreateSUBlingList
+	call DeleteSUBlingList
+
+3.) EvolveLevelRoutinesOptimized.C
+	All modificatons pertain to UpdateFromFinerGrids.  
+	I've made the assumption that the Non-Optimized version isn't used.  
+	Updates are as follows:
+	Send Pass:
+		after the loop over subgrids for GetProjectedBoundaryFluxes,
+		add a similar loop for the SUBlings.
+	Receive Pass:
+		after the CorrectForRefinedFluxes subgrid loop, add a similar one 
+		for the SUBling.
+
+4.)Grid_CheckForRefinedFluxes.C
+	Simply use the copy attached.
+	Two things have happned.  Additional logic for the SUBling group has been added,
+	which I won't detail here because its god awful tedious.  ALSO, I've uncommented the
+	CorrectLeftBoundaryFlux and CorrectRightBoundaryFlux business, that has been commented
+	out for god only knows how long.  These fixes update a ParentGrid BoundaryFlux (the
+	one it will pass on to ITS parent grid) with the Subgrid's, provided the subgrid
+	shares a face.  This is necessary for mass conservation for the same reasons the
+	SUBling business is necessary.
+
+

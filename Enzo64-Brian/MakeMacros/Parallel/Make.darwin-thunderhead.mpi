@@ -1,0 +1,37 @@
+#
+# macros for ia64
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /sw/
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+
+CPP          = /usr/bin/cpp
+
+DEFINES      = -DLINUX -DUSE_MPI
+
+## Fortran compiler
+FC           = gfortran
+FC_OPT       = -O3 -ff2c -fno-second-underscore
+
+## C Compiler
+CC           = gcc-4
+CC_OPT       = -O3
+
+## C++ Compiler
+CCxx         = g++-4
+CCxx_OPT     = -O3 
+
+## Linker/loader
+LDR          = g++ 
+LDR_OPT      = -lm
+LIB          = -L$(HDF5_INSTALL)/lib/ -lhdf5  -L/usr/lib -lz -lsz -ljpeg \
+               -L/sw/lib/gcc4/lib -lgfortran \
+               -L/sw/lib -llam -lmpi -llammpi++ -llamf77mpi
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I/sw/include
+
+OPTS         = -c -DLINUX ${OPTIONS} ${INCLUDE} -DUSE_MPI -DOSX
+DEBUG        = -g

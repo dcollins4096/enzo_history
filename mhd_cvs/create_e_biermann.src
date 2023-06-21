@@ -1,0 +1,200 @@
+      subroutine create_e_biermann(fx1, fy1, fz1, 
+     +                   fx2, fy2, fz2,
+     +                   ex, ey, ez,
+     +                   dx, dy, dz,
+     +                   density,ge,
+     +                   idim, jdim, kdim,
+     +                   i1,i2,j1,j2,k1,k2, dtIn, projectE,
+     +                   gamma,c,mh,e,chi,a)
+      
+      implicit none
+
+c including the biermann battery terms in create E
+
+c     This determines e from curl(v cross b), which is determined from
+c     the fluxes that come out of the rieman problem.
+c     Currently, e and f are defined on the entire grid, but only
+c     updated in the active zones.  
+
+c     For those of you following along at home:
+c     The following is the correspondnce with Balsara:
+c     fx1 = F7; fx2 = F8;
+c     fy1 = G6; fy2 = G8
+c     fz1 = H6; fz2 = H7
+
+      integer idim, jdim, kdim, i1, i2, j1, j2, k1, k2, projectE
+
+      real fx1(idim+1,jdim,kdim),fx2(idim+1,jdim,kdim),
+     +     fy1(idim,jdim+1,kdim),fy2(idim,jdim+1,kdim),
+     +     fz1(idim,jdim,kdim+1),fz2(idim,jdim,kdim+1),
+     +     ex(idim,jdim+1,kdim+1),
+     +     ey(idim+1,jdim,kdim+1),
+     +     ez(idim+1,jdim+1,kdim)
+      real density(idim,jdim,kdim)
+      real ge(idim,jdim,kdim)
+      real dx,dy,dz
+      real dtIn, dt
+      integer i,j,k, is, js,ks, ie, je, ke
+ 
+      real gamma,c,mh,e,chi
+      real a(0:3)
+
+      real pre(idim,jdim,kdim)
+      real gradient_p_1(idim,jdim,kdim)
+      real gradient_p_2(idim,jdim,kdim)
+      real gradient_p_3(idim,jdim,kdim)
+ 
+      real gm1
+
+c     fortran starts at 1.
+c     Additionally, e must be updated on the face, so 
+c     one more than 'GridStopIndex'
+
+      gm1= gamma-1.0
+
+      is = 1
+      ie = idim
+      js = 1
+      je = jdim
+      ks = 1
+      ke = kdim
+ 
+      if( projectE .eq. 1 ) then
+         dt = dtIn
+      else
+         dt = 1.0
+      endif
+c      write(*,*) "enter create e"
+c     update ex
+      do k=ks,ke+1
+         do j=js,je+1
+            do i=is,ie
+               
+               ex(i,j,k) = .25*dt*(fz2(i,j-1,k)+fz2(i,j,k)
+     +              -fy2(i,j,k-1)-fy2(i,j,k) )
+               
+            enddo
+         enddo
+      enddo
+
+c     update ey
+      do k=ks,ke+1
+         do j=js,je
+            do i=is,ie+1
+               
+               ey(i,j,k) = .25*dt*(fx2(i,j,k-1)+fx2(i,j,k)
+     +              -fz1(i-1,j,k)-fz1(i,j,k) )
+               
+            enddo
+         enddo
+      enddo
+
+c     update ez
+      do k=ks,ke
+         do j=js,je+1
+            do i=is,ie+1
+               
+               ez(i,j,k) = .25*dt*(fy1(i-1,j,k)+fy1(i,j,k)
+     +              -fx1(i,j-1,k)-fx1(i,j,k) )
+               
+            enddo
+         enddo
+      enddo
+
+c-----------------------------------------------------------------------
+c Compute Pressure
+c----------------------------------------------------------------------
+        do i=1,idim
+         do j=1,jdim
+           do k=1,kdim
+         pre(i,j,k) = ge(i,j,k)*density(i,j,k)*gm1
+           enddo
+         enddo
+       enddo
+
+
+c--------------------------------------------------------
+c include the biermann battery terms
+c--------------------------------------------------------
+           do i=is+1,ie-1
+             do j=js,je
+               do k=ks,ke
+                gradient_p_1(i,j,k)= 0.5*
+     +        (pre(i+1,j,k)-pre(i-1,j,k))/dx
+               enddo
+             enddo
+           enddo
+
+           do i=is,ie
+             do j=js+1,je-1
+               do k=ks,ke
+                gradient_p_2(i,j,k)= 0.5*
+     +        (pre(i,j+1,k)-pre(i,j-1,k))/dy
+               enddo
+             enddo
+           enddo
+
+           do i=is,ie
+             do j=js,je
+               do k=ks+1,ke-1
+                gradient_p_3(i,j,k)= 0.5*
+     +        (pre(i,j,k+1)-pre(i,j,k-1))/dz
+               enddo
+             enddo
+           enddo
+
+
+      do k=ks+2,ke-1
+         do j=js+2,je-1
+            do i=is+1,ie-1
+               ex(i,j,k) = ex(i,j,k)+
+     +           (mh*c/(e*(1+chi)))*0.25*dt*(
+c                ex(i,j,k) = +.25*dt*(
+     +     gradient_p_1(i,j,k)/density(i,j,k)
+     +   +  gradient_p_1(i,j-1,k)/density(i,j-1,k)
+     +   +  gradient_p_1(i,j,k-1)/density(i,j,k-1)
+     +   +  gradient_p_1(i,j-1,k-1)/density(i,j-1,k-1))/a(2)
+          enddo
+         enddo
+      enddo
+
+         do k=ks+2,ke-1
+         do j=js+1,je-1
+            do i=is+2,ie-1
+               ey(i,j,k) = ey(i,j,k)+
+     +        (mh*c/(e*(1+chi)))*0.25*dt*(
+c                ey(i,j,k) = +.25*dt*(
+     +     gradient_p_2(i,j,k)/density(i,j,k)
+     +   +  gradient_p_2(i-1,j,k)/density(i-1,j,k)
+     +   +  gradient_p_2(i,j,k-1)/density(i,j,k-1)
+     +   +  gradient_p_2(i-1,j,k-1)/density(i-1,j,k-1))/a(2)
+          enddo
+         enddo
+      enddo
+
+         do k=ks+1,ke-1
+         do j=js+2,je-1
+            do i=is+2,ie-1
+               ez(i,j,k) = ez(i,j,k)+
+     +             (mh*c/(e*(1+chi)))*0.25*dt*(
+c                ez(i,j,k) = +.25*dt*(
+     +     gradient_p_3(i,j,k)/density(i,j,k)
+     +   +  gradient_p_3(i-1,j,k)/density(i-1,j,k)
+     +   +  gradient_p_3(i,j-1,k)/density(i,j-1,k)
+     +   +  gradient_p_3(i-1,j-1,k)/density(i-1,j-1,k))/a(2)
+          enddo
+         enddo
+      enddo
+
+
+
+      
+      end
+
+c     ex(i,j,k) = .5*(fz(i,j-1,k)+fz(i,j,k)
+c     +              -fy(i,j,k-1)-fy(i,j,k) )
+c     ey(i,j,k) = .5*(fx(i,j,k-1)+fx(i,j,k)
+c     +              -fz(i-1,j,k)-fz(i,j,k) )
+c     ez(i,j,k) = .5*(fy(i-1,j,k)+fy(i,j,k)
+c     +              -fx(i,j-1,k)-fx(i,j,k) )
+      

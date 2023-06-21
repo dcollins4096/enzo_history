@@ -1,0 +1,87 @@
+#======================================================================
+#
+# Make.mach for nordlys (Bordner's Pentium4 desktop)
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-06-21  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_NORDLYS)
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+INTEL_CC_PATH = /opt/intel_cc_80
+INTEL_FC_PATH = /opt/intel_fc_80
+
+CC_ARCH    = $(INTEL_CC_PATH)/bin/icc
+CXX_ARCH   = $(INTEL_CC_PATH)/bin/icc
+FC_ARCH    = $(INTEL_FC_PATH)/bin/ifort
+F90_ARCH   = $(INTEL_FC_PATH)/bin/ifort
+LD_ARCH    = $(INTEL_CC_PATH)/bin/icc
+
+LIBS_F77_ARCH = -L/opt/intel_fc_80/lib -lifcore
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+# CC_MPI_ARCH    =
+# CXX_MPI_ARCH   =
+# FC_MPI_ARCH    =
+# F90_MPI_ARCH   =
+# LD_MPI_ARCH    =
+
+# CC_NOMPI_ARCH  =
+# CXX_NOMPI_ARCH =
+# FC_NOMPI_ARCH  =
+# F90_NOMPI_ARCH =
+# LD_NOMPI_ARCH  =
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = -w2
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -O2
+FLAGS_OPT_AGGRESSIVE_ARCH = -O3
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = 
+LIBS_MPI_ARCH = 
+
+#======================================================================
+# HDF5 libraries
+#======================================================================
+
+HDF4_DIR = /usr/local
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /usr/local
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = /usr/local/papi
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI
+FLAGS_PERF_PAPI_ARCH   = -I$(PERF_PAPI_DIR)/include
+LIBS_PERF_PAPI_ARCH    = -L$(PERF_PAPI_DIR)/lib -lpapi
+
+#======================================================================
+# OVERRIDES
+#======================================================================
+
+include $(TOP_DIR)/config/Make.mpi.off
+include $(TOP_DIR)/config/Make.fft.F77

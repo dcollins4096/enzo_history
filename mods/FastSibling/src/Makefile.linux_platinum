@@ -1,0 +1,41 @@
+#
+# macros for linux.
+#
+CPP          = /usr/bin/cpp -traditional
+
+## Fortran compiler
+FC           = ifc -132
+# -fno-second-underscore keeps g77 from adding two underscores
+# to the end of external/intrinsic subroutine symbol names (normally
+# you'd only append a single underscore to fortran symbols).
+FC_OPTIMIZE  =  -O
+DEFINES      = -D $(PRECISION)
+
+## C Compiler
+CC           = icc
+CC_OPTIMIZE  = -O
+
+## C++ Compiler
+CCxx	     = icc
+CCxx_OPTIMIZE = -I/usr/local/vmi/mpich/include -O
+
+## Linker/loader
+HDF_DIR      = /afs/ncsa/packages/hdf/4.1r5-linux
+MPI_DIR      = /usr/local/vmi/mpich/lib/icc
+#MPI_DIR      = /usr/local/vmi/mpich/lib/pgi
+#MPI_DIR      = /usr/parallel/mpich-eth.pgi
+LDR          = icc
+LDR_OPTIMIZE = -O
+
+LIB          = -L${HDF_DIR}/lib -L${MPI_DIR} -lm -lmfhdf -ldf -lz -ljpeg \
+               -lmpich -lfmpich -lvmi -ldl -lpthread \
+               -L/usr/local/intel/compiler70/ia32/lib -lintrins -lIEPCF90 -lF90
+#               -L/usr/local/pgi/linux86/lib -lpgftnrtl -lpgc
+#LIB          = -L${HDF_DIR}/lib -L${MPI_DIR}/lib -lm -lmfhdf -ldf -lz -ljpeg -lmpich -lpgftnrtl -L/usr/local/rr-gm/lib -lgm
+
+OPTS         = -c -I${HDF_DIR}/include -I${MPI_DIR}/include -D USE_MPI \
+               -D LINUX
+#               -D LINUX -D FSYM_lf
+#OPTS         = -c -I${HDF_DIR}/include -I${MPI_DIR}/include -I${MPI_DIR}/build/LINUX/ch_gm/include -D USE_MPI -D LINUX
+DEBUG        = 
+

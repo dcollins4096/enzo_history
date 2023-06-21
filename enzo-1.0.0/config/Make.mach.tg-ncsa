@@ -1,0 +1,92 @@
+#======================================================================
+#
+# Make.mach for NCSA TeraGrid
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-07-18  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_TG_NCSA)
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+F90_ARCH   = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+# MPI_PATH = /home/ac/bordner/public/mpich
+# MPI_PATH = /opt/mpich-vmi-2.0b-3-intel
+
+MPI_BIN_PATH =
+
+CC_MPI_ARCH    = $(MPI_BIN_PATH)mpicc
+CXX_MPI_ARCH   = $(MPI_BIN_PATH)mpicc
+FC_MPI_ARCH    = $(MPI_BIN_PATH)mpif77
+F90_MPI_ARCH   = $(MPI_BIN_PATH)mpif90
+LD_MPI_ARCH    = $(MPI_BIN_PATH)mpicc
+
+CC_NOMPI_ARCH  = ecc
+CXX_NOMPI_ARCH = ecc
+FC_NOMPI_ARCH  = efc
+F90_NOMPI_ARCH = efc
+LD_NOMPI_ARCH  = ecc
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+F90FLAGS_ARCH = -FR
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+# REMOVED -g TO AVOID APPARENT COMPILER BUG ON TeraGrids
+# (causes idb to immediately exit; make have induced Enzo crashes)
+
+FLAGS_OPT_DEBUG_ARCH      =
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+HDF4_DIR = /usr/local/hdf4/1.5
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /usr/local/hdf5/1.6.1
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5 -lz
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = 
+LIBS_MPI_ARCH = 
+
+FLAGS_MPI_ARCH = -I$(MPI_PATH)/include
+LIBS_MPI_ARCH = 
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = /home/ac/bordner/public
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI
+FLAGS_PERF_PAPI_ARCH   = -I$(PERF_PAPI_DIR)/include
+LIBS_PERF_PAPI_ARCH    = $(PERF_PAPI_DIR)/lib/libpapi.a

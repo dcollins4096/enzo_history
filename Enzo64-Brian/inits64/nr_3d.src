@@ -1,0 +1,37 @@
+      subroutine nr_3d(x, rank, n1, n2, n3, dir)
+
+!     Wrapper for unadorned Numerical Recipes 3D FFT
+!     The NR routine is exceptionally cache-hostile
+!     and should never, ever be used except as a 
+!     last resort.
+
+!     Wriiten by: Robert Harkness
+!     Date:       November, 2003
+
+      implicit none
+
+!     Arguments
+
+      integer :: rank, n1, n2, n3, dir
+      complex :: x(n1,n2,n3)
+
+!     Locals
+
+      integer :: n(3)
+      real :: factor
+
+      n(1) = n1
+      n(2) = n2
+      n(3) = n3
+
+      factor = 1.0/real(n1*n2*n3)
+
+      if( dir == -1 ) then
+        call fourn(x, n, rank, dir)
+      else
+        call fourn(x, n, rank, dir)
+        x = x * factor
+      end if
+
+      return
+      end

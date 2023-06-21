@@ -1,0 +1,125 @@
+#======================================================================
+#
+# Make.arch for IBM PowerPC
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-17  Created
+#
+#======================================================================
+
+TEXT_ARCH = $(TEXT_ARCH_POWERPC)
+
+#======================================================================
+# Pre-processor cpp
+#======================================================================
+
+CPP_ARCH      = /usr/lib/cpp
+CPPFLAGS_ARCH = -P
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DSP2
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    = mpcc_r
+CXX_MPI_ARCH   = mpCC_r
+FC_MPI_ARCH    = mpxlf_r
+LD_MPI_ARCH    = mpCC_r
+
+CC_NOMPI_ARCH  = cc_r
+CXX_NOMPI_ARCH = xlC_r
+FC_NOMPI_ARCH  = xlf_r
+LD_NOMPI_ARCH  = xlC_r
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = 
+FLAGS_OPT_CHECK_ARCH      = -C -qflttrap=enable:zerodivide:invalid:overflow
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -O3 -qstrict
+FLAGS_OPT_AGGRESSIVE_ARCH = -O4
+
+LDFLAGS_OPT = -qnoipa
+
+#======================================================================
+# Architecture-dependent compiler and linker flags 
+#======================================================================
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+CXXFLAGS_ARCH = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+FFLAGS_ARCH   = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+LDFLAGS_ARCH  = -bmaxdata:0x80000000 -bmaxstack:0x70000000
+
+#----------------------------------------------------------------------
+# General link flags
+#----------------------------------------------------------------------
+
+LIBS_ARCH = 
+
+#----------------------------------------------------------------------
+# Precision-related compiler flags
+#----------------------------------------------------------------------
+
+FFLAGS_PRECISION_SINGLE_ARCH = 
+
+FFLAGS_PRECISION_DOUBLE_ARCH = -qrealsize=8
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -lxlf90_r
+
+#======================================================================
+# Object mode flags
+#======================================================================
+
+FLAGS_OBJ_32_ARCH = -q32
+FLAGS_OBJ_64_ARCH = -q64
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = 
+LIBS_MPI_ARCH = 
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+#----------------------------------------------------------------------
+# Library include and lib files
+#----------------------------------------------------------------------
+
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR_OBJ)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR_OBJ)/lib -lmfhdf -ldf -ljpeg -lz
+
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR_OBJ)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR_OBJ)/lib -lhdf5 -L$(HDF4_DIR_OBJ)/lib -lz
+

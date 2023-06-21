@@ -1,0 +1,22 @@
+=======================================================================
+ENZO bin directory
+=======================================================================
+
+Executable   Source directory
+-----------------------------
+
+  inits        inits/
+
+  enzo         amr_mpi/src/
+
+  differ       hdf5_tools/
+  diffx        hdf5_tools/
+  dumper       hdf5_tools/
+  logger       hdf5_tools/
+  newname      hdf5_tools/
+
+  ring         ring/
+  ringforce    ring/
+
+  glop         uniglue/
+

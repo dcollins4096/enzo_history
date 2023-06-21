@@ -1,0 +1,37 @@
+8
+
+dir
+1408
+svn://mngrid.ucsd.edu/Enzo/devel/trunk/src
+svn://mngrid.ucsd.edu/Enzo
+
+
+
+2008-05-27T18:59:59.573539Z
+1405
+rpwagner
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+e1420ddf-aa2b-0410-86ea-f13f722ea44b
+
+ring
+dir
+
+inits
+dir
+
+enzo
+dir
+

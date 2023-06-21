@@ -1,0 +1,995 @@
+
+
+/*****************************************************************************
+ *                                                                           *
+ * Copyright 2004 Greg Bryan                                                 *
+ * Copyright 2004 Laboratory for Computational Astrophysics                  *
+ * Copyright 2004 Board of Trustees of the University of Illinois            *
+ * Copyright 2004 Regents of the University of California                    *
+ *                                                                           *
+ * This software is released under the terms of the "Enzo Public License"    *
+ * in the accompanying LICENSE file.                                         *
+ *                                                                           *
+ *****************************************************************************/
+/***********************************************************************
+/
+/  GRID CLASS (READ GRID)
+/
+/  written by: Greg Bryan
+/  date:       November, 1994
+/  modified1:  Robert Harkness, July 2002
+/  modified2:  James Bordner, June 2003   added USE_HDF5
+/
+/  PURPOSE:
+/
+************************************************************************/
+
+#ifdef USE_HDF5
+
+//  Input a grid from file pointer fpt
+
+#include <hdf5.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+
+#include "hdf4.h"
+
+#include "performance.h"
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+
+#ifdef PROTO // Remove troublesome HDF PROTO declaration. 
+#undef PROTO
+#endif
+
+
+
+
+// HDF5 function prototypes
+
+#include "extern_hdf5.h"
+
+// function prototypes
+
+int ReadListOfFloats(FILE *fptr, int N, FLOAT floats[]);
+int ReadListOfInts(FILE *fptr, int N, int nums[]);
+
+
+
+#define OBSOLETE_IFDEF  //Probably can remove everything that's in the 'else' clauses of this.  Used for debugging.
+
+int grid::ReadGridHDF5(FILE *fptr)
+{
+
+
+#define floatdcc float
+//#define floatdcc float32
+  int i, j, k, dim, field, size, active_size;
+  char name[MAX_LINE_LENGTH], dummy[MAX_LINE_LENGTH];
+  
+  int ActiveDim[MAX_DIMENSION];
+  
+  FILE *log_fptr;
+  
+  hid_t       file_id, dset_id;
+  hid_t       float_type_id, FLOAT_type_id;
+  hid_t       file_dsp_id;
+  hid_t       num_type;
+  
+  hsize_t     OutDims[MAX_DIMENSION];
+  hsize_t     TempIntArray[MAX_DIMENSION];
+  
+  herr_t      h5_status;
+  herr_t      h5_error = -1;
+  
+  int         num_size;
+  
+  char *ParticlePositionLabel[] =
+     {"particle_position_x", "particle_position_y", "particle_position_z"};
+  char *ParticleVelocityLabel[] =
+     {"particle_velocity_x", "particle_velocity_y", "particle_velocity_z"};
+  char *ParticleAttributeLabel[] = {"creation_time", "dynamical_time",
+                                    "metallicity_fraction", "alpha_fraction"};
+#ifdef IO_LOG
+  int         io_log = 1;
+#else
+  int         io_log = 0;
+#endif
+ 
+  //Checking for WriteBoundary:
+  //If the dataset was written with the boundary, fail
+  //If the user wishes to restart and BEGIN writing the boundary, it's set to -1.
+
+  if( WriteBoundary == TRUE ) {
+    fprintf(stderr, "\n Dataset written with boundary.  Fix ReadGrid.\n");
+    return FAIL;
+  }
+
+  // make sure quantities defined at least for 3d 
+  
+  for (dim = GridRank; dim < 3; dim++) {
+    GridDimension[dim] = 1;
+    GridStartIndex[dim] = 0;
+    GridEndIndex[dim] = 0;
+  }
+  
+  // Read general grid class data 
+  
+  if (fscanf(fptr, "GridRank = %d\n", &GridRank) != 1) {
+    fprintf(stderr, "Error reading GridRank.\n");
+    return FAIL;
+  }
+  
+  if (fscanf(fptr, "GridDimension = ") != 0) {
+    fprintf(stderr, "Error reading GridDimension(0).\n");
+    return FAIL;
+  }
+  //fprintf(stderr, "Grid Dimension %d\n",GridRank);
+  if (ReadListOfInts(fptr, GridRank, GridDimension) == FAIL) {
+    fprintf(stderr, "Error reading GridDimension(1).\n");
+    return FAIL;
+  }
+  
+  fscanf(fptr, "GridStartIndex = ");
+  //fprintf(stderr,"GridStartIndex %d\n", GridRank);
+  if (ReadListOfInts(fptr, GridRank, GridStartIndex) == FAIL) {
+    fprintf(stderr, "Error reading GridStartIndex.\n");
+    return FAIL;
+  }
+  
+  fscanf(fptr, "GridEndIndex = ");
+  //fprintf(stderr, "GridEndIndex %d\n",GridRank);
+  if (ReadListOfInts(fptr, GridRank, GridEndIndex) == FAIL) {
+    fprintf(stderr, "Error reading GridEndIndex.\n");
+    return FAIL;
+  }
+
+  //this is a kludge for debugging.  ignore.  dcc
+#ifdef NO_NOTHIS
+  float LeftEdgeCell[3], RightEdgeCell[3];
+
+  fscanf(fptr, "GridLeftCell poo = ");
+  
+  if (ReadListOfFloats(fptr, GridRank, LeftEdgeCell) == FAIL) {
+    fprintf(stderr, "Error reading GridLeftCell.\n");
+    return FAIL;
+  }  
+
+  fscanf(fptr, "GridRightCell poo = ");
+  if (ReadListOfFloats(fptr, GridRank, RightEdgeCell) == FAIL) {
+    fprintf(stderr, "Error reading GridRightCell.\n");
+    return FAIL;
+  }
+  
+  //Back to our regular routine.
+#endif //NO
+  fscanf(fptr, "GridLeftEdge = ");
+  
+  if (ReadListOfFloats(fptr, GridRank, GridLeftEdge) == FAIL) {
+    fprintf(stderr, "Error reading GridLeftEdge.\n");
+    return FAIL;
+  }
+  
+  fscanf(fptr, "GridRightEdge = ");
+  
+  if (ReadListOfFloats(fptr, GridRank, GridRightEdge) == FAIL) {
+    fprintf(stderr, "Error reading GridRightEdge.\n");
+    return FAIL;
+  }
+  
+  if (fscanf(fptr, "Time = %"PSYM"\n", &Time) != 1) {
+    fprintf(stderr, "Error reading Time.\n");
+    return FAIL;
+  }
+  
+  if (fscanf(fptr, "SubgridsAreStatic = %d\n", &SubgridsAreStatic) != 1) {
+    fprintf(stderr, "Error reading SubgridsAreStatic.\n");
+    return FAIL;
+  }
+  
+  // Compute Flux quantities 
+  
+  this->PrepareGridDerivedQuantities();
+  
+  // Read baryon field quantities. 
+  
+  if (fscanf(fptr, "NumberOfBaryonFields = %d\n", 
+	     &NumberOfBaryonFields) != 1) {
+    fprintf(stderr, "Error reading NumberOfBaryonFields.\n");
+    return FAIL;
+  }
+  
+  int ii = sizeof(floatdcc);
+  
+  switch(ii)
+    {
+      
+    case 4:
+      float_type_id = HDF5_R4;
+      break;
+      
+    case 8:
+      float_type_id = HDF5_R8;
+      break;
+      
+    default:
+      float_type_id = HDF5_R4;
+      
+    }
+  
+  int jj = sizeof(FLOAT);
+  
+  switch(jj)
+    {
+      
+    case 4:
+      FLOAT_type_id = HDF5_R4;
+      break;
+      
+    case 8:
+      FLOAT_type_id = HDF5_R8;
+      break;
+      
+    case 16:
+      FLOAT_type_id = HDF5_R16;
+      break;
+      
+    default:
+      printf("INCORRECT FLOAT DEFINITION\n");
+      
+    }
+  
+  
+  
+  if (NumberOfBaryonFields > 0) {
+    
+    fscanf(fptr, "FieldType = ");
+    //fprintf(stderr, "read field type %d\n",NumberOfBaryonFields);
+    if (ReadListOfInts(fptr, NumberOfBaryonFields, FieldType) == FAIL) {
+      fprintf(stderr, "Error reading FieldType.\n");
+      return FAIL;
+    }
+    
+    fgetpos(fptr, &BaryonFileNamePosition); //AK
+
+    if (fscanf(fptr, "BaryonFileName = %s\n", name) != 1) {
+      fprintf(stderr, "Error reading BaryonFileName.\n");
+      return FAIL;
+    }
+    
+    
+    fscanf(fptr, "CourantSafetyNumber    = %"FSYM"\n", &CourantSafetyNumber);
+    fscanf(fptr, "PPMFlatteningParameter = %d\n", &PPMFlatteningParameter);
+    fscanf(fptr, "PPMDiffusionParameter  = %d\n", &PPMDiffusionParameter);
+    fscanf(fptr, "PPMSteepeningParameter = %d\n", &PPMSteepeningParameter);
+    
+    if (MyProcessorNumber == ProcessorNumber)
+      {
+	char *logname = new char[strlen(name)+9];
+	strcpy(logname, name);
+	strcat(logname, ".hdf.log");
+	if (io_log) log_fptr = fopen(logname, "a");
+      }
+    
+    if (MyProcessorNumber == ProcessorNumber)
+      {
+	if (io_log) fprintf(log_fptr,"H5Fopen with Name %s\n",name);
+	file_id = H5Fopen(name,  H5F_ACC_RDONLY, H5P_DEFAULT);
+        if (io_log) fprintf(log_fptr, "H5Fopen id: %d\n", file_id);
+	if( file_id == h5_error )
+	  fprintf(stderr,"Error opening H5Fopen with Name %s\n",name);
+	
+        assert( file_id != h5_error );
+      }
+    
+    if (MyProcessorNumber == ProcessorNumber) {
+      
+      // fill in ActiveDim for dims up to 3d 
+      
+      for (dim = 0; dim < 3; dim++)
+	ActiveDim[dim] = GridEndIndex[dim] - GridStartIndex[dim] +1;
+      
+      // check dimensions of HDF file against this grid
+      //    (note: we don't bother to check the coordinate arrays)  
+      
+      size = 1;
+      active_size = 1;
+      
+      for (dim = 0; dim < GridRank; dim++) {
+	size *= GridDimension[dim];
+	active_size *= ActiveDim[dim];
+      }
+      
+      //  CAUTION - are the coordinates reversed?
+      
+      for (dim = 0; dim < GridRank; dim++) {
+	OutDims[GridRank-dim-1] = ActiveDim[dim];
+	if (io_log) fprintf(log_fptr, "Outdims %d\n", (int) OutDims[GridRank-dim-1]);
+      }
+      
+      // allocate temporary space 
+      
+      floatdcc *temp = new floatdcc[active_size];
+      
+      // loop over fields, reading each one 
+      
+      for (field = 0; field < NumberOfBaryonFields; field++) {
+	
+	// get data into temporary array 
+	
+	file_dsp_id = H5Screate_simple(GridRank, OutDims, NULL);
+        if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+        assert( file_dsp_id != h5_error );
+
+	if (io_log) fprintf(log_fptr, "H5Dopen with Name = %s\n", DataLabel[field]);
+
+	dset_id =  H5Dopen(file_id, DataLabel[field]);
+        if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+        assert( dset_id != h5_error );
+	
+	h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) temp);
+        if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+        assert( h5_status != h5_error );
+	JBPERF_COUNT_READ(dset_id, float_type_id, H5S_ALL);
+	
+	h5_status = H5Sclose(file_dsp_id);
+        if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+	
+	h5_status = H5Dclose(dset_id);
+        if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+	
+	// copy active region into whole grid 
+	
+	BaryonField[field] = new float[size];
+	
+	for (i = 0; i < size; i++)
+	  BaryonField[field][i] = 0;
+	
+	for (k = GridStartIndex[2]; k <= GridEndIndex[2]; k++)
+	  for (j = GridStartIndex[1]; j <= GridEndIndex[1]; j++)
+	    for (i = GridStartIndex[0]; i <= GridEndIndex[0]; i++)
+	      BaryonField[field][i + j*GridDimension[0] +
+				k*GridDimension[0]*GridDimension[1]] =
+		float(temp[(i-GridStartIndex[0])                         + 
+			  (j-GridStartIndex[1])*ActiveDim[0]            + 
+			  (k-GridStartIndex[2])*ActiveDim[0]*ActiveDim[1] ]);
+	
+      } // end: loop over fields
+      delete [] temp;
+      
+      // If there's MHD, read in the fields. 
+    
+      if(MHD_Used){
+	
+	if(MHDcLabel[0]==NULL)
+  MHDcLabel[0] = "MagneticField_C_1";
+	if(MHDcLabel[1]==NULL)
+  MHDcLabel[1] = "MagneticField_C_2";
+	if(MHDcLabel[2]==NULL)
+  MHDcLabel[2] = "MagneticField_C_3";
+
+	if(MHDLabel[0]==NULL)
+  MHDLabel[0] = "MagneticField_F_1";
+	if(MHDLabel[1]==NULL)
+  MHDLabel[1] = "MagneticField_F_2";
+	if(MHDLabel[2]==NULL)
+  MHDLabel[2] = "MagneticField_F_3";
+
+
+
+	
+#ifndef OBSOLETE_IFDEF 
+
+	//Read Centerd Magnetic Field.  If not, then just allocated.
+
+	temp = new floatdcc[active_size];
+ 	if( MHD_WriteCentered == TRUE ){
+	  for (field = 0; field < 3; field++) {
+	    
+	    // get data into temporary array 
+	    
+	    file_dsp_id = H5Screate_simple(GridRank, OutDims, NULL);
+	    if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+	    assert( file_dsp_id != h5_error );
+	    
+	    if (io_log) fprintf(log_fptr, "H5Dopen with Name = %s\n", MHDcLabel[field]);
+	    //fprintf(stderr, "MHDcLabel[%d] = %s\n",field, MHDcLabel[field]);
+	    dset_id =  H5Dopen(file_id, MHDcLabel[field]);
+	    if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+	    assert( dset_id != h5_error );
+	    
+	    h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) temp);
+	    
+	    if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    JBPERF_COUNT_READ(dset_id, float_type_id, H5S_ALL);
+	    
+	    h5_status = H5Sclose(file_dsp_id);
+	    if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    
+	    h5_status = H5Dclose(dset_id);
+	    if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    
+	    // copy active region into whole grid 
+	    
+	    CenteredB[field] = new float[size];
+	    
+	    for (i = 0; i < size; i++)
+	      CenteredB[field][i] = 0.0;
+	    
+	    for (k = GridStartIndex[2]; k <= GridEndIndex[2]; k++)
+	      for (j = GridStartIndex[1]; j <= GridEndIndex[1]; j++)
+		for (i = GridStartIndex[0]; i <= GridEndIndex[0]; i++){
+		  CenteredB[field][i + j*GridDimension[0] +
+				   k*GridDimension[0]*GridDimension[1]] =
+		    float(temp[(i-GridStartIndex[0])                         + 
+			       (j-GridStartIndex[1])*ActiveDim[0]            + 
+			       (k-GridStartIndex[2])*ActiveDim[0]*ActiveDim[1] ]);
+		}
+	    
+	  } // end: loop over Centered B
+	}else{
+	  for(field=0;field<3;field++){
+	    CenteredB[field] = new float[size];
+	    
+	    for (i = 0; i < size; i++)
+	      CenteredB[field][i] = 0.0;
+	  }
+	}
+	  delete [] temp;
+      	
+#endif /* not OBSOLETE_IFDEF */
+	//
+	// Set up metadata for MHD.
+	//
+	
+	for(field=0; field<3; field++){
+	  MagneticSize[field] = 1;
+	  ElectricSize[field] = 1;
+	  
+	  for(dim=0; dim<3; dim++){
+	    MagneticDims[field][dim] = GridDimension[dim];
+	    ElectricDims[field][dim] = GridDimension[dim] +1;
+	    
+	    
+	    MHDStartIndex[field][dim] = GridStartIndex[dim];
+	    MHDEndIndex[field][dim] = GridEndIndex[dim];
+	    
+	    MHDeStartIndex[field][dim] = GridStartIndex[dim];
+	    MHDeEndIndex[field][dim] = GridEndIndex[dim]+1;
+
+	    MHDAdd[field][dim]=0;
+	    if( field == dim )
+	      {MagneticDims[field][dim]++;
+	      ElectricDims[field][dim]--;
+	      MHDEndIndex[field][dim]++;
+	      MHDeEndIndex[field][dim]--;
+	      MHDAdd[field][dim]=1;}
+	    
+	    
+	    MagneticSize[field] *= MagneticDims[field][dim];
+	    ElectricSize[field] *= ElectricDims[field][dim];
+	  }
+	  
+	}
+
+	//
+	// Define some local variables for MHD.
+	//
+	
+	int MHDActive[3];
+	hsize_t MHDOutDims[3];
+	int BiggieSize = (GridDimension[0]+1)*(GridDimension[1]+1)*(GridDimension[2]+1);
+	floatdcc *MHDtmp = new floatdcc[BiggieSize];	
+	
+
+	//
+	// Read Magnetic Field.
+	//
+	for (field = 0; field < 3; field++) {
+
+	  for (dim = 0; dim < 3; dim++)
+	    MHDActive[dim] = MHDEndIndex[field][dim] - MHDStartIndex[field][dim] +1;
+	  
+	  for (dim = 0; dim < GridRank; dim++)
+	    MHDOutDims[GridRank-dim-1] = MHDActive[dim];
+	  
+	  
+	  file_dsp_id = H5Screate_simple(3, MHDOutDims, NULL);
+	  if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+	  assert( file_dsp_id != h5_error );
+	  
+	  if (io_log) fprintf(log_fptr, "H5Dopen with Name = %s\n", MHDLabel[field]);
+	  
+	  dset_id = H5Dopen(file_id, MHDLabel[field]);
+	  if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+	  assert( dset_id != h5_error );
+	  
+	  h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+			      (VOIDP) MHDtmp);
+	  
+	  h5_status = H5Sclose(file_dsp_id);
+	  if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+	  assert( h5_status != h5_error );
+	  
+	  h5_status = H5Dclose(dset_id);
+	  if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+	  assert( h5_status != h5_error );
+	  
+	  MagneticField[field] = new float[MagneticSize[field]];
+	  if( MagneticField[field] == NULL ){
+	    fprintf(stderr,"ReadGridHDF5: Not enough memory! Lost it on the MagneticField read.\n");
+	    return FAIL;
+	  }
+	  for( i=0;i<MagneticSize[field]; i++) MagneticField[field][i] = 0.0;
+	  for(k=MHDStartIndex[field][2]; k<=MHDEndIndex[field][2]; k++)
+	    for(j=MHDStartIndex[field][1];j<=MHDEndIndex[field][1];j++)
+	      for(i=MHDStartIndex[field][0];i<=MHDEndIndex[field][0];i++)
+		{
+		  MagneticField[field][i + j*MagneticDims[field][0] + 
+				      k*MagneticDims[field][0]*MagneticDims[field][1]] =
+		    float( MHDtmp[(i-MHDStartIndex[field][0])+
+				 (j-MHDStartIndex[field][1])*MHDActive[0]+
+				 (k-MHDStartIndex[field][2])*MHDActive[0]*MHDActive[1] ] );
+		}
+	  
+	}//End Read Magnetic Field
+
+#ifdef OBSOLETE_IFDEF
+	//Read Centerd Magnetic Field.  If not, center it from MagneticField
+
+	temp = new floatdcc[active_size];
+ 	if( MHD_WriteCentered == TRUE ){
+	  for (field = 0; field < 3; field++) {
+	    
+	    // get data into temporary array 
+	    
+	    file_dsp_id = H5Screate_simple(GridRank, OutDims, NULL);
+	    if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+	    assert( file_dsp_id != h5_error );
+	    
+	    if (io_log) fprintf(log_fptr, "H5Dopen with Name = %s\n", MHDcLabel[field]);
+	    //fprintf(stderr, "MHDcLabel[%d] = %s\n",field, MHDcLabel[field]);
+	    dset_id =  H5Dopen(file_id, MHDcLabel[field]);
+	    if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+	    assert( dset_id != h5_error );
+	    
+	    h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) temp);
+	    
+	    if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    JBPERF_COUNT_READ(dset_id, float_type_id, H5S_ALL);
+	    
+	    h5_status = H5Sclose(file_dsp_id);
+	    if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    
+	    h5_status = H5Dclose(dset_id);
+	    if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    
+	    // copy active region into whole grid 
+	    
+	    CenteredB[field] = new float[size];
+	    
+	    for (i = 0; i < size; i++)
+	      CenteredB[field][i] = 0.0;
+	    
+	    for (k = GridStartIndex[2]; k <= GridEndIndex[2]; k++)
+	      for (j = GridStartIndex[1]; j <= GridEndIndex[1]; j++)
+		for (i = GridStartIndex[0]; i <= GridEndIndex[0]; i++){
+		  CenteredB[field][i + j*GridDimension[0] +
+				   k*GridDimension[0]*GridDimension[1]] =
+		    float(temp[(i-GridStartIndex[0])                         + 
+			       (j-GridStartIndex[1])*ActiveDim[0]            + 
+			       (k-GridStartIndex[2])*ActiveDim[0]*ActiveDim[1] ]);
+		}
+	    
+	  } // end: loop over Centered B
+	}//MHD_WriteCentered == TRUE
+	else{
+	  for(field=0;field<3;field++){
+	    CenteredB[field] = new float[size];
+	    
+	    for (i = 0; i < size; i++)
+	      CenteredB[field][i] = 0.0;
+	  }
+
+	  
+	  if( this->CenterMagneticField() == FAIL ) {
+	    fprintf(stderr," error with CenterMagneticField , second call\n");
+	    return FAIL;
+	  }
+	  
+	}
+	delete [] temp;
+      	
+#endif /*OBSOLETE_IFDEF */
+	// I don't think I ever need to read the electric field.
+	// I will allocate the electric field, though.
+	if( MHD_WriteElectric == TRUE && 0==1){
+	  
+	  //
+	  // Read in the electric field.
+	  //
+
+	  // Either make it a flag, or make sure this routine matches Write Grid.
+
+	  
+	  int iostart[3][3], ioend[3][3];
+	  
+	  for(j=0;j<3;j++)
+	    for(i=0;i<3;i++){
+	      
+	      if(WriteBoundary == 1) {
+		iostart[i][j] = 0;
+		ioend[i][j] = ElectricDims[i][j] -1; //watch the loop bounds.
+	      }
+	      else{
+		iostart[i][j] = MHDeStartIndex[i][j];
+		ioend[i][j] = MHDeEndIndex[i][j];
+		
+		
+	      }
+	    }
+	  
+	  for(field = 0; field<3; field++){
+	    
+	    for(dim = 0; dim<3; dim++)
+	      MHDActive[dim] = ioend[field][dim] - iostart[field][dim] +1;
+	    
+	    
+	    
+	    for(dim = 0; dim<3; dim++)
+	      MHDOutDims[GridRank-dim-1] = MHDActive[dim];
+	    
+	    for(i=0;i<BiggieSize; i++)
+	      MHDtmp[i] = -1;
+	    
+	    
+	    file_dsp_id = H5Screate_simple(3, MHDOutDims, NULL);
+	    if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+	    assert( file_dsp_id != h5_error );
+	    
+	    if (io_log) fprintf(log_fptr, "H5Dopen with Name = %s\n", MHDLabel[field]);
+	    
+	    dset_id = H5Dopen(file_id, MHDeLabel[field]);
+	    if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+	    assert( dset_id != h5_error );
+	    
+	    h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+				(VOIDP) MHDtmp);
+	    
+	    h5_status = H5Sclose(file_dsp_id);
+	    if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    
+	    h5_status = H5Dclose(dset_id);
+	    if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+	    assert( h5_status != h5_error );
+	    
+	    //+++++++++++++++ now copy the electric field from the buffer.
+	    
+	    ElectricField[field] = new float[ElectricSize[field]];
+	    
+	    for(k=iostart[field][2]; k<=ioend[field][2]; k++)
+	      for(j=iostart[field][1]; j<= ioend[field][1];j++)
+		for(i=iostart[field][0];i<=ioend[field][0];i++){
+		  
+		  ElectricField[field][i+j*ElectricDims[field][0]+
+				      k*ElectricDims[field][1]*ElectricDims[field][0]]=
+		    
+		    float(MHDtmp[ (i-iostart[field][0])+
+				(j-iostart[field][1])*MHDActive[0]+
+				(k-iostart[field][2])*MHDActive[0]*MHDActive[1] ] );
+		}
+	    
+	    
+	    
+	  }//field 
+	}else{
+
+	  for(field=0;field<3;field++)
+	    ElectricField[field] = new float[ElectricSize[field]];
+	}// end Electric Field Input.
+
+	delete [] MHDtmp;
+	
+      }//end if(MHD_Used)
+    }  // end: if (MyProcessorNumber == ProcessorNumber)
+  } // if( NumberOfBaryonFields > 0)
+  
+  
+  // 3) Read particle info 
+  
+  if (fscanf(fptr, "NumberOfParticles = %d\n", &NumberOfParticles) != 1) {
+    fprintf(stderr, "error reading NumberOfParticles.\n");
+    return FAIL;
+  }
+  
+  
+  if (NumberOfParticles > 0) {
+    
+    // Read particle file name. 
+    
+    if (fscanf(fptr, "ParticleFileName = %s\n", name) != 1) {
+      fprintf(stderr, "Error reading ParticleFileName.\n");
+      return FAIL;
+    }
+
+    if (MyProcessorNumber == ProcessorNumber) {
+
+    // Open file if not already done (note: particle name must = grid name). 
+
+    if (NumberOfBaryonFields == 0) {
+
+      if (io_log) fprintf(log_fptr, "H5Fopen with Name %s\n", name);
+      
+      file_id = H5Fopen(name, H5F_ACC_RDONLY, H5P_DEFAULT);
+        if (io_log) fprintf(log_fptr, "H5Fopen id: %d\n", file_id);
+        assert( file_id != h5_error );
+
+    } // end: if (NumberOfBaryonFields == 0)
+
+    // Allocate room for particles. 
+
+    this->AllocateNewParticles(NumberOfParticles);
+
+    TempIntArray[0] = int(NumberOfParticles);
+
+    // Create a temporary buffer (32 bit or twice the size for 64). 
+
+    floatdcc *temp = NULL;
+
+    jj = sizeof(FLOAT);
+    
+    switch(jj)
+      {
+	
+      case 4:
+        temp = new floatdcc[NumberOfParticles];
+        break;
+
+      case 8:
+        temp = new floatdcc[NumberOfParticles*2];
+        break;
+
+      case 16:
+        temp = new floatdcc[NumberOfParticles*4];
+        break;
+
+      default:
+        printf("INCORRECT FLOAT DEFINITION\n");
+
+    }
+
+    if (temp == NULL)
+      temp = new floatdcc[NumberOfParticles];
+
+    // Read ParticlePosition (use temporary buffer).  
+      
+    for (dim = 0; dim < GridRank; dim++) {
+
+      file_dsp_id = H5Screate_simple(1, TempIntArray, NULL);
+        if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+        assert( file_dsp_id != h5_error );
+
+      if (io_log) fprintf(log_fptr,"H5Dopen with Name = %s\n", ParticlePositionLabel[dim]);
+
+      dset_id =  H5Dopen(file_id, ParticlePositionLabel[dim]);
+        if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+        assert( dset_id != h5_error );
+
+      num_type = H5Dget_type(dset_id);
+      num_size = H5Tget_size(num_type);
+
+      h5_status = H5Dread(dset_id, FLOAT_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) ParticlePosition[dim]);
+        if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+        assert( h5_status != h5_error );
+	JBPERF_COUNT_READ(dset_id, FLOAT_type_id, H5S_ALL);
+
+      h5_status = H5Sclose(file_dsp_id);
+        if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+
+      h5_status = H5Dclose(dset_id);
+        if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+
+    }
+
+
+    // Read ParticleVelocity. 
+
+    for (dim = 0; dim < GridRank; dim++) {
+
+      file_dsp_id = H5Screate_simple(1, TempIntArray, NULL);
+        if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+        assert( file_dsp_id != h5_error );
+
+      if (io_log) fprintf(log_fptr, "H5Dopen with Name = %s\n", ParticleVelocityLabel[dim]);
+
+      dset_id =  H5Dopen(file_id, ParticleVelocityLabel[dim]);
+        if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+        assert( dset_id != h5_error );
+
+      h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) temp);
+        if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+        assert( h5_status != h5_error );
+	JBPERF_COUNT_READ(dset_id, float_type_id, H5S_ALL);
+
+      h5_status = H5Sclose(file_dsp_id);
+        if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+
+      h5_status = H5Dclose(dset_id);
+        if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+
+      for (i = 0; i < NumberOfParticles; i++)
+	ParticleVelocity[dim][i] = float(temp[i]);
+    }
+
+
+    // Read ParticleMass into temporary buffer and Copy to ParticleMass. 
+    
+    file_dsp_id = H5Screate_simple(1, TempIntArray, NULL);
+      if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+      assert( file_dsp_id != h5_error );
+
+    if (io_log) fprintf(log_fptr,"H5Dopen with Name = particle_mass\n");
+
+    dset_id =  H5Dopen(file_id, "particle_mass");
+      if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+      assert( dset_id != h5_error );
+
+    h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) temp);
+      if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+      assert( h5_status != h5_error );
+      JBPERF_COUNT_READ(dset_id, float_type_id, H5S_ALL);
+
+    h5_status = H5Sclose(file_dsp_id);
+      if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+      assert( h5_status != h5_error );
+
+    h5_status = H5Dclose(dset_id);
+      if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+      assert( h5_status != h5_error );
+
+    for (i = 0; i < NumberOfParticles; i++)
+      ParticleMass[i] = float(temp[i]);
+
+    // Read ParticleNumber into temporary buffer and Copy to ParticleNumber. 
+
+    int32 *tempint = new int32[NumberOfParticles];
+
+    file_dsp_id = H5Screate_simple(1, TempIntArray, NULL);
+      if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+      assert( file_dsp_id != h5_error);
+
+    if (io_log) fprintf(log_fptr,"H5Dopen  with Name = particle_index\n");
+
+    dset_id =  H5Dopen(file_id, "particle_index");
+      if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+      assert( dset_id != h5_error );
+
+    h5_status = H5Dread(dset_id, HDF5_I4, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) tempint);
+      if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+      assert( h5_status != h5_error );
+      JBPERF_COUNT_READ(dset_id, HDF5_I4, H5S_ALL);
+
+    h5_status = H5Sclose(file_dsp_id);
+      if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+      assert( h5_status != h5_error );
+
+    h5_status = H5Dclose(dset_id);
+      if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+      assert( h5_status != h5_error );
+
+    for (i = 0; i < NumberOfParticles; i++)
+      ParticleNumber[i] = int(tempint[i]);
+
+    // Read ParticleAttributes. 
+    
+    for (j = 0; j < NumberOfParticleAttributes; j++) {
+
+      file_dsp_id = H5Screate_simple(1, TempIntArray, NULL);
+        if (io_log) fprintf(log_fptr, "H5Screate file_dsp_id: %d\n", file_dsp_id);
+        assert( file_dsp_id != h5_error );
+
+      if (io_log) fprintf(log_fptr,"H5Dopen with Name = %s\n",ParticleAttributeLabel[j]);
+
+      dset_id =  H5Dopen(file_id, ParticleAttributeLabel[j]);
+      if (io_log) fprintf(log_fptr, "H5Dopen id: %d\n", dset_id);
+      assert( dset_id != h5_error );
+    
+      h5_status = H5Dread(dset_id, float_type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, (VOIDP) temp);
+      if (io_log) fprintf(log_fptr, "H5Dread: %d\n", h5_status);
+        assert( h5_status != h5_error );
+	JBPERF_COUNT_READ(dset_id, float_type_id, H5S_ALL);
+
+      h5_status = H5Sclose(file_dsp_id);
+        if (io_log) fprintf(log_fptr, "H5Sclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+
+      h5_status = H5Dclose(dset_id);
+        if (io_log) fprintf(log_fptr, "H5Dclose: %d\n", h5_status);
+        assert( h5_status != h5_error );
+
+      for (i = 0; i < NumberOfParticles; i++)
+	ParticleAttribute[j][i] = float(temp[i]);
+
+    }
+
+    delete [] temp;
+    delete [] tempint;
+    
+    } // end: if (MyProcessorNumber == ProcessorNumber)
+  } // end: if (NumberOfParticles > 0)
+  
+  // Close file. 
+  
+  if ( (MyProcessorNumber == ProcessorNumber) && 
+       (NumberOfParticles > 0 || NumberOfBaryonFields > 0) )
+    {
+      
+      h5_status = H5Fclose(file_id);
+      
+      if (io_log) fprintf(log_fptr, "H5Fclose: %d\n", h5_status);
+      assert( h5_status != h5_error );
+    }
+  
+  if (MyProcessorNumber == ProcessorNumber)
+  {
+    if (io_log) fclose(log_fptr);
+  }
+
+  // 4) Read gravity info 
+
+  if (SelfGravity)
+    if (fscanf(fptr, "GravityBoundaryType = %d\n",&GravityBoundaryType) != 1) {
+      fprintf(stderr, "Error reading GravityBoundaryType.\n");
+      return FAIL;
+    }
+
+
+
+  return SUCCESS;
+
+}
+
+#else
+
+#include <stdio.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+#include "message.h"
+
+// HDF5 is not used, so ReadGridHDF5 should not be called
+
+int grid::ReadGridHDF5(FILE *fptr)
+{ 
+  ERROR_MESSAGE;
+  return FAIL;
+}
+#endif
+
+
+
+
+

@@ -1,0 +1,678 @@
+
+c ------- Hyunh monotonicity constraint (Balsara and Shu, 2000, JCP) -------
+
+      Subroutine Monotx(mk,Nx,Qpr,Qpl,Qpm,a2_sound,c0)
+c     --- dcc
+      implicit none
+      integer mk,nx,M,I
+      real alfa ,beta ,diz ,diy ,dmm ,dix ,dmn ,ulb ,uln ,ulc ,ult 
+      real ula ,umin_l ,uxl ,umd ,umax_l 
+      real Xminmod, Xmedian, Xminmod4
+
+      integer kstep
+      real c0
+c     ---sound speed
+      real a2_sound
+c     --- /dcc
+      External Xminmod,Xmedian
+	
+      Real Qpm(nx,7),Qpr(Nx,7),Qpl(Nx,7)
+
+      Real a1(7),a2(7),a3(7),a4(7),a5(7)
+      Real u1(7),u2(7),u3(7),u4(7),u5(7)
+      Real b1(7),b2(7),c1(7),c2(7)
+      Real ql(7,7),qr(7,7),uv(7)
+
+c      COMMON/x111/c0,omloc,kstep
+
+c     dbg	
+c      write(*,*) "mx NX  ", nx
+c      write(*,*) "mx dim ", mk
+c      write(*,*) "mx qpr ", ( Qpr( i,1 ), i=1,nx)
+c      write(*,*) "mx qpl ", ( Qpl( i,1 ), i=1,nx)
+c      write(*,'( 16f5.1)')  ( Qpm( i,1 ), i=1,nx)
+c     /dbg
+      alfa = 0.95*(1. - c0)/c0
+      beta = 4.
+      
+      do i=3,Nx-2
+	 
+         do M=1,7  
+            a1(m)=Qpm(i-2,m)
+            a2(m)=Qpm(i-1,m)
+            a3(m)=Qpm(i,m)      
+            a4(m)=Qpm(i+1,m)
+            a5(m)=Qpm(i+2,m)
+            b1(m)=Qpl(i,m)      
+            b2(m)=Qpr(i,m)      
+         enddo 
+	  
+         if(mk.eq.1)then
+	    CALL VECTLRx(a3,QL,QR,UV,a2_sound)
+         else
+            if(mk.eq.2)then
+               CALL VECTLRy(a3,QL,QR,UV,a2_sound)
+            else
+               CALL VECTLRz(a3,QL,QR,UV,a2_sound)
+            endif
+         endif
+        
+         CALL AMPLTD(QL,a1,u1)
+         CALL AMPLTD(QL,a2,u2)
+         CALL AMPLTD(QL,a3,u3)
+         CALL AMPLTD(QL,a4,u4)
+         CALL AMPLTD(QL,a5,u5)
+         CALL AMPLTD(QL,b1,c1)
+         CALL AMPLTD(QL,b2,c2)
+
+	 do m=1,7  
+            dix = u4(m) - 2.*u3(m) + u2(m)
+            diy = u5(m) - 2.*u4(m) + u3(m)
+            diz = u3(m) - 2.*u2(m) + u1(m)
+	  
+c	  dmm = Xminmod(dix,diy)
+c	  dmn = Xminmod(dix,diz)
+
+            dmm = Xminmod4(dix,diy,4.*dix-diy,4.*diy-dix) 
+            dmn = Xminmod4(dix,diz,4.*dix-diz,4.*diz-dix) 
+
+            uxl = u3(m) + alfa*(u3(m) - u2(m))
+            umd = 0.5*(u3(m) + u4(m)) - 0.5*dmm
+            ulc = u3(m) + 0.5*(u3(m) - u2(m)) + beta/3.*dmn
+
+            ula = min(u3(m),u4(m),umd) 
+            ulb = min(u3(m),uxl,ulc) 
+            uln = max(u3(m),u4(m),umd) 
+            ult = max(u3(m),uxl,ulc) 
+            
+            umin_l = max(ula,ulb)
+            umax_l = min(uln,ult)
+
+c	  sn = c2(m) - c1(m)
+c	  qn = c2(m) + c1(m) - 2.*u3(m)
+c	  u_l = u3(m) + sn/2. + qn/2.
+
+            c2(m) = Xmedian(c2(m),umin_l,umax_l)
+
+            dix = u4(m) - 2.*u3(m) + u2(m)
+            diy = u3(m) - 2.*u2(m) + u1(m)
+            diz = u5(m) - 2.*u4(m) + u3(m)
+	  
+c	  dmm = Xminmod(dix,diy)
+c	  dmn = Xminmod(dix,diz)
+
+            dmm = Xminmod4(dix,diy,4.*dix-diy,4.*diy-dix) 
+            dmn = Xminmod4(dix,diz,4.*dix-diz,4.*diz-dix) 
+
+            uxl = u3(m) + alfa*(u3(m) - u4(m))
+            umd = 0.5*(u3(m) + u2(m)) - 0.5*dmm
+            ulc = u3(m) + 0.5*(u3(m) - u4(m)) + beta/3.*dmn
+
+            ula = min(u3(m),u2(m),umd) 
+            ulb = min(u3(m),uxl,ulc) 
+            uln = max(u3(m),u2(m),umd) 
+            ult = max(u3(m),uxl,ulc) 
+
+            umin_l = max(ula,ulb)
+            umax_l = min(uln,ult)
+
+c	  sn = c2(m) - c1(m)
+c	  qn = c2(m) + c1(m) - 2.*u3(m)
+c	  u_l = u3(m) - sn/2. + qn/2.
+
+            c1(m) = Xmedian(c1(m),umin_l,umax_l)
+
+	 enddo 
+
+         CALL AMPLTD(QR,c2,b2)
+	 
+	 do m=1,7  
+            qpr(i,m)=b2(m)
+         enddo
+
+         CALL AMPLTD(QR,c1,b1)
+	 
+	 do m=1,7  
+            qpl(i,m)=b1(m)
+         enddo
+
+      enddo 
+      
+      Return
+      End
+
+c
+c     PPM correction for local extremum 
+c
+      Subroutine QDD6(Nx,Qvr,Qvl,Qp)
+c     ---dcc
+      implicit none
+      integer Nx, I,M
+      real DQ, Q6
+c     ---/dcc
+	Real Qvr(Nx,7),Qvl(Nx,7),Qp(Nx,7) 
+
+      do I=1,NX
+	 do M=1,7
+
+	   IF((QVR(I,M)-QP(I,M))*(QP(I,M)-QVL(I,M)).LE.0.)THEN
+		 QVR(I,M)=QP(I,M)
+	     QVL(I,M)=QP(I,M)
+         ELSE
+
+           DQ=QVR(I,M)-QVL(I,M)
+	     Q6=6.0*(QP(I,M)-(QVR(I,M)+QVL(I,M))/2.)
+
+	     IF(DQ*Q6.GT.DQ**2) QVL(I,M)=3.*QP(I,M)-2.*QVR(I,M)
+	     IF(DQ*Q6.LT.-DQ**2) QVR(I,M)=3.*QP(I,M)-2.*QVL(I,M)
+         
+	   ENDIF  
+	 
+	 ENDdo 
+      enddo
+
+	Return
+	End
+
+c----------- Utilities ---------------
+
+      Function Xminmod(x,y)
+
+	Xminmod = 0.5*(sign(1.,x) + sign(1.,y))*min(abs(x),abs(y))
+
+	Return
+	End
+
+      Function Xmedian(x,y,z)
+
+	External Xminmod
+
+	Xmedian = x + Xminmod(y-x,z-x)
+
+	Return
+	End
+
+      Function Xminmod4(x,y,z,h)
+
+	Xminmod4 = 0.5*(sign(1.,x) + sign(1.,y))
+     1	      *0.5*(sign(1.,x) + sign(1.,z))
+     1	      *0.5*(sign(1.,x) + sign(1.,h))
+     1	      *amin1(abs(x),abs(y),abs(z),abs(h))
+
+	Return
+	End
+
+c
+c     vector of amplitudes   
+c
+
+      SUBROUTINE AMPLTD(QL,QD,SL)
+c     --- dcc
+      implicit none
+      integer M, L
+c     --- /dcc
+
+	  REAL QL(7,7),QD(7),SL(7)
+	  
+	  do M=1,7
+             SL(M)=0.   
+             do L=1,7
+                SL(M)=SL(M)+QL(M,L)*QD(L)
+             enddo
+	  enddo
+          
+          RETURN
+          END 
+
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+c\\\\\\\\\\\\\\\\\\\\\\\\\\ EIGENVECTOR - Y ///////////////////////////
+c//////////////////////////////////////////////////////////////////////
+c
+c     comp eigenvector in y direction 
+c
+c     qu - primitive vector
+c     ql - left eigenvector
+c     qr - right eigenvector
+c     u  - eigenvalue vector
+
+      SUBROUTINE VECTLRy(QU,QL,QR,U,a2)
+      implicit none
+
+c     --- variables
+      real DLT,AS,BMG,BVX,BSGN,ASS,BVY,AF,BX,BYY
+      real BZ,CA,CF,CD2,BXZ,BVZ,CS,CSR,CSV,CWH,CKV
+      real GPB,SK1,SBB,GPP,DSCV,VAX,VAH,VAY,VAZ,VS2,VF2,X22
+c     --- sound speed, sound speed squared
+      real a1, a2
+
+c     --- /dcc
+      REAL QU(7),QL(7,7),QR(7,7),U(7)  	
+      
+c     dcc
+c     common/aspd/a1,a2  
+c     /dcc
+
+      DLT=1.E-7
+      X22=1./SQRT(2.)
+ 	
+      SK1=SQRT(QU(1))
+      BVX=QU(5)/SK1
+      BVY=QU(6)/SK1
+      BVZ=QU(7)/SK1
+      VAX=BVX**2
+      VAY=BVY**2
+      VAZ=BVZ**2
+      VAH=VAX+VAY+VAZ
+      CKV=A2
+      if(CKV.lt.0.) write(*,*) "ppml_standalone, cvk<0 2"
+      CSR=SQRT(CKV)
+      CSV=CKV+VAH
+      CWH=CKV-VAH
+      DSCV=CSV**2-4.*CKV*VAY
+      IF(DSCV.LT.0.) DSCV=0.
+      DSCV=SQRT(DSCV)
+      VF2=(CSV+DSCV)/2.
+      VS2=(CSV-DSCV)/2.
+      IF(VS2.LT.0.) VS2=0.
+      CF=SQRT(VF2)
+      CS=SQRT(VS2)
+      CA=ABS(BVY)
+
+      BYY=QU(6)**2
+      BXZ=QU(5)**2+QU(7)**2
+      SBB=SQRT(BXZ)
+      BMG=BYY+BXZ
+      GPP=A2*QU(1)
+      GPB=ABS(GPP-BYY)
+
+      IF(BXZ.GT.DLT*BMG) THEN
+
+         ASS=SQRT(CWH**2+4.*CKV*(VAX+VAZ))
+         AS=SQRT(abs((1.-CWH/ASS)/2.))
+         AF=SQRT(abs((1.+CWH/ASS)/2.))
+
+         BX=QU(5)/SBB
+         BZ=QU(7)/SBB
+
+      ELSE
+
+         IF(GPB.GT.DLT*GPP) THEN
+            AS=SQRT(abs((1.-SIGN(1.,CWH))/2.))
+            AF=SQRT(abs((1.+SIGN(1.,CWH))/2.))
+            CS=SQRT(abs((CKV+VAY-SIGN(1.,CWH)*CWH)/2.))
+            CF=SQRT(abs((CKV+VAY+SIGN(1.,CWH)*CWH)/2.))
+         ELSE
+            AS=X22
+            AF=X22
+            CS=CSR
+            CF=CSR  
+         ENDIF
+
+         BX=X22
+         BZ=X22
+
+      ENDIF
+
+      BSGN=SIGN(1.,QU(6))
+      CD2=2.*CKV
+      
+      QL(1,1)=AF/2.
+      QL(1,2)=QU(1)*AS*CS*BX*BSGN/CD2
+      QL(1,3)=-QU(1)*AF*CF/CD2
+      QL(1,4)=QU(1)*AS*CS*BZ*BSGN/CD2
+      QL(1,5)=SK1*CSR*AS*BX/CD2
+      QL(1,6)=0.
+      QL(1,7)=SK1*CSR*AS*BZ/CD2
+	
+      QL(2,1)=0.
+      QL(2,2)=-QU(1)*BZ*BSGN/2.
+      QL(2,3)=0.
+      QL(2,4)=QU(1)*BX*BSGN/2.
+      QL(2,5)=-SK1*BZ/2.
+      QL(2,6)=0.
+      QL(2,7)=SK1*BX/2.
+
+      QL(3,1)=AS/2.
+      QL(3,2)=-QU(1)*AF*CF*BX*BSGN/CD2
+      QL(3,3)=-QU(1)*AS*CS/CD2
+      QL(3,4)=-QU(1)*AF*CF*BZ*BSGN/CD2
+      QL(3,5)=-SK1*CSR*AF*BX/CD2
+      QL(3,6)=0.
+      QL(3,7)=-SK1*CSR*AF*BZ/CD2
+
+      QL(4,1)=0.
+      QL(4,2)=0.
+      QL(4,3)=0.
+      QL(4,4)=0.
+      QL(4,5)=0.
+      QL(4,6)=1.
+      QL(4,7)=0.
+
+      QL(5,1)=AS/2.
+      QL(5,2)=QU(1)*AF*CF*BX*BSGN/CD2
+      QL(5,3)=QU(1)*AS*CS/CD2
+      QL(5,4)=QU(1)*AF*CF*BZ*BSGN/CD2
+      QL(5,5)=-SK1*CSR*AF*BX/CD2
+      QL(5,6)=0.
+      QL(5,7)=-SK1*CSR*AF*BZ/CD2
+
+      QL(6,1)=0.
+      QL(6,2)=-QU(1)*BZ*BSGN/2.
+      QL(6,3)=0.
+      QL(6,4)=QU(1)*BX*BSGN/2.
+      QL(6,5)=SK1*BZ/2.
+      QL(6,6)=0.
+      QL(6,7)=-SK1*BX/2.
+
+      QL(7,1)=AF/2.
+      QL(7,2)=-QU(1)*AS*CS*BX*BSGN/CD2
+      QL(7,3)=QU(1)*AF*CF/CD2
+      QL(7,4)=-QU(1)*AS*CS*BZ*BSGN/CD2
+      QL(7,5)=SK1*CSR*AS*BX/CD2
+      QL(7,6)=0.
+      QL(7,7)=SK1*CSR*AS*BZ/CD2
+	
+      QR(1,1)=AF
+      QR(1,2)=0.
+      QR(1,3)=AS
+      QR(1,4)=0.
+      QR(1,5)=AS
+      QR(1,6)=0.
+      QR(1,7)=AF
+
+      QR(2,1)=AS*CS*BX*BSGN/QU(1)
+      QR(2,2)=-BZ*BSGN/QU(1)
+      QR(2,3)=-AF*CF*BX*BSGN/QU(1)
+      QR(2,4)=0.
+      QR(2,5)=AF*CF*BX*BSGN/QU(1)
+      QR(2,6)=-BZ*BSGN/QU(1)
+      QR(2,7)=-AS*CS*BX*BSGN/QU(1)
+
+      QR(3,1)=-AF*CF/QU(1)
+      QR(3,2)=0.
+      QR(3,3)=-AS*CS/QU(1)
+      QR(3,4)=0.
+      QR(3,5)=AS*CS/QU(1)
+      QR(3,6)=0.
+      QR(3,7)=AF*CF/QU(1)
+
+      QR(4,1)=AS*CS*BZ*BSGN/QU(1)
+      QR(4,2)=BX*BSGN/QU(1)
+      QR(4,3)=-AF*CF*BZ*BSGN/QU(1)
+      QR(4,4)=0.
+      QR(4,5)=AF*CF*BZ*BSGN/QU(1)
+      QR(4,6)=BX*BSGN/QU(1)
+      QR(4,7)=-AS*CS*BZ*BSGN/QU(1)
+
+      QR(5,1)=AS*BX*CSR/SK1
+      QR(5,2)=-BZ/SK1
+      QR(5,3)=-AF*BX*CSR/SK1
+      QR(5,4)=0.
+      QR(5,5)=-AF*BX*CSR/SK1
+      QR(5,6)=BZ/SK1
+      QR(5,7)=AS*BX*CSR/SK1
+
+      QR(6,1)=0.
+      QR(6,2)=0.
+      QR(6,3)=0.
+      QR(6,4)=1.
+      QR(6,5)=0.
+      QR(6,6)=0.
+      QR(6,7)=0.
+
+      QR(7,1)=AS*BZ*CSR/SK1
+      QR(7,2)=BX/SK1
+      QR(7,3)=-AF*BZ*CSR/SK1
+      QR(7,4)=0.
+      QR(7,5)=-AF*BZ*CSR/SK1
+      QR(7,6)=-BX/SK1
+      QR(7,7)=AS*BZ*CSR/SK1
+
+
+      U(1)=QU(3)-CF 
+      U(2)=QU(3)-CA
+      U(3)=QU(3)-CS
+      U(4)=QU(3)
+      U(5)=QU(3)+CS
+      U(6)=QU(3)+CA
+      U(7)=QU(3)+CF 
+
+      RETURN
+      END
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\ EIGENVECTOR - Y ///////////////////////////
+
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+c\\\\\\\\\\\\\\\\\\\\\\\\\\ EIGENVECTOR - Z ///////////////////////////
+c//////////////////////////////////////////////////////////////////////
+c
+c     comp eigenvector in z direction 
+c
+c     qu - primitive vector
+c      ql- left eigenvector
+c      qr- right eigenvector
+c      u- eigenvalue vector
+
+      SUBROUTINE VECTLRz(QU,QL,QR,U,a2)
+      implicit none
+
+c     --- variables
+      real DLT,AS,BMG,BVX,BSGN,ASS,BVY,AF,BX,BYY
+      real BY,CA,CF,CD2,BXZ,BVZ,CS,CSR,CSV,CWH,CKV
+      real GPB,SK1,SBB,GPP,DSCV,VAX,VAH,VAY,VAZ,VS2,VF2,X22
+c     --- sound speed, sound speed squared
+      real a1, a2
+
+c     --- /dcc
+
+      REAL QU(7),QL(7,7),QR(7,7),U(7)  	
+      
+c     dcc
+c     common/aspd/a1,a2  
+c     /dcc
+
+
+      DLT=1.E-7
+      X22=1./SQRT(2.)
+ 	
+      SK1=SQRT(QU(1))
+      BVX=QU(5)/SK1
+      BVY=QU(6)/SK1
+      BVZ=QU(7)/SK1
+      VAX=BVX**2
+      VAY=BVY**2
+      VAZ=BVZ**2
+      VAH=VAX+VAY+VAZ
+      CKV=A2
+      if(CKV.lt.0.) write(*,*) "ppml_standalone, cvk<0 3"
+      CSR=SQRT(CKV)
+      CSV=CKV+VAH
+      CWH=CKV-VAH
+      DSCV=CSV**2-4.*CKV*VAZ
+      IF(DSCV.LT.0.) DSCV=0.
+      DSCV=SQRT(DSCV)
+      VF2=(CSV+DSCV)/2.
+      VS2=(CSV-DSCV)/2.
+      IF(VS2.LT.0.) VS2=0.
+      CF=SQRT(VF2)
+      CS=SQRT(VS2)
+      CA=ABS(BVZ)
+
+      BYY=QU(7)**2
+      BXZ=QU(5)**2+QU(6)**2
+      SBB=SQRT(BXZ)
+      BMG=BYY+BXZ
+      GPP=A2*QU(1)
+      GPB=ABS(GPP-BYY)
+
+      IF(BXZ.GT.DLT*BMG) THEN
+
+         ASS=SQRT(CWH**2+4.*CKV*(VAX+VAY))
+         AS=SQRT(abs((1.-CWH/ASS)/2.))
+         AF=SQRT(abs((1.+CWH/ASS)/2.))
+
+         BX=QU(5)/SBB
+         BY=QU(6)/SBB
+
+      ELSE
+
+         IF(GPB.GT.DLT*GPP) THEN
+            AS=SQRT(abs((1.-SIGN(1.,CWH))/2.))
+            AF=SQRT(abs((1.+SIGN(1.,CWH))/2.))
+            CS=SQRT(abs((CKV+VAZ-SIGN(1.,CWH)*CWH)/2.))
+            CF=SQRT(abs((CKV+VAZ+SIGN(1.,CWH)*CWH)/2.))
+         ELSE
+            AS=X22
+            AF=X22
+            CS=CSR
+            CF=CSR  
+         ENDIF
+
+         BX=X22
+         BY=X22
+
+      ENDIF
+
+      BSGN=SIGN(1.,QU(7))
+      CD2=2.*CKV
+	
+      QL(1,1)=AF/2.
+      QL(1,2)=QU(1)*AS*CS*BX*BSGN/CD2
+      QL(1,3)=QU(1)*AS*CS*BY*BSGN/CD2
+      QL(1,4)=-QU(1)*AF*CF/CD2
+      QL(1,5)=SK1*CSR*AS*BX/CD2
+      QL(1,6)=SK1*CSR*AS*BY/CD2
+      QL(1,7)=0.
+	
+      QL(2,1)=0.
+      QL(2,2)=-QU(1)*BY*BSGN/2.
+      QL(2,3)=QU(1)*BX*BSGN/2.
+      QL(2,4)=0.
+      QL(2,5)=-SK1*BY/2.
+      QL(2,6)=SK1*BX/2.
+      QL(2,7)=0.
+
+      QL(3,1)=AS/2.
+      QL(3,2)=-QU(1)*AF*CF*BX*BSGN/CD2
+      QL(3,3)=-QU(1)*AF*CF*BY*BSGN/CD2
+      QL(3,4)=-QU(1)*AS*CS/CD2
+      QL(3,5)=-SK1*CSR*AF*BX/CD2
+      QL(3,6)=-SK1*CSR*AF*BY/CD2
+      QL(3,7)=0.
+
+      QL(4,1)=0.
+      QL(4,2)=0.
+      QL(4,3)=0.
+      QL(4,4)=0.
+      QL(4,5)=0.
+      QL(4,6)=0.
+      QL(4,7)=1.
+
+      QL(5,1)=AS/2.
+      QL(5,2)=QU(1)*AF*CF*BX*BSGN/CD2
+      QL(5,3)=QU(1)*AF*CF*BY*BSGN/CD2
+      QL(5,4)=QU(1)*AS*CS/CD2
+      QL(5,5)=-SK1*CSR*AF*BX/CD2
+      QL(5,6)=-SK1*CSR*AF*BY/CD2
+      QL(5,7)=0.
+
+      QL(6,1)=0.
+      QL(6,2)=-QU(1)*BY*BSGN/2.
+      QL(6,3)=QU(1)*BX*BSGN/2.
+      QL(6,4)=0.
+      QL(6,5)=SK1*BY/2.
+      QL(6,6)=-SK1*BX/2.
+      QL(6,7)=0.
+
+      QL(7,1)=AF/2.
+      QL(7,2)=-QU(1)*AS*CS*BX*BSGN/CD2
+      QL(7,3)=-QU(1)*AS*CS*BY*BSGN/CD2
+      QL(7,4)=QU(1)*AF*CF/CD2
+      QL(7,5)=SK1*CSR*AS*BX/CD2
+      QL(7,6)=SK1*CSR*AS*BY/CD2
+      QL(7,7)=0.
+	
+
+      QR(1,1)=AF
+      QR(1,2)=0.
+      QR(1,3)=AS
+      QR(1,4)=0.
+      QR(1,5)=AS
+      QR(1,6)=0.
+      QR(1,7)=AF
+
+      QR(2,1)=AS*CS*BX*BSGN/QU(1)
+      QR(2,2)=-BY*BSGN/QU(1)
+      QR(2,3)=-AF*CF*BX*BSGN/QU(1)
+      QR(2,4)=0.
+      QR(2,5)=AF*CF*BX*BSGN/QU(1)
+      QR(2,6)=-BY*BSGN/QU(1)
+      QR(2,7)=-AS*CS*BX*BSGN/QU(1)
+
+      QR(3,1)=AS*CS*BY*BSGN/QU(1)
+      QR(3,2)=BX*BSGN/QU(1)
+      QR(3,3)=-AF*CF*BY*BSGN/QU(1)
+      QR(3,4)=0.
+      QR(3,5)=AF*CF*BY*BSGN/QU(1)
+      QR(3,6)=BX*BSGN/QU(1)
+      QR(3,7)=-AS*CS*BY*BSGN/QU(1)
+
+      QR(4,1)=-AF*CF/QU(1)
+      QR(4,2)=0.
+      QR(4,3)=-AS*CS/QU(1)
+      QR(4,4)=0.
+      QR(4,5)=AS*CS/QU(1)
+      QR(4,6)=0.
+      QR(4,7)=AF*CF/QU(1)
+
+      QR(5,1)=AS*BX*CSR/SK1
+      QR(5,2)=-BY/SK1
+      QR(5,3)=-AF*BX*CSR/SK1
+      QR(5,4)=0.
+      QR(5,5)=-AF*BX*CSR/SK1
+      QR(5,6)=BY/SK1
+      QR(5,7)=AS*BX*CSR/SK1
+
+      QR(6,1)=AS*BY*CSR/SK1
+      QR(6,2)=BX/SK1
+      QR(6,3)=-AF*BY*CSR/SK1
+      QR(6,4)=0.
+      QR(6,5)=-AF*BY*CSR/SK1
+      QR(6,6)=-BX/SK1
+      QR(6,7)=AS*BY*CSR/SK1
+
+      QR(7,1)=0.
+      QR(7,2)=0.
+      QR(7,3)=0.
+      QR(7,4)=1.
+      QR(7,5)=0.
+      QR(7,6)=0.
+      QR(7,7)=0.
+
+
+c	do k=1,7
+c	do m=1,7
+c		sum=0.
+c	do l=1,7
+c		sum=sum+ql(m,l)*qr(l,k)
+c	enddo
+c          print*,k,m,sum
+c	    pause
+c	enddo
+c	enddo
+
+
+      U(1)=QU(4)-CF 
+      U(2)=QU(4)-CA
+      U(3)=QU(4)-CS
+      U(4)=QU(4)
+      U(5)=QU(4)+CS
+      U(6)=QU(4)+CA
+      U(7)=QU(4)+CF 
+
+      RETURN
+      END
+
+c\\\\\\\\\\\\\\\\\\\\\\\\\\ EIGENVECTOR - Z ///////////////////////////

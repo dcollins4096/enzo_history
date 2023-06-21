@@ -1,0 +1,309 @@
+=======================================================================
+Enzo: README.bugs
+=======================================================================
+
+This file contains IEEE standard descriptions of fields in the bug
+report.  For the actual bug reports, see the BUGS file.
+
+James Bordner <jbordner@cosmos.ucsd.edu>
+
+-----------------------------------------------------------------------
+Required for IEEE Compliance:
+-----------------------------------------------------------------------
+
+ IV100 Actual Cause       What caused the anomaly to occur?
+ DP100 Disposition        What actually happened to close the anomaly
+ RR100 Project Activity   What were you doing when the anomaly occurred
+ IM600 Project cost       Relative effect on the project budget to fix
+ RR200 Project Phase      In what life-cycle phase is the product?
+ IM500 Project schedule   Relative effect on the product schedule to fix
+ AC100 Resolution         What action to take to resolve the anomaly
+ IM100 Severity           How bad is the anomaly in more objective terms
+ IV200 Source             Where was the origin of the anomaly
+ RR500 Symptom            How did the anomaly manifest itself?
+ IV300 Type               What type of anomaly / enhancement at the code level?
+
+-----------------------------------------------------------------------
+IV100 Actual Cause
+-----------------------------------------------------------------------
+
+  IV110 Product
+  IV111   Hardware
+  IV112   Software
+  IV113   Data
+  IV114   Interface
+  IV115   Documentation
+  IV126   Enhancement
+  IV120 Test System
+  IV121   Hardware
+  IV122   Software
+  IV123   Data
+  IV124   Interface
+  IV125   Documentation
+  IV126   Enhancement
+  IV130 Platform
+  IV131   Hardware
+  IV132   Operating System
+  IV133   Documentation
+  IV140 Outside Vendor/Third Party
+  IV141   Hardware
+  IV142   Software
+  IV143   Data
+  IV145   Documentation
+  IV146   Enhancement
+  IV150 User
+  IV160 Unknown
+
+-----------------------------------------------------------------------
+ DP100 Disposition        What actually happened to close the anomaly
+-----------------------------------------------------------------------
+
+  DP110 Closed
+  DP111   Resolution Implemented
+  DP112   Not a Problem
+  DP113   Not in Scope of Project
+  DP114   Outside Vendor's Problem
+  DP115   Duplicate Problem
+  DP120 Deferred
+  DP130 Merged With Another Problem
+  DP140 Referred to Another Project
+
+-----------------------------------------------------------------------
+ RR100 Project Activity   What were you doing when the anomaly occurred
+-----------------------------------------------------------------------
+
+  RR110 Analysis
+  RR120 Review
+  RR130 Audit
+  RR140 Inspection
+  RR150 Compilation
+  RR160 Testing
+  RR170 Validation/Qualification Testing
+  RR180 Support/Operational
+  RR190 Walk-through
+
+-----------------------------------------------------------------------
+ IM600 Project cost       Relative effect on the project budget to fix
+-----------------------------------------------------------------------
+
+  IM610 High
+  IM620 Medium
+  IM630 Low
+  IM640 None
+
+-----------------------------------------------------------------------
+ RR200 Project Phase      In what life-cycle phase is the product?
+-----------------------------------------------------------------------
+
+  RR210 Requirements
+  RR211   Concept Evaluation
+  RR212   System Requirements
+  RR213   Software Requirements
+  RR214   Prototype Requirements
+  RR220 Design
+  RR221   System Design
+  RR222   Preliminary Design
+  RR223   Detail Design
+  RR224   Prototype Design
+  RR230 Implementation
+  RR231   Code
+  RR232   Unit Test
+  RR233   Integrate
+  RR234   Prototype
+  RR240 Test
+  RR241   Integration Test
+  RR242   System Test
+  RR243   Beta Test
+  RR244   Prototype Test
+  RR245   Acceptance Test
+  RR246   Installation and Checkout
+  RR250 Operation and Maintenance
+  RR260 Retirement
+
+-----------------------------------------------------------------------
+ IM500 Project schedule   Relative effect on the product schedule to fix
+-----------------------------------------------------------------------
+  IM510 High
+  IM520 Medium
+  IM530 Low
+  IM540 None
+
+-----------------------------------------------------------------------
+ AC100 Resolution         What action to take to resolve the anomaly
+-----------------------------------------------------------------------
+  AC110 Immediate
+  AC111   Software Fix
+  AC112   Update Project Documentation
+  AC113   Operator Training
+  AC114   Testware Fix
+  AC115   Outside Vendor/Third Party
+  AC120 Eventual
+  AC121   Software Fix
+  AC122   Update Project Documentation
+  AC123   Operator Training
+  AC124   Testware Fix
+  AC125   Outside Vendor/Third Party
+  AC130 Defer
+  AC131   Fix in Later Release
+  AC132   Waiver Requested
+  AC140 No Fix
+  AC141   Not a Problem
+  AC142   Waiver Requested
+  AC143   Fix not Justifiable
+  AC144   Fix not Identifiable
+  AC145   Obsolete
+
+-----------------------------------------------------------------------
+ IM100 Severity           How bad is the anomaly in more objective terms
+-----------------------------------------------------------------------
+
+  IM110 Urgent
+  IM120 High
+  IM130 Medium
+  IM140 Low
+  IM150 None
+
+-----------------------------------------------------------------------
+ IV200 Source             Where was the origin of the anomaly
+-----------------------------------------------------------------------
+
+  IV210 Specification
+  IV211   Requirements
+  IV212   Functional
+  IV213   Preliminary Design
+  IV214   Detailed Design
+  IV215   Product Design
+  IV216   Interface
+  IV217   Data
+  IV218   Implementation
+  IV220 Code
+  IV230 Database
+  IV240 Manuals or Guides
+  IV241   User Guide
+  IV242   Reference Manual
+  IV243   Product Internals Training Manual
+  IV244   System Administrator Manual
+  IV245   Installation Guide
+  IV250 Plans and Procedures
+  IV251   Test Plan
+  IV252   Test Procedures
+  IV253   Quality Assurance Plan
+  IV254   Configuration Management Plan
+  IV255   Maintenance Plan
+  IV256   Product Support Plan
+  IV260 Reports
+  IV261   Test Report
+  IV262   Quality Assesment Report
+  IV270 Standards/Policies
+
+-----------------------------------------------------------------------
+ RR500 Symptom            How did the anomaly manifest itself?
+-----------------------------------------------------------------------
+
+  RR510 Operating System Crash
+  RR520 Program Hung-up
+  RR530 Program Crash
+  RR540 Input Problem
+  RR541   Correct Input Not Accepted
+  RR542   Wrong Input Accepted
+  RR543   Description Incorrect or Missing
+  RR544   Parameters Incomplete or Missing
+  RR550 Output Problem
+  RR551   Wrong Format
+  RR552   Incorrect Results/Data
+  RR553   Incomplete/Missing
+  RR554   Spelling/Grammar
+  RR555   Cosmetic
+  RR560 Failed Required Performance
+  RR570 Perceived Total Product Failure
+  RR580 System Error Message
+  RR590 Other
+
+-----------------------------------------------------------------------
+ IV300 Type               What type of anomaly / enhancement at the code level?
+-----------------------------------------------------------------------
+
+  IV310   Logic Problem
+  IV311     Forgotten Case or Steps
+  IV312     Duplicate Logic
+  IV313     Extreme Conditions Neglected
+  IV314     Unnecessary Function
+  IV315     Misinterpretation
+  IV316     Missing Condition Test
+  IV317     Checking Wrong Variable
+  IV318     Iterating Loop Incorrectly
+  IV320   Computational Problem
+  IV321     Equation Insufficient or Incorrect
+  IV321.1     Missing Computation
+  IV321.2     Operand in Equation Incorrect
+  IV321.3     Operator in Equation Incorrect
+  IV321.4     Parentheses Used Incorrectly or missing
+  IV322     Precision Loss
+  IV322.1     Rounding or Truncation Fault
+  IV322.2     Mixed Modes
+  IV323     Sign Convention Fault
+  IV330   Interface/Timing Problem
+  IV331     Interrupts Handled Incorrectly
+  IV332   I/O Timing Incorrect
+  IV332.1     Timing Fault Causes Data Loss
+  IV333     Subroutine/Module Mismatch
+  IV333.1     Wrong Subroutine Called
+  IV333.2     Incorrectly Located Subroutine Call
+  IV333.3     Nonexistent Subroutine Called
+  IV333.4     Inconsistent Subroutine Arguments
+  IV340   Data Handling Problem
+  IV341     Initialized Data Incorrectly
+  IV342     Accessed or Stored Data Incorrectly
+  IV342.1     Flag or Index Set Incorrectly
+  IV342.2     Packed/Unpacked Data Incorrectly
+  IV342.3     Referenced Wrong Data Variable
+  IV342.4     Data Referenced Out of Bounds
+  IV343     Scaling or Units of Data Incorrect
+  IV344     Dimensioned Data Incorrectly
+  IV344.1     Variable Type Incorrect
+  IV344.2     Subscripted Variable Incorrectly
+  IV345   Scope of Data Incorrect
+  IV350   Data Problem
+  IV351     Sensor Data Incorrect or Missing
+  IV352     Operator Data Incorrect or Missing
+  IV353     Embedded Data in Tables Incorrectly or Missing
+  IV354     External Data Incorrect or Missing
+  IV355     Output Data Incorrect or Missing
+  IV356     Input Data Incorrect or Missing
+  IV360   Documentation Problem
+  IV361     Ambiguous Statement
+  IV362     Incomplete Item
+  IV363     Incorrect Item
+  IV364     Missing Item
+  IV365     Conflicting Items
+  IV366     Confusing Items
+  IV367     Redundant Items
+  IV368     Illogical Item
+  IV369     Non-verifiable Item
+  IV370     Unachievable Item
+  IV380   Document Quality Problem
+  IV381     Applicable Standards Not Met
+  IV382     Not Traceable
+  IV383     Not Current
+  IV384     Incomplete
+  IV385     Inconsistencies
+  IV390   Enhancement
+  IV391     Change in Program Requirements
+  IV391.1     Add New Capability
+  IV391.2     Remove Unnecessary Capability
+  IV391.3     Update Current Capability
+  IV392       Improve Comments
+  IV393       Improve Code Efficiency
+  IV394       Implement Editorial Changes
+  IV395       Improve Usability
+  IV396       Software Fix of a Hardware Problem
+  IV397       Other Enhancement
+  IV398   Failure Caused by Previous Fix
+  IV399   Performance Problem
+  IV400   Interoperability Problem
+  IV401   Standards Conformance Problem
+  IV402   Other
+
+
+
+

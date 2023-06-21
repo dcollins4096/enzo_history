@@ -1,0 +1,69 @@
+#======================================================================
+#
+# Make.mach for Paolo's Opteron cluster
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2004-02-24  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_PAOLO_GNU)
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DGNU
+
+#======================================================================
+# Compilers
+#======================================================================
+
+MPI_HOME =  /usr/local/mpich/1.2.5.2/gnu/x86_64
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+F90_ARCH   = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    = $(MPI_HOME)/bin/mpicc
+CXX_MPI_ARCH   = $(MPI_HOME)/bin/mpiCC
+FC_MPI_ARCH    = $(MPI_HOME)/bin/mpif77
+F90_MPI_ARCH   = $(MPI_HOME)/bin/mpif90
+LD_MPI_ARCH    = $(MPI_HOME)/bin/mpiCC
+
+CC_NOMPI_ARCH  = gcc
+CXX_NOMPI_ARCH = g++
+FC_NOMPI_ARCH  = g77
+F90_NOMPI_ARCH = g77
+LD_NOMPI_ARCH  = g++
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = 
+CXXFLAGS_ARCH =
+FFLAGS_ARCH   = 
+F90FLAGS_ARCH = 
+LDFLAGS_ARCH  = 
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = 
+
+
+
+

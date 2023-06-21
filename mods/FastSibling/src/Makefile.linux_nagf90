@@ -1,0 +1,28 @@
+#
+# macros for Linux
+# Requires EGCS 1.1.1 complete with g++, g77, and the default gcc
+# Can also substitute NAG f90 for g77, but doesn't produce correct
+# results it appears (I'm still looking into that). 
+#
+CPP          = /usr/lib/cpp
+
+## Fortran compiler
+FC           = f90
+FC_OPTIMIZE  = -Nl50 -g
+DEFINES      = -D LINUX -D NAGF90 -D $(PRECISION)
+
+## C Compiler
+CC           = gcc
+CC_OPTIMIZE  = -g -D LINUX -D NAGF90
+
+## C++ Compiler
+CCxx	     = g++
+CCxx_OPTIMIZE = -g -D LINUX -D NAGF90
+
+## Linker/loader
+LDR          = g++
+LDR_OPTIMIZE = -g
+LIB          = -L/usr/local/lib  -lf90 -lnagfl90 -lnag -lm -lmfhdf -ldf -lz
+OPTS         = -c -I/usr/local/include
+DEBUG        = -g
+

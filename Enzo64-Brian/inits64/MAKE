@@ -1,0 +1,49 @@
+#!/bin/tcsh
+
+# Script to compile inits5 on the following machines:
+#   sdsc-datastar    SDSC DataStar
+#   nersc-bassi      NERSC Bassi
+#  
+# Usage: MAKE [machine]
+#
+# Author: jbordner@cosmos.ucsd.edu
+
+if ($#argv != 1) then
+   echo "Usage: $0:t [sdsc-datastar|nersc-bassi]"
+   exit 1
+else
+   set MACHINE = $argv[1]
+endif
+
+# Machine-specific settings
+
+if ($MACHINE == "sdsc-datastar") then
+   setenv SZIP_INSTALL /usr/local/apps64/hdf4
+   setenv ZLIB_INSTALL /usr/local/apps64/hdf4
+   setenv OBJECT_MODE 64
+else if ($MACHINE == "nersc-bassi") then
+   module add hdf5 hdf papi
+
+   setenv SZIP_INSTALL $HDF_DIR
+   setenv ZLIB_INSTALL $HDF_DIR
+   setenv OBJECT_MODE 64
+else
+   echo "$0:t Unknown machine $MACHINE\!"
+   exit 1
+endif
+
+set exec = inits5
+
+printf "Compiling $exec..."
+gmake >& out.make
+
+if (-e $exec) then
+   printf "Success\!\n"
+   set bin = ../bin
+   if (! -e $bin) mkdir $bin
+   cp $exec $bin
+else
+   printf "D'oh\!\n"
+endif
+
+

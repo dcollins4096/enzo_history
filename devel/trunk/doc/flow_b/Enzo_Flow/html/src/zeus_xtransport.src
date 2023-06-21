@@ -1,0 +1,301 @@
+#include "fortran.def"
+#include "error.def"
+c=======================================================================
+c/////////////////////  SUBROUTINE ZEUS_XTRANSPORT  \\\\\\\\\\\\\\\\\\\\
+c
+      subroutine zeus_xtransport(d, e, u, v, w, in, jn, kn, rank,
+     &                           is, ie, js, je, ks, ke,
+     &                           dt, dx, f1, bottom,
+     &                           nsubgrids, lface, rface,
+     &                           fistart, fiend, fjstart, fjend,
+     &                           dindex, eindex, geindex,
+     &                           uindex, vindex, windex, array,
+     &                           ncolor, colorpt, coloff, colindex)
+c
+c  TRANSPORT TERM IN X-DIRECTION FOR ZEUS HYDRO (CARTESIAN ONLY)
+c
+c  written by: Greg Bryan (implemented from Stone & Norman, ApJS 80, 753)
+c  date:       February, 1997
+c  modified1:  Alexei Kritsuk, April 2003
+c
+c  PURPOSE:
+c
+c  EXTERNALS:
+c
+c  INPUTS:
+c     d       - density field (includes boundary zones)
+c     dx,y,z  - zone width arrays for each dimension
+c     e       - gas specific energy field
+c     i,j,kn  - dimensions of field arrays
+c     rank    - dimension of problem (not currently used)
+c     u       - x-velocity field
+c     v       - y-velocity field
+c     w       - z-velocity field
+c
+c  LOCALS:
+c
+c-----------------------------------------------------------------------
+      implicit NONE
+c-----------------------------------------------------------------------
+c
+c     Arguments
+c
+      integer in, jn, kn, is, ie, js, je, ks, ke, rank, bottom,
+     &        nsubgrids, ncolor, coloff(ncolor)
+      integer fistart(nsubgrids*3), fiend(nsubgrids*3),
+     &        fjstart(nsubgrids*3), fjend(nsubgrids*3),
+     &        lface(nsubgrids*3), rface(nsubgrids*3)
+      integer dindex(nsubgrids*6), eindex(nsubgrids*6),
+     &        uindex(nsubgrids*6), vindex(nsubgrids*6),
+     &        windex(nsubgrids*6),geindex(nsubgrids*6),
+     &        colindex(nsubgrids*6,ncolor)
+      real    array(1), colorpt(1)
+      real    d(in,jn,kn), e(in,jn,kn), u(in,jn,kn), v(in,jn,kn),
+     &        w(in,jn,kn), f1(in,jn,kn), dx(in)
+      real    dt
+c
+c     Parameters
+c
+      integer ijk
+      parameter (ijk = MAX_ANY_SINGLE_DIRECTION)
+c
+c     Locals
+c
+      integer i, j, k, jm1, km1, n, idim, offset, ic, ind
+      real   dnew, f2(ijk), f3(ijk), f4(ijk), f5(ijk),
+     &       dstar(ijk), estar(ijk), ustar(ijk), vstar(ijk), wstar(ijk),
+     &       uavgi(ijk), uavgj(ijk), uavgk(ijk),
+     &       colstar(ijk, MAX_COLOR), ueff(ijk)
+c
+#define NO_VELOCITY_AVERAGE
+#define DENS_LIMIT 1000000.0
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\////////////////////////////////
+c=======================================================================
+c
+c     1) Transport step - x direction
+c
+c     Compute the mass flux over the entire field
+c
+      do k = 1, kn
+         do j = 1, jn
+c
+c           Interpolate density
+c
+            do i = 1, in
+               ueff(i) = u(i,j,k)
+            enddo
+c
+#ifdef VELOCITY_AVERAGE
+            if (bottom .eq. 1) then
+               do i = is-1, ie+2
+                  im1 = max(i-1, is-2)
+                  if (max(d(im1,j,k),d(i,j,k)) .gt. DENS_LIMIT) then
+                     ip1 = min(i+1, ie+3)
+                     im2 = max(i-2, is-2)
+                     ip2 = min(i+2, ie+3)
+                     im3 = max(i-3, is-2)
+c
+                     ueff(i) = ((d(im2,j,k)+d(im1,j,k))*u(im1,j,k)+
+     &                          (d(im1,j,k)+d(i  ,j,k))*u(i  ,j,k)+
+     &                          (d(i  ,j,k)+d(ip1,j,k))*u(ip1,j,k))/
+     &                      (    d(im2,j,k)+
+     &                       2.0*d(im1,j,k)+2.0*d(i  ,j,k)+
+     &                           d(ip1,j,k))
+                  endif
+               enddo
+            endif
+#endif
+c
+            call vanlr1_zc(d, in, jn, kn, is-1, ie+2, j, k,
+     &                     dx, dt, ueff, dstar)
+c
+c           Compute mass flux
+c
+            do i = is-2, ie+3
+               f1(i,j,k) = dstar(i)*ueff(i)
+            enddo
+c
+         enddo
+      enddo
+c
+c     Update the quantities (loop backwards on j,k so j-1,k-1 are old values)
+c
+      do k = kn, 1, -1
+         do j = jn, 1, -1
+            jm1 = max(j-1, 1)
+            km1 = max(k-1, 1)
+c
+            do i = 1, in
+               ueff(i) = u(i,j,k)
+            enddo
+c
+#ifdef VELOCITY_AVERAGE
+            if (bottom .eq. 1) then
+               do i = is-1, ie+2
+                  im1 = max(i-1, is-2)
+                  if (max(d(im1,j,k),d(i,j,k)) .gt. DENS_LIMIT) then
+                     ip1 = min(i+1, ie+3)
+                     im2 = max(i-2, is-2)
+                     ip2 = min(i+2, ie+3)
+                     im3 = max(i-3, is-2)
+c
+                     ueff(i) = ((d(im2,j,k)+d(im1,j,k))*u(im1,j,k)+
+     &                          (d(im1,j,k)+d(i  ,j,k))*u(i  ,j,k)+
+     &                          (d(i  ,j,k)+d(ip1,j,k))*u(ip1,j,k))/
+     &                      (    d(im2,j,k)+
+     &                       2.0*d(im1,j,k)+2.0*d(i  ,j,k)+
+     &                           d(ip1,j,k))
+                  endif
+               enddo
+            endif
+#endif
+c
+            call vanlr1_zc(e, in, jn, kn, is-1, ie+2, j, k,
+     &                     dx, dt, ueff, estar)
+c
+c           Compute color flux (assuming it is density-like) and advect
+c              color variables (zone-centered)
+c
+            do ic = 1, ncolor
+               call vanlr1_zc(colorpt(coloff(ic)+1),
+     &                        in, jn, kn, is-1, ie+2, j, k,
+     &                        dx, dt, ueff, colstar(1,ic))
+               do i = is-2, ie+3
+                  colstar(i,ic) = colstar(i,ic) * ueff(i)
+               enddo
+               do i = is-2, ie+2
+                  ind = coloff(ic)+((k-1)*jn+j-1)*in+i
+                  colorpt(ind) =
+     &              max(0.1*colorpt(ind),
+     &                      colorpt(ind) +
+     &                      dt*(colstar(i,ic) - colstar(i+1,ic))/dx(i))
+               enddo
+            enddo
+c
+c           Compute energy flux
+c
+            do i = is-2, ie+3
+               f5(i) = estar(i)*f1(i,j,k)
+            enddo
+c
+c           Make appropriately-averaged quanitities for advection
+c
+            do i=is-3, ie+2
+               uavgi(i) = 0.5*(ueff(i) + ueff(i+1))
+               uavgj(i) = 0.5*(u(i,j,k) + u(i,jm1,k))
+               uavgk(i) = 0.5*(u(i,j,k) + u(i,j,km1))
+            enddo
+            i = ie+3
+            uavgj(i) = 0.5*(u(i,j,k) + u(i,jm1,k))
+            uavgk(i) = 0.5*(u(i,j,k) + u(i,j,km1))
+c
+c           Interpolate velocities
+c
+            call vanlr1_fc(u, in, jn, kn, is-1, ie+1, j, k,
+     &                     dx, dt, uavgi, ustar)
+            if (rank .gt. 1) then
+               call vanlr1_zc(v, in, jn, kn, is-1,ie+2,j,
+     &              k, dx, dt, uavgj, vstar)
+               if (rank .gt. 2) then
+                  call vanlr1_zc(w, in, jn, kn, is-1,ie+2,j,
+     &                 k, dx, dt, uavgk, wstar)
+               end if
+            end if
+c
+c           Compute momentum fluxes
+c
+            i = is-2
+            f2(i) = ustar(i)*0.5*(f1(i,j,k) + f1(i+1,j,k))
+            do i = is-1, ie+2
+               f2(i) = ustar(i)*0.5*(f1(i,j,k) + f1(i+1,j,k))
+               f3(i) = vstar(i)*0.5*(f1(i,j,k) + f1(i,jm1,k))
+               f4(i) = wstar(i)*0.5*(f1(i,j,k) + f1(i,j,km1))
+            enddo
+c
+c           Convert velocities to momenta
+c
+            i = ie+2
+            u(i,j,k) = u(i,j,k)*0.5*(d(i,j,k) + d(i-1,j,k))
+            u(i,j,k) = u(i,j,k) + dt*(f2(i-1)-f2(i))/dx(i)
+            do i = is-1, ie+1
+               u(i,j,k) = u(i,j,k)*0.5*(d(i,j,k) + d(i-1,j,k))
+               u(i,j,k) = u(i,j,k) + dt*(f2(i-1)-f2(i))/dx(i)
+               v(i,j,k) = v(i,j,k)*0.5*(d(i,j,k) + d(i,jm1,k))
+               v(i,j,k) = v(i,j,k) + dt*(f3(i  )-f3(i+1))/dx(i)
+               w(i,j,k) = w(i,j,k)*0.5*(d(i,j,k) + d(i,j,km1))
+               w(i,j,k) = w(i,j,k) + dt*(f4(i  )-f4(i+1))/dx(i)
+            enddo
+c
+c              Update mass and energy fluxes
+c
+            do i = is-2, ie+2
+               dnew = d(i,j,k) + dt*(f1(i,j,k) - f1(i+1,j,k))/dx(i)
+               e(i,j,k) = (e(i,j,k)*d(i,j,k) +
+     &                     dt*(f5(i) - f5(i+1))/dx(i))/dnew
+               if (e(i,j,k) .le. 0.0 .or. dnew .le. 0.0) then
+                  write(6,*) 'zxt',d(i,j,k),e(i,j,k),dnew,dt
+                  ERROR_MESSAGE
+               endif
+               d(i,j,k) = dnew
+            enddo
+c
+c              Convert momenta back to velocities
+c
+            do i = is-1, ie+2
+               u(i,j,k) = u(i,j,k)/(0.5*(d(i,j,k) + d(i-1,j,k)))
+               if (abs(u(i,j,k)) .gt. dx(i)/dt) then
+                  write(6,*) 'ux',i,j,k,ie,je,ke
+                  write(6,*) u(i,j,k),d(i,j,k),d(i-1,j,k)
+                  ERROR_MESSAGE
+               endif
+            enddo
+c
+c     Copy mass fluxes into subgrid boundaries
+c     (all subgrid quantities are zero based)
+c
+         do n=0, nsubgrids-1
+           if (k .ge. fjstart(n*3+1)+1 .and. k .le. fjend(n*3+1)+1 .and.
+     &         j .ge. fistart(n*3+1)+1 .and. j .le. fiend(n*3+1)+1) then
+             idim = fiend(n*3+1) - fistart(n*3+1) + 1
+             offset = j-fistart(n*3+1) + (k-fjstart(n*3+1)-1)*idim
+             array(dindex(n*6+1)+offset) = f1(lface(n*3+1)+1, j, k)*dt
+             array(dindex(n*6+2)+offset) = f1(rface(n*3+1)+2, j, k)*dt
+             do ic=1, ncolor
+               array(colindex(n*6+1,ic)+offset) =
+     &                                 colstar(lface(n*3+1)+1, ic)*dt
+               array(colindex(n*6+2,ic)+offset) =
+     &                                 colstar(rface(n*3+1)+2, ic)*dt
+             enddo
+           endif
+         enddo
+c
+c        Next j,k
+         enddo
+      enddo
+c
+c     Convert v,w momenta back to velocities
+c
+      do k = 1, kn
+         do j = 1, jn
+            jm1 = max(j-1, 1)
+            km1 = max(k-1, 1)
+            do i = is-1, ie+1
+               v(i,j,k) = v(i,j,k)/(0.5*(d(i,j,k) + d(i,jm1,k)))
+               if (abs(v(i,j,k)) .gt. dx(i)/dt) then
+                  write(6,*) 'vx',i,j,k,ie,je,ke,jm1
+                  write(6,*) v(i,j,k),d(i,j,k),d(i,jm1,k)
+                  WARNING_MESSAGE
+               endif
+               w(i,j,k) = w(i,j,k)/(0.5*(d(i,j,k) + d(i,j,km1)))
+               if (abs(w(i,j,k)) .gt. dx(i)/dt) then
+                  write(6,*) 'wx',i,j,k,ie,je,ke,km1
+                  write(6,*) w(i,j,k),d(i,j,k),d(i,j,km1)
+                  WARNING_MESSAGE
+               endif
+            enddo
+         enddo
+      enddo
+c
+      return
+      end

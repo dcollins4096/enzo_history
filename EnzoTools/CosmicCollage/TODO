@@ -1,0 +1,19 @@
+To do list:
+
+1.  Finish rebinning routine.  This needs to be modified to take in Mike Norman's 
+    new ideas about varied projection sizes.  Also, this now means that the 
+    user-defined inputs need to be more thorough.  I need to think about this
+    some more.
+
+2.  Finish routine for applying corrections to data (for redshift, etc.).  First
+    I need to figure out what units Rick's data is in (in general) and then Eric
+    and I have to converge on desired output units for various quantities.
+
+3.  What other things do we want to do projections of?
+
+4.  All major loops need to be OpenMP-parallelized.  Should be straightforward,
+    but we need to double check that the OpenMP stuff won't thrash memory.
+    In other words, make sure memory access patterns are striped (along with array)
+    not jumping around array.  The one this doesn't work with is the interpolation
+    routine.  We may just have to suck it up and take the performance hit, though.
+    This can be tested easily for scaling at some point.

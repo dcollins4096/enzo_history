@@ -1,0 +1,78 @@
+c=======================================================================
+c////////////////////////  SUBROUTINE ADJFFT  \\\\\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine adjfft(array, nxz, nyz, nzz, in, jn)
+c
+c  ADJUSTS A COMPLEX ARRAY TO SATISFY THE CONJUGATE RELATIONS FOR REAL ARRAYS
+c
+c  written by: Greg Bryan
+c  date:       January, 1993
+c
+c  INPUTS: array(in,jn,*) - 3d array to be adjusted
+c          in,jn        - first and second declared dimension of array
+c          nxz,nyz,nzz  - size (within array) of appropriate 3d array
+c
+c  OUTPUTS: array(in,jn,*)
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+      integer in, jn, j, k, nxz, nyz, nzz
+      real    array(in, jn, *)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////////////////
+c=======================================================================
+c
+c  Adjust the array to satisfy the complex conjugation relations for real
+c    arrays.
+c
+c  1) adjust the corners
+c
+      array(    2,      1,      1) = 0.
+      array(nxz+2,      1,      1) = 0.
+      array(    2,nyz/2+1,      1) = 0.
+      array(    2,      1,nzz/2+1) = 0.
+      array(nxz+2,nyz/2+1,      1) = 0.
+      array(nxz+2,      1,nzz/2+1) = 0.
+      array(    2,nyz/2+1,nzz/2+1) = 0.
+      array(nxz+2,nyz/2+1,nzz/2+1) = 0.
+c
+c  2) adjust faces
+c
+      do j=2, nyz/2
+         array(    1,j,      1) =  array(    1,nyz+2-j,      1)
+         array(    2,j,      1) = -array(    2,nyz+2-j,      1)
+         array(nxz+1,j,      1) =  array(nxz+1,nyz+2-j,      1)
+         array(nxz+2,j,      1) = -array(nxz+2,nyz+2-j,      1)
+         array(    1,j,nzz/2+1) =  array(    1,nyz+2-j,nzz/2+1)
+         array(    2,j,nzz/2+1) = -array(    2,nyz+2-j,nzz/2+1)
+         array(nxz+1,j,nzz/2+1) =  array(nxz+1,nyz+2-j,nzz/2+1)
+         array(nxz+2,j,nzz/2+1) = -array(nxz+2,nyz+2-j,nzz/2+1)
+         do k=2, nzz/2
+            array(    1,j,      k) =  array(    1,nyz+2-j,nzz+2-k)
+            array(    2,j,      k) = -array(    2,nyz+2-j,nzz+2-k)
+            array(nxz+1,j,      k) =  array(nxz+1,nyz+2-j,nzz+2-k)
+            array(nxz+2,j,      k) = -array(nxz+2,nyz+2-j,nzz+2-k)
+            array(    1,j,nzz+2-k) =  array(    1,nyz+2-j,      k)
+            array(    2,j,nzz+2-k) = -array(    2,nyz+2-j,      k)
+            array(nxz+1,j,nzz+2-k) =  array(nxz+1,nyz+2-j,      k)
+            array(nxz+2,j,nzz+2-k) = -array(nxz+2,nyz+2-j,      k)
+         enddo
+      enddo
+c
+c  3) adjust sides
+c
+      do k=2, nzz/2
+         array(    1,      1,k) =  array(    1,      1,nzz+2-k)
+         array(    2,      1,k) = -array(    2,      1,nzz+2-k)
+         array(nxz+1,      1,k) =  array(nxz+1,      1,nzz+2-k)
+         array(nxz+2,      1,k) = -array(nxz+2,      1,nzz+2-k)
+         array(    1,nyz/2+1,k) =  array(    1,nyz/2+1,nzz+2-k)
+         array(    2,nyz/2+1,k) = -array(    2,nyz/2+1,nzz+2-k)
+         array(nxz+1,nyz/2+1,k) =  array(nxz+1,nyz/2+1,nzz+2-k)
+         array(nxz+2,nyz/2+1,k) = -array(nxz+2,nyz/2+1,nzz+2-k)
+      enddo
+c
+      return
+      end

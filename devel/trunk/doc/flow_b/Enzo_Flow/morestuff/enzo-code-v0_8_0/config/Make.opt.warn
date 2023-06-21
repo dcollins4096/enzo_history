@@ -1,0 +1,14 @@
+#======================================================================
+#
+# Make.opt for displaying verbose compile-time warnings
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-06-21  Created
+#
+#======================================================================
+
+TEXT_OPT = $(TEXT_OPT_WARN)
+
+FLAGS_OPT = $(FLAGS_OPT_WARN_ARCH) $(FLAGS_OPT_DEBUG_ARCH) \
+            $(FLAGS_OPT_FAST_ARCH)

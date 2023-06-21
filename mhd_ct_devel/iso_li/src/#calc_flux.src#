@@ -1,0 +1,506 @@
+      
+      subroutine calc_fluxAI_mhd(gamma,wl,wr,flux,cmax,index,imeth
+     $     ,csmin,dump)
+
+      implicit none
+      integer index, imeth
+      real gamma,wl(8),wr(8),flux(8),cmax
+
+c     dcc
+      integer dump, fuck,this
+c
+c
+c...  local variable
+      real wl_un, wr_un, wa_un, wl_ut1,wr_ut1,wa_ut1,wl_ut2,
+     &     wr_ut2, wa_ut2,csmin
+      real wl_bn, wr_bn, wa_bn, wl_bt1, wr_bt1, wa_bt1, 
+     &     wl_bt2, wr_bt2, wa_bt2
+      real rho_l_inv, rho_r_inv, bb_l, bb_r, vv_l, vv_r
+      real v_c_lf, v_c_rf, v_c_af, v_a_lf, v_a_rf, 
+     &       v_E_lf, v_E_rf, v_cf_lf, v_cf_rf, v_cs_lf, v_cs_rf
+      real flux_l(8), flux_r(8), del_u(8), half
+      real v_eig(8), gm1, l_eigv(8,8), r_eigv(8,8), alpha(8), sign
+      real rho_l, rho_r, rho_a, pre_l, pre_r, pre_a, pre
+      real ammx, ampx, am, am1, am2, am2_inv, am12, tmp1, B_hll
+      real su(8), ustatel(8), ustater(8),flux1,delta1, delta2,ubar
+      real delB, v_hll, w_hll, bt1_hll, bt2_hll, apmx, v_cf_af
+      real rho_hll, mu_hll, mv_hll, mw_hll, B2, BxBy, BxBz, Bbv
+      integer i,j, ihll
+      integer printflag
+c      common /printff/printflag
+      data half/0.5e00/
+
+      gm1 = gamma - 1.0e0
+      if (index.eq. 1) then
+c
+c...  x-direction
+         wl_un  = wl(2)
+         wl_ut1 = wl(3)
+         wl_ut2 = wl(4)
+         wr_un  = wr(2)
+         wr_ut1 = wr(3)
+         wr_ut2 = wr(4)
+         
+         wl_bn  = wl(5)
+         wl_bt1 = wl(6)
+         wl_bt2 = wl(7)
+         wr_bn  = wr(5)
+         wr_bt1 = wr(6)
+         wr_bt2 = wr(7)
+      else if (index.eq.2) then
+c
+c...  y-direction
+         wl_un  = wl(3)
+         wl_ut1 = wl(4)
+         wl_ut2 = wl(2)
+         wr_un  = wr(3)
+         wr_ut1 = wr(4)
+         wr_ut2 = wr(2)
+         
+         wl_bn  = wl(6)
+         wl_bt1 = wl(7)
+         wl_bt2 = wl(5)
+         wr_bn  = wr(6)
+         wr_bt1 = wr(7)
+         wr_bt2 = wr(5)
+      else
+c
+c...  z-direction
+         wl_un  = wl(4)
+         wl_ut1 = wl(2)
+         wl_ut2 = wl(3)
+         wr_un  = wr(4)
+         wr_ut1 = wr(2)
+         wr_ut2 = wr(3)
+         
+         wl_bn  = wl(7)
+         wl_bt1 = wl(5)
+         wl_bt2 = wl(6)
+         wr_bn  = wr(7)
+         wr_bt1 = wr(5)
+         wr_bt2 = wr(6)
+      end if
+                 
+      rho_r = wr(1)
+      rho_l = wl(1)
+      rho_l_inv = 1.e0/rho_l
+      rho_r_inv = 1.e0/rho_r
+
+      pre_l = wl(8)
+      pre_r = wr(8)
+      
+      bb_l = wl_bn*wl_bn + wl_bt1*wl_bt1 + wl_bt2*wl_bt2
+      bb_r = wr_bn*wr_bn + wr_bt1*wr_bt1 + wr_bt2*wr_bt2
+      
+      vv_l = wl_un*wl_un + wl_ut1*wl_ut1 + wl_ut2*wl_ut2
+      vv_r = wr_un*wr_un + wr_ut1*wr_ut1 + wr_ut2*wr_ut2
+
+      v_c_lf = max(csmin,gamma*pre_l*rho_l_inv)
+      v_c_rf = max(csmin,gamma*pre_r*rho_r_inv)
+
+      v_a_lf = wl_bn*wl_bn*rho_l_inv
+      v_a_rf = wr_bn*wr_bn*rho_r_inv
+
+      v_E_lf  = v_c_lf + bb_l*rho_l_inv
+      v_cf_lf = max(0.e0, v_E_lf*v_E_lf - 4.e0*v_c_lf*v_a_lf)
+      v_E_rf  = v_c_rf + bb_r*rho_r_inv
+      v_cf_rf = max(0.e0, v_E_rf*v_E_rf - 4.e0*v_c_rf*v_a_rf)
+
+      v_cf_lf = sqrt(v_cf_lf)
+      v_cf_rf = sqrt(v_cf_rf)
+      
+      v_cs_lf = max(0.0e0,half*(v_E_lf-v_cf_lf))
+      v_cs_rf = max(0.0e0,half*(v_E_rf-v_cf_rf))
+      v_cs_lf = sqrt(v_cs_lf)
+      v_cs_rf = sqrt(v_cs_rf)
+
+      v_cf_lf = sqrt(half*(v_E_lf+v_cf_lf))
+      v_cf_rf = sqrt(half*(v_E_rf+v_cf_rf))
+
+      v_c_lf = sqrt(v_c_lf)
+      v_c_rf = sqrt(v_c_rf)
+
+      v_cs_lf = min(v_cs_lf, v_c_lf)
+      v_cs_rf = min(v_cs_rf, v_c_rf)
+      v_cf_lf = max(v_cf_lf, v_c_lf)
+      v_cf_rf = max(v_cf_rf, v_c_rf)
+
+      if (abs(gm1).gt.1e-12) then
+         v_E_rf = pre_r/gm1 + half*rho_r*vv_r + half*bb_r
+         v_E_lf = pre_l/gm1 + half*rho_l*vv_l + half*bb_l
+      else        
+         v_E_rf = half*rho_r*vv_r + half*bb_r
+         v_E_lf = half*rho_l*vv_l + half*bb_l
+      end if
+c
+c...  calculate flux at right and left interface
+c
+
+
+      call calc_flux1_mhd(8,wl,v_E_lf,flux_l,index)
+      call calc_flux1_mhd(8,wr,v_E_rf,flux_r,index)
+
+c     
+c...  state delta
+      ustatel(1) = rho_l
+      ustatel(2) = rho_l * wl_un
+      ustatel(3) = rho_l * wl_ut1
+      ustatel(4) = rho_l * wl_ut2
+      ustatel(5) = wl_bn
+      ustatel(6) = wl_bt1
+      ustatel(7) = wl_bt2
+      ustatel(8) = v_E_lf
+
+      ustater(1) = rho_r
+      ustater(2) = rho_r * wr_un
+      ustater(3) = rho_r * wr_ut1
+      ustater(4) = rho_r * wr_ut2
+      ustater(5) = wr_bn
+      ustater(6) = wr_bt1
+      ustater(7) = wr_bt2
+      ustater(8) = v_E_rf
+
+      do i = 1, 8
+         del_u(i) = ustater(i) - ustatel(i)
+      end do
+c
+c...  calculate the average state wa*
+      rho_a =  half*(rho_l + rho_r)
+      wa_un =  half*(wl_un + wr_un)
+      wa_ut1 = half*(wl_ut1 + wr_ut1)
+      wa_ut2 = half*(wl_ut2 + wr_ut2)
+      wa_bn =  half*(wl_bn + wr_bn)
+      wa_bt1 = half*(wl_bt1 + wr_bt1)
+      wa_bt2 = half*(wl_bt2 + wr_bt2)
+      pre_a  = half*(pre_l + pre_r)
+c
+c...  calculate the eigenvalue and eigenvector at interface.
+      if (imeth.lt.3) then
+dcf
+         call calc_eigv_mhd(rho_a,wa_un,wa_ut1,wa_ut2,wa_bn,
+     &        wa_bt1, wa_bt2,pre_a, gamma, v_eig, l_eigv,r_eigv,
+     &        v_c_af, v_cf_af, csmin,1,dump)
+      else if (imeth.eq.3) then
+         call calc_eigv_mhd(rho_a,wa_un,wa_ut1,wa_ut2,wa_bn,
+     &        wa_bt1, wa_bt2,pre_a, gamma, v_eig, l_eigv,r_eigv,
+     &        v_c_af, v_cf_af, csmin,2,dump)
+      else
+         call calc_eigv_mhd(rho_a,wa_un,wa_ut1,wa_ut2,wa_bn,
+     &        wa_bt1, wa_bt2,pre_a, gamma, v_eig, l_eigv,r_eigv,
+     &        v_c_af, v_cf_af, csmin,0,dump)
+      end if
+
+      if( dump .eq. 1 .and. .false.) then
+c         write(*,"(A,F15.8)") "arsehat rho_a",  rho_a
+c         write(*,"(A,F15.8)") "arsehat wa_un",  wa_un
+c         write(*,"(A,F15.8)") "arsehat wa_ut1",  wa_ut1
+c         write(*,"(A,F15.8)") "arsehat wa_ut2",  wa_ut2
+c         write(*,"(A,F15.8)") "arsehat wa_bn",  wa_bn
+c         write(*,"(A,F15.8)") "arsehat wa_bt1",  wa_bt1
+c         write(*,"(A,F15.8)") "arsehat wa_bt2",  wa_bt2
+c         write(*,"(A,F15.8)") "arsehat pre_a",  pre_a
+c         write(*,"(A,F15.8)") "arsehat gamma",  gamma
+c         write(*,"(A,8F15.8)") "arsehat v_eig",  v_eig
+c         write(*,"(A,F15.8)") "arsehat v_c_af",  v_c_af
+c         write(*,"(A,F15.8)") "arsehat v_cf_af",  v_cf_af
+c         write(*,"(A,F15.8)") "arsehat csmin",  csmin
+         write(*,"(A,I4)") "arsehat imeth",  imeth
+         
+         do fuck=1,8 
+            do this=1,8 
+            write(*,"(A,I2,I2,E15.8)") "arsehat eL ", 
+     +              fuck,this,l_eigv(fuck,this)
+         enddo
+      enddo
+c         write(*,"(A,64F15.8)") "arsehat eR ", r_eigv
+      endif
+
+c
+c...  maximum speed--------------???------------------------
+c      cmax = max(abs(wl_un)+v_cf_lf, abs(wr_un)+v_cf_rf)
+c-----------------------------------------------------------
+      cmax = abs(wa_un) + v_cf_af
+
+      if (imeth.lt.4) then
+c.... HLL family flux
+         ampx = max(v_eig(5), wr_un + v_cf_rf)
+         ammx = min(v_eig(7), wl_un - v_cf_lf) 
+c$$$         ampx = max(wl_un + v_cf_lf, wr_un + v_cf_rf)
+c$$$         ammx = min(wr_un - v_cf_rf, wl_un - v_cf_lf) 
+         if(ammx.ge.0e0) then
+            do i = 1, 8
+               flux(i) = flux_l(i)
+            end do
+         else if (ampx.le.0e0) then
+            do i = 1, 8
+               flux(i) = flux_r(i)
+            end do
+         else 
+            if (imeth.eq.2) then ! HLLC family
+c
+c...  three states HLLC family, Barten's algorithm
+               pre_r = pre_r + 0.5e0*bb_r
+               pre_l = pre_l + 0.5e0*bb_l
+               apmx = ampx - ammx
+               mu_hll = (ampx*ustater(2) - ammx*ustatel(2) + flux_l(2)-
+     &              flux_r(2))/apmx
+               mv_hll = (ampx*ustater(3) - ammx*ustatel(3) + flux_l(3)-
+     &              flux_r(3))/apmx
+               mw_hll = (ampx*ustater(4) - ammx*ustatel(4) + flux_l(4)-
+     &              flux_r(4))/apmx
+               rho_hll = (ampx*rho_r - ammx * rho_l + flux_l(1)-
+     &              flux_r(1))/apmx
+
+               am    = mu_hll/rho_hll
+               v_hll = mv_hll/rho_hll
+               w_hll = mw_hll/rho_hll
+
+               delB = - (wr_bn-wl_bn)/apmx
+
+               B_hll   = (ampx * wr_bn - ammx * wl_bn)/apmx + am*delB
+               B2 = B_hll*B_hll
+               Bt1_hll = (ampx*wr_bt1  - ammx * wl_bt1 + flux_l(6)-
+     &              flux_r(6))/apmx + v_hll*delB
+               Bt2_hll = (ampx*wr_bt2  - ammx * wl_bt2 + flux_l(7)-
+     &              flux_r(7))/apmx + w_hll*delB
+c
+c...  middle state of the magnetic fields
+               su(5) = B_hll 
+               su(6) = Bt1_hll
+               su(7) = Bt2_hll
+               BxBy = B_hll * Bt1_hll
+               BxBz = B_hll * Bt2_hll
+               Bbv  = B_hll*(am*B_hll + v_hll*Bt1_hll + w_hll*Bt2_hll)
+               
+               if (am .ge.0e0) then
+c     
+c...  calculate the middle state ul*
+                  am1 = ammx - wl_un
+                  am2 = ammx - am
+                  am2_inv = 1e0/am2
+                  tmp1 = rho_l*am1
+                  pre  = tmp1*(am - wl_un) + pre_l + B2 - wl_bn*wl_bn
+
+                  am12 = am1*am2_inv
+                  su(1) = am12 * rho_l
+                  su(2) = su(1)*am
+                  su(3) = am12*ustatel(3) - (BxBy-wl_bn*wl_bt1)*am2_inv
+                  su(4) = am12*ustatel(4) - (BxBz-wl_bn*wl_bt2)*am2_inv
+                  su(8) = am12*ustatel(8) + (pre*am-pre_l*wl_un)*am2_inv
+     &                 - (Bbv - wl_bn*(wl_bn*wl_un + wl_bt1*wl_ut1 +
+     $                 wl_bt2*wl_ut2)) * am2_inv
+                  do i = 1, 8
+                     flux(i) = flux_l(i) + ammx*(su(i) - ustatel(i))
+                  end do
+               else 
+c     
+c...  calculate the middle state ur*
+                  am1 = ampx - wr_un
+                  am2 = ampx - am
+                  am2_inv = 1e0/am2
+                  tmp1 = rho_r*am1
+                  pre  = tmp1*(am - wr_un) + pre_r+ B2 - wr_bn*wr_bn
+                  
+                  am12 = am1*am2_inv
+                  su(1) = rho_r * am12
+                  su(2) = su(1)*am
+                  su(3) = am12*ustater(3) - (BxBy-wr_bn*wr_bt1)*am2_inv
+                  su(4) = am12*ustater(4) - (BxBz-wr_bn*wr_bt2)*am2_inv
+                  su(8) = am12*ustater(8) + (pre*am-pre_r*wr_un)*am2_inv
+     &                 - (Bbv - wr_bn*(wr_bn*wr_un + wr_bt1*wr_ut1 +
+     $                 wr_bt2*wr_ut2))*am2_inv
+                  do i = 1, 8
+                     flux(i) = flux_r(i) + ampx*(su(i) - ustater(i))
+                  end do
+               end if           ! if (am)
+            else 
+c$$$               ampx = max(ampx, -ammx)
+c$$$               ammx = - ampx
+               do i = 1, 8
+                  flux(i) = (ampx*flux_l(i) - ammx*flux_r(i) + 
+     &                 ampx*ammx*del_u(i))/(ampx - ammx)
+               end do
+            end if              ! if (imeth)            
+         end if                 ! if (ammx < 0 < ampx)
+      end if
+
+      if (imeth .lt. 3) goto 99
+      if (imeth .eq. 3) then
+c
+c...  HLLE with anti-diffusion term
+c...  anti-diffusion for other than fast magnetosonic fields
+         if (ammx .lt. 0e0 .and. ampx .gt. 0e0) then
+            tmp1 = v_c_af
+            delta1 = (ampx*ammx)/(ampx - ammx)
+            do i = 1, 8
+               if (i.ne.5.and.i.ne.7) then
+                  delta2 = 0.e0
+                  do j = 1, 8
+                     delta2 = delta2 + l_eigv(j,i)*del_u(j)
+                  end do
+                  ubar = half*(ampx+ammx) ! HLLEM method
+                  alpha(i) = delta1*delta2*(tmp1/(tmp1+abs(ubar)))
+               end if
+            end do
+            do i = 1, 8
+               flux1 = 0e0
+               do j = 1, 8
+                  if (j.ne.5.and.j.ne.7) then
+                     flux1 = flux1 + alpha(j)*r_eigv(j,i)
+                  end if
+               end do
+               flux(i) = flux(i) - flux1
+            end do
+         end if
+         goto 99
+      end if
+c     
+c...  entropy fix
+c$$$      v_a_lf = sqrt(v_a_lf)
+c$$$      v_a_rf = sqrt(v_a_rf)
+c$$$                                !Entropy   
+c$$$      tmp1 = max(0.e0, 4.0e0*(wr_un - wl_un))
+c$$$      if (abs(v_eig(1)) .lt. tmp1*half) then
+c$$$         v_eig(1) = sign(1.e0, v_eig(1)) *
+c$$$     &        (v_eig(1)*v_eig(1)/tmp1 + tmp1*0.25e0)
+c$$$      end if
+c$$$      
+c$$$                                !Alfven + 
+c$$$      tmp1 = (wr_un+v_a_rf) - (wl_un+v_a_lf)
+c$$$      tmp1 = max(0.e0, 4.0e0*tmp1)
+c$$$      if (abs(v_eig(2)) .lt. tmp1*half) then
+c$$$         v_eig(2) = sign(1.e0, v_eig(2)) *
+c$$$     &        (v_eig(2)*v_eig(2)/tmp1 + tmp1*0.25e0)
+c$$$      end if
+c$$$                                !Alfven - 
+c$$$      tmp1 = (wr_un-v_a_rf) - (wl_un-v_a_lf)
+c$$$      tmp1 = max(0.e0, 4.0e0*tmp1)
+c$$$      if (abs(v_eig(3)) .lt. tmp1*half) then
+c$$$         v_eig(3) = sign(1.e0, v_eig(3)) *
+c$$$     &        (v_eig(3)*v_eig(3)/tmp1 + tmp1*0.25e0)
+c$$$      end if
+
+      tmp1 = (wr_un+v_cs_rf) - (wl_un+v_cs_lf)
+      tmp1 = max(0.e0, 4.0e0*tmp1)
+      if (abs(v_eig(4)) .lt. tmp1*half) then
+         v_eig(4) = sign(1.e0, v_eig(4)) *
+     &        (v_eig(4)*v_eig(4)/tmp1 + tmp1*0.25e0)
+      end if
+                                !fast + 
+      tmp1 = (wr_un+v_cf_rf) - (wl_un+v_cf_lf)
+      tmp1 = max(0.e0, 4.0e0*tmp1)
+      if (abs(v_eig(5)) .lt. tmp1*half) then
+         v_eig(5) = sign(1.e0, v_eig(5)) *
+     &        (v_eig(5)*v_eig(5)/tmp1 + tmp1*0.25e0)
+      end if
+                                !Slow - 
+      tmp1 = (wr_un-v_cs_rf) - (wl_un-v_cs_lf)
+      tmp1 = max(0.e0, 4.0e0*tmp1)
+      if (abs(v_eig(6)) .lt. tmp1*half) then
+         v_eig(6) = sign(1.e0, v_eig(6)) *
+     &        (v_eig(6)*v_eig(6)/tmp1 + tmp1*0.25e0)
+      end if
+                                !fast - 
+      tmp1 = (wr_un-v_cf_rf) - (wl_un-v_cf_lf)
+      tmp1 = max(0.e0, 4.0e0*tmp1)
+      if (abs(v_eig(7)) .lt. tmp1*half) then
+         v_eig(7) = sign(1.e0, v_eig(7)) *
+     &        (v_eig(7)*v_eig(7)/tmp1 + tmp1*0.25e0)
+      end if
+
+                                !Divergence
+      v_eig(8) = v_eig(1)
+                                !\
+                                ! Timur's divergence wave fix!!!
+                                !/
+c      v_eig(8)=abs(v_eig(8))+v_c_af
+c      v_eig(8) = 0e0
+                                !\
+                                ! Alphas (elemental wave strengths)
+                                !/
+      do i = 1, 8
+         alpha(i) = 0.e0
+         do j = 1, 8
+            alpha(i) = alpha(i) + l_eigv(j,i)*del_u(j)
+         end do
+         alpha(i) = alpha(i) * abs(v_eig(i))  
+      end do         
+                                !\
+                                ! Calculate the Roe Interface fluxes
+                                !/
+      do i = 1, 8
+         flux(i) = (flux_l(i)+flux_r(i))
+         do j = 1, 8
+            flux(i) = flux(i) - alpha(j)*r_eigv(j,i)
+         end do
+c...  LxF flux
+c$$$         flux(i) = flux(i) - cmax*del_u(i)
+         flux(i) = flux(i)*half
+      enddo
+c
+c...  possible modification for imeth = 4 combined with HLL flux
+      if (imeth.gt.4) then
+         ampx = max(v_eig(5), wr_un + v_cf_rf)
+         ammx = min(v_eig(7), wl_un - v_cf_lf) 
+         if (ammx .ge. 0) then
+            do i = 1, 8
+               flux(i) = flux_l(i)
+            end do
+            goto 99
+         else if (ampx .le. 0) then
+            do i = 1, 8
+               flux(i) = flux_r(i)
+            end do
+            goto 99
+         end if
+            
+         do i = 1, 8
+            su(i) = ustatel(i) + (flux(i) - flux_l(i))/ammx
+         end do
+         ihll = 0
+         if (su(1).lt.0) ihll = 1
+         if (ihll .eq. 0) then
+            pre_l = (su(8) - 0.5*(su(2)*su(2)+su(3)*su(3)+su(4)*su(4))/
+     &           su(1) - 0.5*(su(5)*su(5)+su(6)*su(6)+su(7)*su(7)))
+            if (pre_l .lt. 0) ihll = 1
+         end if
+         if (ihll .eq. 0) then
+            do i = 1, 8
+               su(i) = ustater(i) + (flux(i) - flux_r(i))/ampx
+            end do
+            if (su(1) .lt. 0) ihll = 1
+            if (ihll .eq. 0) then
+               pre_r = (su(8)-0.5*(su(2)*su(2)+su(3)*su(3)+su(4)*su(4))
+     &              /su(1) - 0.5*(su(5)*su(5)+su(6)*su(6)+su(7)*su(7)))
+               if (pre_r .lt. 0) ihll = 1
+            end if
+         end if
+         if (ihll .eq. 1) then
+            do i = 1, 8
+               flux(i) = (ampx*flux_l(i) - ammx*flux_r(i) + 
+     &              ampx*ammx*del_u(i))/(ampx - ammx)
+            end do
+         end if
+      end if
+ 99   continue
+      if (index.eq.2) then
+         tmp1 = flux(2)
+         flux(2) = flux(4)
+         flux(4) = flux(3)
+         flux(3) = tmp1
+         tmp1 = flux(5)
+         flux(5) = flux(7)
+         flux(7) = flux(6)
+         flux(6) = tmp1
+      else if (index.eq.3) then
+         tmp1 = flux(2)
+         flux(2) = flux(3)
+         flux(3) = flux(4)
+         flux(4) = tmp1
+         tmp1 = flux(5)
+         flux(5) = flux(6)
+         flux(6) = flux(7)
+         flux(7) = tmp1
+      end if
+      return
+      end

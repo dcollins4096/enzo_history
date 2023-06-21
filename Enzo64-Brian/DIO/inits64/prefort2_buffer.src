@@ -1,0 +1,217 @@
+!=======================================================================
+!///////////////////////  SUBROUTINE PREFORT  \\\\\\\\\\\\\\\\\\\\\\\\\\
+
+      subroutine prefort(buffer, tempbuffer, dim1, dim2, dim3,
+     &                   rdim1, rdim2, rdim3, rank, isign)
+
+!  PREPARES THE REAL/COMPLEX BUFFER FOR A CALL TO FORTRAN COMPLEX FFT
+
+!     written by: Robert Harkness
+!     date:       May, 2003
+
+!  INPUTS:
+!     buffer      - real or complex array to be transformed
+!     tempbuffer  - temporary buffer of size 2*dim1*dim2*dim3
+!     dim1,2,3    - dimension of transform
+!     rdim1,2,3   - declared dimension of buffer
+!     rank        - number of dimensions to be used in transform
+!     isign       - direction of transform
+
+!  OUTPUTS:
+!     buffer      - transformed array
+
+      implicit NONE
+
+!  Arguments
+
+      integer :: dim1, dim2, dim3, isign, rank, rdim1, rdim2, rdim3
+      real    :: buffer(rdim1, rdim2, rdim3), 
+     &           tempbuffer(2*dim1, dim2, dim3)
+
+!  Locals
+
+      integer :: i, i1, j, j1, k, k1, dims(3)
+      real    :: factor
+
+      real, allocatable :: pbuffer1(:,:), pbuffer2(:,:)
+      real, allocatable :: pbuffer3(:,:), pbuffer4(:,:)
+
+!     Error check
+
+
+      write(0,'("Pre-Fortran FFT ",8i8)')
+     & rdim1, rdim2, rdim3, dim1, dim2, dim3, rank, isign
+
+      if (rdim1 .lt. dim1+2) then
+         write (0,*) 'PREFORT: rdim1 < dim1+2:', rdim1, dim1+2
+         stop
+      endif
+
+!     Copy dims into integer array for fourn
+
+      dims(1) = dim1
+      dims(2) = dim2
+      dims(3) = dim3
+
+!     1) Forward direction
+
+      if (isign .eq. -1) then
+
+!        Copy real data into complex temporary
+
+         open(38, file='pb1', form='unformatted', status='unknown')
+         do k = 1, dim3
+         write(38) ((buffer(i,j,k), i = 1, dim1+2), j = 1, dim2)
+         end do
+         rewind(38)
+
+         allocate( pbuffer1(1:dim1+2, 1:dim2) )
+
+         tempbuffer = 0.0
+
+         do k = 1, dim3
+            read(38) ((pbuffer1(i,j), i = 1, dim1+2), j = 1, dim2)
+            do j = 1, dim2
+               do i = 1, dim1
+                  tempbuffer(i*2-1, j, k) = pbuffer1(i, j)
+                  tempbuffer(i*2  , j, k) = 0.0
+               enddo
+            enddo
+         enddo
+
+         deallocate( pbuffer1 )
+         close(38)
+
+!        Carry out the transform
+
+
+!        call nr_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+!        call nrot_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+!        call sing90_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+!        call sing66_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+
+         call fortfft(tempbuffer, rank, dim1, dim2, dim3, isign)
+
+
+!        Copy unique part of complex temporary back to buffer.
+
+         open(39, file='pb2', form='unformatted', status='unknown')
+         do k = 1, dim3
+         write(39) ((tempbuffer(i,j,k), i = 1, dim1*2), j = 1, dim2)
+         end do
+         rewind(39)
+
+         allocate( pbuffer2( 1:dim1*2, 1:dim2 ) )
+
+         do k = 1, dim3
+            read(39) ((pbuffer2(i,j), i = 1, dim1*2), j = 1, dim2)
+            do j = 1, dim2
+               do i = 1, dim1+2
+                  buffer(i, j, k) = pbuffer2(i, j)
+               enddo
+            enddo
+         enddo
+
+         deallocate( pbuffer2 )
+         close(39)
+
+!     2) Inverse transform
+
+      else
+
+!        Recreate the other half of the complex data.
+
+         write(0,'("Hard bit")')
+
+         open(48, file='pb3', form='unformatted', status='unknown')
+         do k = 1, dim3
+         write(48) ((buffer(i,j,k), i = 1, dim1+2), j = 1, dim2)
+         end do
+         rewind(48)
+
+         allocate( pbuffer3(1:dim1+2, 1:dim2) )
+
+         tempbuffer = 0.0
+
+         do k = 1, dim3
+            read(48) ((pbuffer3(i,j), i = 1, dim1+2), j = 1, dim2)
+            do j = 1, dim2
+
+!              First copy the 1/2 that is already there.
+
+               do i = 1, dim1+2
+                  tempbuffer(i, j, k) = pbuffer3(i, j)
+               enddo
+
+            enddo
+         enddo
+
+         rewind(48)
+
+         do k1 = 1, dim3
+            read(48) ((pbuffer3(i,j), i = 1, dim1+2), j = 1, dim2) 
+            do j1 = 1, dim2
+
+               k = dim3 + 2 - k1
+               j = dim2 + 2 - j1
+         
+!              Use conjugate relations to make up other 1/2.
+
+               if (k1 .eq. 1) k = 1
+               if (j1 .eq. 1) j = 1
+
+               do i1 = 2, dim1/2
+                  i = dim1 + 2 - i1
+                  tempbuffer(i*2-1, j, k) =   pbuffer3(i1*2-1, j1)
+                  tempbuffer(i*2  , j, k) = - pbuffer3(i1*2  , j1)
+               enddo
+
+            enddo
+         enddo
+
+         deallocate( pbuffer3 )
+         close(48)
+
+!        Perform transform
+
+
+!        call nr_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+!        call nrot_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+!        call sing66_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+!        call sing90_fftx(tempbuffer, rank, dim1, dim2, dim3, isign)
+
+         call fortfft(tempbuffer, rank, dim1, dim2, dim3, isign)
+
+         open(49, file='pb4', form='unformatted', status='unknown')
+         do k = 1, dim3
+         write(49) ((tempbuffer(i,j,k), i = 1, dim1*2), j = 1, dim2)
+         end do
+         rewind(49)
+
+         allocate( pbuffer4(1:dim1*2, 1:dim2) )
+
+!        Copy real part of tempbuffer to buffer & scale.
+
+
+!        factor = 1.0/real(dim1*dim2*dim3)
+
+         do k = 1, dim3
+            read(49) ((pbuffer4(i,j), i = 1, dim1*2), j = 1, dim2)
+            do j = 1, dim2
+               do i = 1, dim1
+                  buffer(i, j, k) = pbuffer4(i*2-1, j) ! *factor
+               enddo
+            enddo
+         enddo
+
+         deallocate( pbuffer4 )
+         close(49)
+
+      endif
+
+!     Done
+
+      write(0,'("Exit Pre-Fortran")')
+
+      return
+      end

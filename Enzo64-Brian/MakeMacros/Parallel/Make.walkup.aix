@@ -1,0 +1,53 @@
+#
+# macros for bgl
+#
+
+MPI_INC =
+TRACE = /u/walkup/mpi_trace/aix/libmpihpm.a -lpmapi
+MPI_LIB = $(TRACE)
+FORTRAN_LIBS = -lxlf90 /u/walkup/mass/libmassvp4.a
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /gpfs/fs2/walkup/hdf5
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /usr/local/apps/hdf4
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+CPP          = /usr/lib/cpp 
+DEFINES      = -D${PRECISION} -DUSE_MPI -DUSE_VECTOR
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = mpxlf90_r
+FC_OPT       = -g -pg -qfullpath -O -qarch=pwr4 -qmaxmem=64000
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed=132
+
+## C Compiler
+CC           = mpcc_r
+CC_OPT       = -g -pg -qfullpath -O -qarch=pwr4 -qmaxmem=64000 -DBGL
+CFLAGS       = 
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = mpCC_r
+CCxx_OPT     = -g -pg -qfullpath -O -qarch=pwr4 -qmaxmem=64000 -DBGL -DUSE_MPI
+CCxxFLAGS    = 
+
+#CCxx	     = xlC128
+#CCxx_OPT    = -O -DSP2 -DUSE_MPI -qldbl128
+
+## Linker/loader
+LDR          = mpCC_r
+LDR_OPT      = -g -pg -qfullpath -bmaxdata:0x80000000 -bnoobjreorder
+
+LIB          = -L${HDF5_INSTALL}/lib -lhdf5 -lz \
+               $(MPI_LIB) $(FORTRAN_LIBS)
+
+OPTS         = -c -I${HDF5_INSTALL}/include $(MPI_INC)
+DEBUG        = 

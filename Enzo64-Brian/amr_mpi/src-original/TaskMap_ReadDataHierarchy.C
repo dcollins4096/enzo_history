@@ -1,0 +1,141 @@
+/***********************************************************************
+/
+/  READ IN THE DATA HIERARCHY (DATA & RESTART DUMP)
+/
+/  written by: Greg Bryan
+/  date:       May, 1995
+/  modified1:  Alexei Kritsuk, Jan 2004 now reads RandomForcing fields //AK
+/  modified2:  Robert harkness, Jan 2006
+/              Read Unigrid Grid-to-MPI task map
+/              This is necessary only for ultra-large grids on
+/              node memory challenged systems
+/
+/  PURPOSE:
+/
+************************************************************************/
+ 
+// This function reads in the data hierarchy (TopGrid)
+ 
+#include <string.h>
+#include <stdio.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+#include "Hierarchy.h"
+#include "TopGridData.h"
+ 
+/* function prototypes */
+ 
+static int ReadDataGridCounter = 0;
+ 
+int ReadDataHierarchy(FILE *fptr, HierarchyEntry *Grid, int GridID,
+		      HierarchyEntry *ParentGrid)
+{
+ 
+  int TestGridID, NextGridThisLevelID, NextGridNextLevelID;
+ 
+  /* Read header info for this grid */
+ 
+  if (fscanf(fptr, "\nGrid = %"ISYM"\n", &TestGridID) != 1) {
+    fprintf(stderr, "Error reading Grid # in grid %"ISYM".\n", GridID);
+    return FAIL;
+  }
+  if (TestGridID != GridID) {
+    fprintf(stderr, "Unexpected GridID = %"ISYM" while reading grid %"ISYM".\n",
+	    TestGridID, GridID);
+    return FAIL;
+  }
+ 
+  /* Create new grid and fill out hierarchy entry. */
+ 
+  Grid->GridData          = new grid;
+  Grid->NextGridThisLevel = NULL;
+  Grid->NextGridNextLevel = NULL;
+  Grid->ParentGrid        = ParentGrid;
+
+  int CPU;
+  CPU = ReadDataGridCounter % NumberOfProcessors;
+//  if ( MyProcessorNumber == 0 )
+//    fprintf(stderr, "Grid->Processor assignment:  GridID = %"ISYM"  MPI Task = %"ISYM"\n", GridID, CPU);
+
+//    Grid->GridData->SetProcessorNumber(ReadDataGridCounter++ %
+//					 NumberOfProcessors);
+
+  if ( MyProcessorNumber == 0 ) 
+    fprintf(stderr, "New assignment: GridID = %"ISYM"  MPI Task = %"ISYM"\n", GridID, TaskMap[GridID-1]);
+
+    Grid->GridData->SetProcessorNumber(TaskMap[GridID-1]);
+
+  /* Read grid data for this grid. */
+ 
+  if (Grid->GridData->ReadGrid(fptr, GridID) == FAIL) {
+    fprintf(stderr, "Error in grid->ReadGrid (grid %"ISYM").\n", GridID);
+    return FAIL;
+  }
+ 
+  /* Read RandomForcingFields for the grid(s) on level 0. //AK */
+ 
+  if (RandomForcing && ParentGrid == NULL && extract != TRUE)
+    if (Grid->GridData->ReadRandomForcingFields(fptr) == FAIL) {
+      fprintf(stderr, "Error in grid->ReadRandomForcingFields (grid %"ISYM").\n",
+              GridID);
+      return FAIL;
+    }
+ 
+  /* Read pointer information for the next grid this level. */
+ 
+  if (fscanf(fptr, "Pointer: Grid[%"ISYM"]->NextGridThisLevel = %"ISYM"\n",
+	     &TestGridID, &NextGridThisLevelID) != 2) {
+    fprintf(stderr, "Error reading NextGridThisLevel pointer for grid %"ISYM".\n",
+	    GridID);
+    return FAIL;
+  }
+  if (TestGridID != GridID) {
+    fprintf(stderr, "GridID = %"ISYM" does not match grid(1) %"ISYM".\n",
+	    TestGridID, GridID);
+    return FAIL;
+  }
+ 
+  /* If the pointer was non-zero, then read that grid. */
+ 
+  if (NextGridThisLevelID != 0) {
+    Grid->NextGridThisLevel = new HierarchyEntry;
+    if (ReadDataHierarchy(fptr, Grid->NextGridThisLevel, NextGridThisLevelID,
+			  ParentGrid) == FAIL) {
+      fprintf(stderr, "Error in ReadDataHierarchy(1).\n");
+      return FAIL;
+    }
+  }
+ 
+  /* Read pointer information for the next grid next level. */
+ 
+  if (fscanf(fptr, "Pointer: Grid[%"ISYM"]->NextGridNextLevel = %"ISYM"\n",
+	     &TestGridID, &NextGridNextLevelID) != 2) {
+    fprintf(stderr, "Error reading NextGridNextLevel pointer for grid %"ISYM".\n",
+	    GridID);
+    return FAIL;
+  }
+  if (TestGridID != GridID) {
+    fprintf(stderr, "GridID = %"ISYM" does not match grid(2) %"ISYM".\n",
+	    TestGridID, GridID);
+    return FAIL;
+  }
+ 
+  /* If the pointer was non-zero, then read that grid. */
+ 
+  if (NextGridNextLevelID != 0) {
+    Grid->NextGridNextLevel = new HierarchyEntry;
+    if (ReadDataHierarchy(fptr, Grid->NextGridNextLevel, NextGridNextLevelID,
+			  Grid)
+	== FAIL) {
+      fprintf(stderr, "Error in ReadDataHierarchy(2).\n");
+      return FAIL;
+    }
+  }
+ 
+  return SUCCESS;
+}

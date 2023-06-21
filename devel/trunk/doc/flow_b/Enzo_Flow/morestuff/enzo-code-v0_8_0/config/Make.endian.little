@@ -1,0 +1,13 @@
+#======================================================================
+#
+# Make.endian for little-endian HDF5
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_ENDIAN = $(TEXT_ENDIAN_LITTLE)
+
+DEFINES_ENDIAN = -DHDF5_LE

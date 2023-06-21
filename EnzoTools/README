@@ -1,0 +1,45 @@
+Directory descriptions:
+
+BoxInfo  - goes through an Enzo AMR hierarchy and calcualtes a bunch of 
+	   statistics about the box.
+
+EnzoDSR  - Example enzo dataset reader.  This was originally for Gabe, but
+           is useful for people who need to modify Enzo datasets.
+
+EnzoExtract64  - 64-bit position information cube extraction tool.
+
+GetDenPeak64  - finds the (x,y,z) position of maximum baryon and dark matter
+                density in an enzo simulation volume
+
+GetH2Frac  - given some information about halo positions and masses, this goes
+             through and calculates the mean H2 fraction in each halo.  This is
+             not all that useful for our current project, but can be modified 
+             to do useful things.
+
+ProjPosns  - given root grid size, desired image size, and position information
+             this will calculate the projection regions and some other info, and
+             output it in a batch script format such that enzoproj is called.
+
+batch_scripts  - example batch scripts.  Generally csh.
+
+example_hdf_reader  - reads in a bunch of enzo dataset cubes and converts
+                      everything to CGS.  Again, this is not meant to be useful
+                      for anything specific, but it's handy to have around for
+                      reference.
+
+idl_scripts  - some useful (and semi-useful) IDL scripts.
+
+star_analysis  - the two star analysis programs from before.  See README files
+                 for descriptions.
+
+UnigridTools  - these are some useful tools for unigrid datasets (NOT AMR DATASETS)
+                and are intended to be examples.
+
+MeanOD - AMR code to calculate mean overdensities for all cells within a given radius
+           of a given position (radii calculated as multiples of the virial radius)
+           (BWO, 16 June 2006)
+
+DensVar - calculates variance in density of a region in a simulation (BWO, 16 June 2006)
+
+Raven - HippoDraw tool to make slices, projections, and two- and three-phase
+        diagrams.  Can also grab the data and output to text.

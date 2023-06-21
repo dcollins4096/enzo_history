@@ -1,0 +1,34 @@
+      subroutine enzo_seed(long_seed)
+
+      implicit none
+
+      integer :: long_seed
+
+!     NAG Mark 20
+
+      integer*4 :: iseed(4), igen
+
+      common /nag_g05kbf_block/ igen, iseed
+
+      external :: a00aaf
+      external :: g05kbf
+
+      save /nag_g05kbf_block/
+
+!     1 <= igen <= 273 for Wichman-Hill generator
+!     W-H has a period of 2^92 but actually > 2^80
+!     NAG advise not using more than the sqrt of this
+!     so < 2^40 trials == 1.09e+12
+
+      igen = 137
+
+      iseed(1) = 1762543
+      iseed(2) = 9324783
+      iseed(3) =   42344
+      iseed(4) =  742335
+
+      call a00aaf()
+      call g05kbf(igen, iseed)
+
+      return
+      end

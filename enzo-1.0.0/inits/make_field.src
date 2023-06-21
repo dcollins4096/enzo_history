@@ -1,0 +1,199 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+#include "fortran.def"
+c=======================================================================
+c//////////////////////  SUBROUTINE MAKE_FIELD  \\\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine make_field(field, nx, ny, nz, nxmax, nymax, nzmax,
+     &                      in, jn, kn, itype, iseed, box,
+     &                      PSTable, PSMin, PSStep, kfcutoff)
+c
+c  COMPUTES RANDOM GAUSSIAN FIELD FROM SPECIFIED POWER SPECTRUM
+c
+c     written by: Greg Bryan
+c     date:       June, 1997
+c
+c  PURPOSE: 
+c
+c  INPUTS:
+c        i,j,kn      = real dimensions of green
+c        nx,ny,nz    = active dimensions of green
+c        nx,y,zmax   = dimensions of k field (for random number countinf)
+c        itype       = field type (0 - density, 1/2/3 - x/y/z displacement)
+c        iseed       = random number seed (negative)
+c        box         = size
+c        PSTable     = Table of precomputed PS values
+c        PSMin       = minimum x value in PSTable
+c        PSStep      = x step in PSTable
+c        kfcutoff    = high k filter (sharp) in units of the fundamental
+c
+c  Outputs:
+c        field       = gaussian random field
+c
+c  LOCALS:
+c        num_dim     = number of dimensions to be used for force law
+c        nx,y,zmid   = midpoint (+1) of the grid in each axis
+c        nx,y,zd2    = number of grid points divided by 2 for each axis
+c
+c  EXTERNALS: 
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c  arguments
+c
+      integer in, jn, kn, nx, ny, nz, nxmax, nymax, nzmax, 
+     &        itype, iseed, kfcutoff
+      real    field(in, jn, kn), box, 
+     &        PSMin, PSPart, PSStep, PSTable(1)
+c
+c  locals
+c
+      integer i, ii, j, jj, k, kk, index, nxmid, nymid, nzmid
+      real    ang, amp, d3k, dummy, kmodsq, kx, ky, kz, kdir,
+     &        klog, psval, ran1, twopi, kcutoffsq, dkx, dky, dkz
+      complex z
+c
+c  Define table lookup function
+c
+      real    Table1, Table2, Step, Min, Tablex, TableLookUp
+      integer Tablei
+      TableLookUp(Table1, Table2, Step, Min, Tablei, Tablex) = 
+     &          Table1 + (Tablex - real(Tablei-1)*Step - Min) 
+     &          / Step * (Table2 - Table1)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////////
+c=======================================================================
+c
+c     Set constants
+c
+      twopi  = 8.0*atan(1.0)
+      dkx    = twopi/box
+      dky    = twopi/(ny*box/nx)
+      dkz    = twopi/(nz*box/nx)
+      d3k    = (twopi/box)**3
+      kcutoffsq = 1.0e30
+      if (kfcutoff .gt. 0) kcutoffsq = (kfcutoff*dkx)**2
+c
+c     Initialize random # generator with random seed
+c
+      dummy = ran1(iseed)
+c
+c     Set maximum wavenumbers in the positive direction
+c
+      nxmid  = max(nx/2 + 1, 1)
+      nymid  = max(ny/2 + 1, 1)
+      nzmid  = max(nz/2 + 1, 1)
+c
+c     Loop over k
+c
+      do k = 1, nzmax
+         kk = k-1
+         if (k .gt. nzmax/2+1) kk = kk - nzmax
+         kz    = real(kk)*dkz
+c
+c        Loop over j
+c
+         do j = 1, nymax
+            jj = j-1
+            if (j .gt. nymax/2+1) jj = jj - nymax
+            ky    = real(jj)*dky
+c
+c           If this j corresponds to a wavenumber vector that is not
+c             inside field then just skip over it (& eat the random nums).
+c
+            if (jj .ge. nymid .or. jj .lt. -ny/2+1 .or.
+     &          kk .ge. nzmid .or. kk .lt. -nz/2+1     ) then
+               do i=1,nxmax/2+1
+                  dummy = ran1(0)
+                  dummy = ran1(0)
+               enddo
+               goto 100
+            endif
+c
+c           Loop over i
+c
+            do i = 1, nxmid
+               ii    = i-1
+               kx    = real(ii)*dkx
+c
+c              Compute kmod and lookup value in table
+c                (and convert from power per mode).
+c
+               kmodsq  = (kx**2 + ky**2 + kz**2)
+               if (kmodsq .eq. 0) kmodsq = 1.0
+               klog   = 0.5*log(kmodsq)
+               index = int((klog - PSMin)/PSStep)
+               psval = TableLookUp(PSTable(index), PSTable(index+1),
+     &                             PSStep, PSMin, index, klog)
+               psval = psval * d3k
+               if (kmodsq .gt. kcutoffsq) psval = 0.0
+c
+c              Generate a complex number with random phase and amplitude
+c               gaussian distributed with a mean of sqrt(psval) with the
+c               Box-Muller method.  Note we have supressed a factor of
+c               sqrt(2) since we must also divide by this factor to account
+c               for the dreary fact that we are really generating two random
+c               fields (if we were doing a complex-to-complex transform
+c               this would show up when we discared the perfectly
+c               good imaginary component of the transformed field).  whew.
+c
+               ang = twopi*ran1(0)
+               amp = sqrt(-log(max(ran1(0),1.0e-37)) * psval)
+               z   = cmplx(cos(ang), sin(ang)) * amp
+c
+c              Process this on the basis of itype:
+c                0) density field - just leave it be.
+c                1-3) displacement field - multiply by vec(k)/k^2
+c                     (and then convert from Mpc to fraction of box).
+c              
+               if (itype .ne. 0) then
+                  if (itype .eq. 1) kdir = kx
+                  if (itype .eq. 2) kdir = ky
+                  if (itype .eq. 3) kdir = kz
+                  z = z * cmplx(0.0,1.0) * kdir / (kmodsq**2 * box)
+               endif
+c
+c              Set the complex field
+c
+               field(i*2-1,j,k) = REAL_PART(z)
+               field(i*2  ,j,k) = IMAG_PART(z)
+c
+            enddo
+c
+c           Now loop over the rest of the kx space to use up the
+c              alloted number of random numbers
+c
+            do i=nxmid+1, nxmax/2+1
+               dummy = ran1(0)
+               dummy = ran1(0)
+            enddo
+c
+ 100        continue
+c
+         enddo
+      enddo
+c
+c     Clear the zero wavenumber position
+c
+      field(1,1,1) = 0.0
+      field(2,1,1) = 0.0
+c
+c     Adjust the field to satisfy that conjugate relations that
+c      are implied by a zero imaginary part.
+c
+      call adjfft(field, nx, ny, nz, in, jn)
+c
+      return
+      end

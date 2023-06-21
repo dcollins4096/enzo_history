@@ -1,0 +1,22 @@
+#======================================================================
+#
+# Make.mpi for VMI MPI
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_MPI = $(TEXT_MPI_ON)
+
+CC_MPI = $(CC_MPI_ARCH)
+CXX_MPI = $(CXX_MPI_ARCH)
+FC_MPI = $(FC_MPI_ARCH)
+F90_MPI = $(F90_MPI_ARCH)
+LD_MPI = $(LD_MPI_ARCH)
+
+DEFINES_MPI = -DUSE_MPI 
+
+FLAGS_MPI = $(FLAGS_MPI_ARCH)
+LIBS_MPI = $(LIBS_MPI_ARCH)

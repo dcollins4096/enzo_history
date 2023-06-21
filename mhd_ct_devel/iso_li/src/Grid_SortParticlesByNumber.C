@@ -1,0 +1,79 @@
+/*****************************************************************************
+ *                                                                           *
+ * Copyright 2004 Greg Bryan                                                 *
+ * Copyright 2004 Laboratory for Computational Astrophysics                  *
+ * Copyright 2004 Board of Trustees of the University of Illinois            *
+ * Copyright 2004 Regents of the University of California                    *
+ *                                                                           *
+ * This software is released under the terms of the "Enzo Public License"    *
+ * in the accompanying LICENSE file.                                         *
+ *                                                                           *
+ *****************************************************************************/
+/***********************************************************************
+/
+/  GRID CLASS (SORT PARTICLES BY PARTICLE NUMBER)
+/
+/  written by: Greg Bryan
+/  date:       Jan, 2001
+/  modified1:
+/
+/  PURPOSE:
+/
+/  NOTE: 
+/
+************************************************************************/
+
+#include <stdio.h>
+#include <math.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+
+/* function prototypes */
+
+void QuickSortAndDrag(int List[], int left, int right, 
+		      int NumberToDrag1, float *DragList1[], 
+		      int NumberToDrag2, FLOAT *DragList2[]);
+
+
+void grid::SortParticlesByNumber()
+{
+
+  /* Return if this doesn't concern us. */
+
+  if (ProcessorNumber != MyProcessorNumber || NumberOfParticles == 0)
+    return;
+
+  int dim, j;
+
+  /* Allocate arrays of pointer, one for float type and one for FLOAT type,
+     and file them up with pointers to the particle data. */
+
+  float **DragList1 = 
+      new float*[GridRank+1+NumberOfParticleAttributes];
+  FLOAT **DragList2 = new FLOAT*[GridRank];
+  for (dim = 0; dim < GridRank; dim++) {
+    DragList2[dim] = ParticlePosition[dim];
+    DragList1[dim] = ParticleVelocity[dim];
+  }
+  DragList1[GridRank] = ParticleMass;
+  for (j = 0; j < NumberOfParticleAttributes; j++)
+    DragList1[GridRank+1+j] = ParticleAttribute[j];
+
+  /* Sort by particle index, dragging the data along. */
+
+  QuickSortAndDrag(ParticleNumber, 0, NumberOfParticles-1, 
+		   GridRank+1+NumberOfParticleAttributes, DragList1,
+		   GridRank, DragList2);
+
+  /* Clean up. */
+
+  delete [] DragList1;
+  delete [] DragList2;
+
+  return;
+}

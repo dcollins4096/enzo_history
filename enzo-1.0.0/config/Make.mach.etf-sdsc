@@ -1,0 +1,47 @@
+#======================================================================
+#
+# Make.mach for SDSC ETF
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-09-25  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_ETF)
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+#----------------------------------------------------------------------
+# Libraries if there IS NO distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_DIR_ARCH = 
+HDF5_DIR_ARCH = 
+
+#----------------------------------------------------------------------
+# Libraries if there IS a distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_DIR_OBJ32_ARCH = /rmount/paci15/ucsd/ux452912/public-etf/hdf4-32
+HDF5_DIR_OBJ32_ARCH = /rmount/paci15/ucsd/ux452912/public-etf/hdf5-32
+
+HDF4_DIR_OBJ64_ARCH = /rmount/paci15/ucsd/ux452912/public-etf/hdf4-64
+HDF5_DIR_OBJ64_ARCH = /rmount/paci15/ucsd/ux452912/public-etf/hdf5-64
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_AGGRESSIVE_ARCH = -O5
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = 
+DEFINES_PERF_PAPI_ARCH =
+FLAGS_PERF_PAPI_ARCH   = 
+LIBS_PERF_PAPI_ARCH    = 

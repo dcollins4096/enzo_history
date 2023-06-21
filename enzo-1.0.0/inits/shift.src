@@ -1,0 +1,90 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+c=======================================================================
+c////////////////////////  SUBROUTINE SHIFT  \\\\\\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine shift(field, nx, ny, nz, in, jn, kn, temp)
+c
+c  SHIFTS A 3D FIELD BY 1/2 CELL USING CIC_INTERPOLATE
+c
+c     written by: Greg Bryan
+c     date:       June, 1997
+c
+c  PURPOSE: 
+c
+c  INPUTS:
+c        i,j,kn      = real dimensions of green
+c        nx,ny,nz    = active dimensions of green
+c        temp        = temp field
+c
+c  Outputs:
+c        field       = input & output field
+c
+c  LOCALS:
+c
+c  EXTERNALS: 
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c  arguments
+c
+      integer in, jn, kn, nx, ny, nz
+      real    field(in, jn, kn), temp(in,jn,kn)
+c
+c  locals
+c
+      integer i, j, k, j1, k1
+      real    coef
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////////
+c=======================================================================
+c
+c     Shift
+c
+      coef = 1.0/8.0
+      do k=1, nz
+         k1 = k+1
+         if (k .eq. nz) k1 = 1
+         do j=1, ny
+            j1 = j+1
+            if (j .eq. ny) j1 = 1
+            do i=1, nx
+               temp(i,j,k) = coef*(
+     &             field(i,j ,k) + field(i,j ,k1) +
+     &             field(i,j1,k) + field(i,j1,k1) )
+            enddo
+            do i=1, nx-1
+               temp(i,j,k) = temp(i,j,k) + coef*(
+     &             field(i+1,j ,k) + field(i+1,j ,k1) +
+     &             field(i+1,j1,k) + field(i+1,j1,k1) )
+            enddo
+            temp(nx,j,k) = temp(nx,j,k) + coef*(
+     &             field(1,j ,k) + field(1,j ,k1) +
+     &             field(1,j1,k) + field(1,j1,k1) )
+         enddo
+      enddo
+c
+c     Copy back
+c
+      do k=1, nz
+         do j=1, ny
+            do i=1, nx
+               field(i,j,k) = temp(i,j,k)
+            enddo
+         enddo
+      enddo
+c
+      return
+      end

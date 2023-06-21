@@ -1,0 +1,67 @@
+#======================================================================
+#
+# Make.mach for NCSA TeraGrid
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-07-18  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_TG_NCSA)
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    = mpicc
+CXX_MPI_ARCH   = mpiCC
+FC_MPI_ARCH    = mpif90
+LD_MPI_ARCH    = mpiCC
+
+CC_NOMPI_ARCH  = ecc
+CXX_NOMPI_ARCH = ecc
+FC_NOMPI_ARCH  = efc
+LD_NOMPI_ARCH  = ecc
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+HDF4_DIR = /home/ac/bordner/public/hdf4
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /home/ac/bordner/public/hdf5
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5 -lz
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+MPI_PATH = /usr/local/mpich-vmi-intel
+FLAGS_MPI_ARCH = -I$(MPI_PATH)/include
+LIBS_MPI_ARCH = -L$(MPI_PATH)/lib -lmpich -lvmi -lpthread -ldl
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_DIR = /home/ac/bordner/public/papi
+FLAGS_PERF_ARCH = -I$(PERF_DIR)/include
+LIBS_PERF_ARCH = $(PERF_DIR)/lib/libpapi.a
+

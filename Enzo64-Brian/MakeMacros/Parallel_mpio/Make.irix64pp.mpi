@@ -1,0 +1,56 @@
+## macros for Origin2000
+
+ifeq ($(HDF5_INSTALL_PP),$(null))
+HDF5_INSTALL_PP = /afs/ncsa/packages/hdf5/5-1.4.5-irix64pp
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /afs/ncsa/packages/hdf/4.1r5-irix64-64
+endif
+
+CPP           = /lib/cpp
+#DEFINES       = -DIRIS4 -D${PRECISION} -DUSE_MPI -DUSE_SRB
+DEFINES       = -DIRIS4 -D${PRECISION} -DUSE_MPI -DIO_LOG
+OPTIONS       = -DSGI_MATH
+
+
+## Fortran compiler
+FC            = f90 -64 -mips4
+FC_OPT        = -O2 -OPT:roundoff=3:Olimit=0 -g3 -TARG:platform=ip27 -r10000
+
+## F90 compiler
+FC90          = f90 -64 -mips4 -fixedform
+FC_OPT        = -O2 -OPT:roundoff=3:Olimit=0 -g3 -TARG:platform=ip27 -r10000
+
+## C Compiler
+CC            = cc -64 -mips4
+CC_OPT        = -g3 -O2 -TARG:platform=ip27 -OPT:Olimit=0:alias=typed -r10000
+
+## C++ Compiler
+CCxx	      = CC -64 -mips4
+CCxx_OPT      = -O2 -prelink -TARG:platform=ip27 -OPT:Olimit=0,alias=typed -r10000 -DMPI_NO_CPPBIND
+
+# -TARG:platform=ip27 : Means optimize for the cache architecture on an
+#                       origin2000 system
+# -LNO : (loop nest optimizer) Reorganize loop nesting for optimal performance.
+# -IPA : (interprocedural analyzer) Automatic inlining and other optimization.
+# -OPT:Olimit=0 : No limit to the size of the optimization window.
+# -OPT:alias=typed : Assumes C & C++ data structures point only to objects of
+#                    the type (or in the case of C++ the base type) specified.
+#                    IE. no overlapping arrays or array indices.
+# -fullwarn : creates bogus warning messages about the -LNO option which are
+#             harmless. Use -fullwarnd for debugging.
+# -prelink :  This tells the compiler that it has to go through a 2-stage
+#             linking process in order to deal with C++ templates.
+#             The first link determines which templates to instantiate and
+#             the second actually instantiates them.
+
+## Linker/loader
+LDR           = CC -64 -mips4
+LDR_OPT       = -g3 -O2
+LIB           = $(HDF5_INSTALL_PP)/lib/libhdf5.a \
+                $(HDF4_INSTALL)/lib/libz.a \
+                /usr/lib64/mips4/libcomplib.sgimath.a -lblas -lfortran -lftn -lm -lC \
+                -lmalloc_ss -lmpi -lfpe
+
+OPTS          = -c -I$(HDF5_INSTALL_PP)/include
+DEBUG         = -g3

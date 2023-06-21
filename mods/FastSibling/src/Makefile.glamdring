@@ -1,0 +1,35 @@
+#
+# macros for linux.
+# Must use EGCS 1.1.1 with complete g77,g++, gcc build.  gcc 2.8.x
+# is not up to the task.
+#
+CPP          = /usr/bin/cpp -traditional
+
+## Fortran compiler
+FC           = g77
+# -fno-second-underscore keeps g77 from adding two underscores
+# to the end of external/intrinsic subroutine symbol names (normally
+# you'd only append a single underscore to fortran symbols).
+#FC_OPTIMIZE  =  -fast -Knoieee
+FC_OPTIMIZE  =  -O3 -fno-second-underscore
+DEFINES      = -D $(PRECISION)
+
+## C Compiler
+CC           = mpicc
+CC_OPTIMIZE  = -O
+
+## C++ Compiler
+CCxx	     = mpiCC
+CCxx_OPTIMIZE = -O
+
+## Linker/loader
+LDR          = mpiCC
+LDR_OPTIMIZE = -O
+
+HDF_DIR      = ${HOME}/hdf
+FFTW_DIR     = /users/ejt/fftw
+
+LIB          = -L${HDF_DIR}/lib -L${MPI_DIR}/lib -lm -lmfhdf -ldf -lz -ljpeg -lg2c -L${FFTW_DIR}/lib -lfftw3f
+OPTS         = -c -I${HDF_DIR}/include -I${MPI_DIR}/include -I${FFTW_DIR}/include -D USE_MPI -D LINUX -D FFTW
+DEBUG        = 
+

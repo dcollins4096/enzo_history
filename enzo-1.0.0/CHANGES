@@ -1,0 +1,643 @@
+
+LATEST STABLE VERSION: cvs co -r v1_0_0 enzo-code
+
+---------------------------------------------------------------------------
+v1_0_0: 2004-02-29
+
+  02-29 jbordner Tagging v1_0_0
+  02-29 jbordner Updated auto-tar in Makefile.in to tar to enzo-<version>.tar
+  02-29 jbordner Updated README to point to website
+  02-27 jbordner Debugging auto-removing proprietary code
+  02-27 jbordner jbPerf mod for PAPI3 on tungsten
+  02-27 jbordner Bug fixes for enzo build tests
+  02-25 jbordner Adding support for auto-removing proprietary code from public release
+  02-25 jbordner Added copyright notices
+  02-25 jbordner Fixed hdf4 link bug on cosmos (found by dcollins)
+  02-25 jbordner Fixed Makefile bug in emon.exe target
+  02-25 jbordner Fixed splash screen to only display from root processor
+  02-25 jbordner Added configuration support for Paolo's cluster
+  02-24 jbordner Refactoring configuration
+  02-23 jbordner Fixed fft-F90 default in help-config target text
+  02-23 jbordner Added README.config
+  02-23 bwoshea  Fixed error with rcubed in Grid_ComputeAccelerationFieldExternal.C
+  02-17 jbordner Added NCSA tungsten support
+  02-12 kritsuk  [jb] Changed numiter from 8 to 4 in twoshock.src
+  02-12 kritsuk  [jb] Added d0(i) to db(i)=... in RAREFACTION1 in euler.src
+  02-12 jbordner Removed dead code from Grid_WritGridHDF5 (found by dcollins)
+  02-12 jbordner Updated tg-ncsa config
+  02-11 jbordner Updated ds-sdsc in bin/gethost
+  01-22 jbordner Added generation of <executable>.[flags|config] files
+  01-22 jbordner Added text for "Generic" machine in config
+  01-15 jbordner Updating config for MPE
+  01-14 jbordner Added perf-jbmemperf (jbMem + jbPerf) 
+  01-14 jbordner Fixed format strings in jbPerf
+  01-14 jbordner jbMem mods--changing output; refactored API
+  01-13 jbordner Bypassed PAPI "negative time" copper bug in jbPerf
+  01-10 jbordner jbMem mods--added processor id and fflush
+  01-09 jbordner Added 'VERBOSE' define in emon for using in batch-like mode
+  01-09 jbordner jbPerf mods in EvolveLevel to avoid recursion
+  01-09 jbordner Updated mach-diapason for Intel 8.0 (see 01-01)
+  01-08 jbordner turned off levels in jbperf as default to reduce overhead
+  01-08 jbordner Fixed long int overflow in jbPerf
+  01-07 jbordner Adding support for 32- and 64-bit object papi libs like hdf
+  01-05 jbordner Removed endian-[big|little] from configuration since rarely used.
+  01-05 jbordner Fixed inits fft configuration/makefile
+  01-01 jbordner Updated mach-nordlys for Intel 8.0
+                 WARNING: fft-F90 CAUSES INTERNAL COMPILER ERROR!  Temporarily
+                 overridden with fft-F77
+  01-01 jbordner fixed fft dependencies; removed unused files
+  01-01 jbordner Fixed papi directory for ds-sdsc
+  12-26 jbordner Implemented Robert's fft fixes, but still seems slow
+                 (+fft_f90.src90, +fft_rotate.src -s90_3d.src90, -rotate3d.src)
+  12-23 jbordner Updating jbPerf; added papi support to make.mach.nordlys
+
+---------------------------------------------------------------------------
+v0_8_4: 2003-12-22
+
+  12-22 jbordner Debugged Makefiles to pass enzo-test 'build' tests
+  12-18 jbordner Changed default C compiler in configure.ac to cc--to fix
+                 occasional ./configure breaks on IBMs
+  12-18 jbordner Removed unnecesary 'extern_hdf5.h' from hdf5_tools (broke build
+                 on copper, DataStar, and TG)
+  12-17 jbordner Debugging makefiles to pass build tests
+  12-15 jbordner (debugging fft-77 / fft-90)
+  12-15 jbordner Adding fft-77 / fft-90 to configuration
+  12-15 jbordner Updated inits to use new FFT via symbolic links to amr_mpi/src
+  12-15 jbordner Finishing FFT refactorization
+  12-13 bwoshea  fixed units issues in Grid_GadgetCalculateCooling.C
+  12-08 jbordner E8.8: added Kritsuk's permutation fix to zeus_main.src
+  12-08 jbordner Added MIN_COLOR_CHANGE to zeus_?transport.src; reintroduced
+                 limits (of 0.0) for MIN_DENSITY_CHANGE and MIN_ENERGY_CHANGE
+  12-04 jbordner Revising FFT to keep old NR version (cosmos f90 apparently
+                 doesn't have an equivalent to -r8 switch)
+  12-04 jbordner renaming F90 *.src files as *.src90
+  12-01 jbordner perf-related updates to config
+  12-01 jbordner updating config/* for F90
+  11-25 jbordner updating FFT stuff to E8.8; UNTESTED
+  11-25 jbordner Configuration mods: added mach-gnu; support overriding
+                 other parameters in mach-* and arch-* (e.g. mpi-off)
+  11-24 jbordner Added Make.mach.ds-sdsc
+  11-21 jbordner updating calcdiss.src to E8.8; fixed minor index bug; 
+                 moved some loop invariants outside inner loops; 
+                 general housecleaning; UNTESTED
+  11-17 jbordner performance.h housecleaning
+  11-17 jbordner Cleaning euler.src warning messages
+  11-17 jbordner Updated Make.mach.tg-* to circumvent TeraGrid system bug
+  11-17 jbordner Minor change to emon.C to not print out compiler warning
+
+---------------------------------------------------------------------------
+v0_8_3: 2003-11-14
+
+  11-12 jbordner Removed lower-level jbPerf regions
+  11-12 jbordner Changed calls from pow() to POW() in Gadget routines
+  11-10 jbordner Updated Make.mach.copper to bypass wandering system libraries
+  11-10 jbordner Implementing new jbPerf file output format; old still default
+  11-10 jbordner Updating performance.h to turn off MPI regions
+  10-30 jbordner fixed Gadget anyl build bug
+  10-29 jbordner tweaked dep target in amr_mpi/src/Makefile.in
+  10-29 jbordner refactoring and debugging performance.h defines
+  10-27 jbordner Updated DEPEND for Gadget cooling routines
+  10-27 bwoshea [jb] Added Gadget cooling routines
+  10-24 jbordner Added SDSC DS to gethost
+  10-21 jbordner Adding MPE support for MPI profiling--UNFINISHED
+  10-21 jbordner Added counter for WARNING_MESSAGEs
+  10-21 jbordner Added ERROR_MESSAGE and WARNING_MESSAGEs 
+  10-17 jbordner Added man pages to config.doxygen
+  10-17 jbordner Simple refactoring in ExternalBoundary_ReadExternal...C
+  10-17 jbordner Added basic exception handling to main()
+  10-16 jbordner Updated amr_mpi/src dependency list
+  10-16 jbordner Adding hdf5 counters to jbPerf (untested)
+  10-14 jbordner updated tg-ncsa and tg-sdsc makefiles for broken mpiCC
+  10-14 jbordner instrumenting ComputePotentialFieldLevelZero with jbPerf
+  10-14 jbordner updated jbPerf to print overhead estimate
+  10-13 jbordner updates for Make.mach.tg-sdsc to fix broken system mpiCC
+  10-13 jbordner changed error to warning in interp3d.src to prevent false stops
+  10-12 jbordner added "make test-{on|off}" for test suite hooks
+  10-11 jbordner installed new mpich-1.2.5 on cosmos; updated Make.mach.cosmos
+  10-10 jbordner adding more mpi perf stuff (mpi-send,mpi-recv,etc. counters)
+
+---------------------------------------------------------------------------
+v0_8_2: 2003-10-10
+
+  10-09 jbordner added bin/gethost for automatic machine detection
+  10-09 jbordner jbPerf mods: added user events
+  10-06 jbordner config mods to Xring: didn't compile on tg-ncsa
+  10-01 jbordner [rh E8.7] Added test when opening ATOMIC.DAT
+  10-01 jbordner [rh E8.7] Cleared Temp[] in GenerateField.C
+  10-01 jbordner [rh E8.7] Added Xring
+
+---------------------------------------------------------------------------
+v0_8_1: 2003-09-30
+
+  09-30 jbordner Debugged configuration: TMPDIR --> TMP_DIR in top Makefile.in
+  09-30 bwoshea  Added metallicity parameter
+  09-29 jbordner Configuration refactoring: clean and distclean
+  09-26 jbordner Fixed minor config bug: compile emon.exe even if enzo.exe fails
+  09-26 jbordner Added "tar-<version>" target to top makefile
+  09-23 jbordner Adding mach-etf-sdsc
+  09-23 bwoshea [jb] Fixed logic bug for H5Fclose in Grid_ReadGridHDF5.C
+
+
+---------------------------------------------------------------------------
+v0_8_0: 2003-09-22
+
+  09-22 jbordner Fixed all configure problems indicated by enzo-test, 
+                 except for tools with hdf4.  Executables {differ diffx
+                 dumper dumpgrids emon enzo enzo_anyl enzohop
+                 enzostats findinit findpeaks glop inits logger
+                 newname ring ringforce} compile out-of-the-box on
+                 machines {copper cosmos horizon modi4 nordlys
+                 platinum tcs tg-ncsa tg-sdsc titan} for configurations
+                 {default mpi-off perf-papi precision-single
+                 particles-quad opt-aggressive jbopt-off obj-32}
+
+---------------------------------------------------------------------------
+v0_2_13: 2003-09-19
+
+  09-19 jbordner Consolidated {f|c}_{error|warning} into {f|c}_message;
+                 moved message stuff from error.h to message.h;
+                 kept CHECK_MPI_ERROR in error.h
+  09-18 jbordner Added jbPerf calls to PrepareDensityField
+  09-18 jbordner Added confirmation messages when revising configuration
+  09-18 jbordner Refactoring Zhiling Lan's performance stuff--UNTESTED
+  09-16 jbordner Deleted some unused files
+  09-16 jbordner Updated amr_mpi/src/DEPEND
+  09-16 jbordner Implementing WriteGeomviewFile (unfinished)
+  09-14 jbordner Added Make.mach.amr2003 (currently only mpi-off works)
+  09-13 jbordner Fixing bug in obj-32/obj-64 on horizon/copper
+  09-13 jbordner Changed jbMem "long"s to "long long"s
+
+---------------------------------------------------------------------------
+v0_2_12: 2003-09-13
+
+  09-12 jbordner Changed auto arrays in FindSubgrids.C, RebuildHierarchy.C, 
+                 and IdentifyNewSubgridsBySignature.C to dynamic arrays to 
+                 reduce stack usage
+  09-10 jbordner Adding make obj-{32|64} support
+  09-09 jbordner Made fp-ins default for -P event <event> command line option
+  09-09 jbordner moved EPS_{FLOAT|float} machine-epsilon to new
+                 precision.h file
+  09-09 jbordner Reverted solve_cool,solve_rate,multi_cool bug
+                 because cosmology amr test problem crashes
+  08-30 jbordner Fixed occurrences of solve_cool bug in solve_rate
+                 and multi_cool
+  08-27 jbordner Added performance region for recursive EvolveLevel
+  08-27 jbordner Updated Make.mach.tg-ncsa with PAPI defines and 
+                 separate compilers for mpi-on and mpi-off
+
+---------------------------------------------------------------------------
+v0_2_11: 2003-08-27
+
+  08-27 jbordner Added JBPERF_MPI_STOP_BYTES macro to performance.h
+  08-26 jbordner Added EPS_{FLOAT|float} machine-epsilon
+                 constants to macros_and_parameters.h; visual cleaning
+  08-26 akritsuk [jb] Fixed bug in solve_cool causing anisotropies
+  08-26 jbordner Added support for average size of 2D grids to emon.C
+  08-23 jbordner Added basic error checking in emon.C
+
+---------------------------------------------------------------------------
+v0_2_10: 2003-08-23
+
+  08-23 jbordner Fixed jbPerf get_real() bug: returned negative values
+                 for some times on cosmos.  Other jbPerf updates.
+  08-23 jbordner Added "emon" ("enzo monitor") tool: displays
+                 OutputLevelInformation.out information in user-readable 
+                 format.  Uses curses by default; home is amr_mpi/src.
+  08-22 jbordner Adding 'total cell' and 'active cell' counts to 
+                 OutputLevelInformation.out
+  08-20 akritsuk [jb] IBM flag changes to fix numerical noise bug 
+  08-20 jbordner tg-sdsc and ia64 makefile tweaks
+  08-20 jbordner cleaned up some warning messages
+  08-20 jbordner jbPerf updates
+  08-13 jbordner Added list-* targets to bin/Makefile to list all, missing,
+                 existing, and runnable executables; added help.
+  08-12 jbordner Added "make check" to bin/Makefile to list missing binaries
+  08-12 jbordner Updating amr_mpi/anyl/Makefile.in to compile tools
+  08-08 jbordner Renamed Make mach-cosmos-mpich as Mach-cosmos
+  08-08 jbordner Added Make.mach.fnord for O'Shea's laptop; REQUIRES
+                 "make mpi-off"
+
+---------------------------------------------------------------------------
+v0_2_9: 2003-08-07
+
+  08-07 jbordner jbPerf updates
+  08-07 jbordner Fixed NCSA copper performance bug in multi_cool.src
+
+---------------------------------------------------------------------------
+v0_2_8: 2003-08-05
+
+  08-05 jbordner added jbPerf77.src
+  08-05 akritsuk [jb] calc_dt mods for PPM_DE
+  08-05 jbordner added jbPerf.def
+  08-05 jbordner jbPerf modifications--preparing for multiplexing
+  08-01 jbordner Added -qnoipa to LDFLAGS_OPT for opt-aggressive to quell 
+                 6MB of warning messages on IBM's (sigh)
+  08-01 jbordner Configuration modifications (mark defaults in help-config)
+  08-01 jbordner Debugging compiler options for IBM's in 32-bit mode
+
+---------------------------------------------------------------------------
+v0_2_7: 2003-07-31
+
+  07-31 jbordner Fixed HDF4 / macros_and_parameters.h include-file
+                 dependency (bug created by jb on 06/11 and found by ak)
+  07-31 jbordner Added jbopt-{off|on|beta} for controling inclusion
+                 of optimizations
+  07-31 jbordner Fixed typo in AUTHORS (bug found by ak)
+
+---------------------------------------------------------------------------
+v0_2_6: 2003-07-30
+
+  07-30 jbordner minor jbPerf call updates
+  07-30 jbordner oops--refixed 07-22 fix for mpi_layout (broke when
+                 USE_MPI *was* defined)
+  07-28 jbordner jbPerf updates
+  07-28 jbordner Revising performance command-line options
+
+---------------------------------------------------------------------------
+v0_2_5: 2003-07-28
+
+  07-28 jbordner Fixed precision bug in Make.mach.horizon (same as 07-22)
+  07-28 jbordner Moved -DNDEBUG from FLAGS_OPT to DEFINES_OPT
+  07-27 jbordner Revising performance command-line options
+  07-25 jbordner Added PAPI to Make.mach.tg-sdsc
+  07-25 jbordner Added performance options to, and cleaned-up, 'usage:'
+  07-25 jbordner Fixed my_exit(SUCCESS) bug in -h switch
+  07-24 jbordner Added PAPI to Make.mach.copper*
+  07-24 jbordner Changed HDF and PAPI libraries from dynamic to static in 
+                 Make.arch.mips
+  07-24 akritsuk [jb] Fixed bug in {xyz}euler_sweep.src: caldiss arguments
+  07-24 jbordner DEBUG TEMP: Added jbPerf to Grid_SolveHydroEquations
+  07-24 jbordner Fixed bug in Make.arch.i686 LIBS_F77_ARCH" config
+  07-24 jbordner Added PAPI to Make.arch.mips
+
+---------------------------------------------------------------------------
+v0_2_4: 2003-07-24
+
+  07-23 akritsuk [jb] ppm_de permutation scheme was wrong in 2D
+                 simulations. 3D case was (and remains) OK.
+  07-22 jbordner Fixed default mpi_layout in Grid_CosmologySimulationInitialize-
+                 HDF5.C from 0 to 1 (broke on TCS when USE_MPI not defined)
+  07-22 jbordner Fixed precision bug in Make.mach.copper64
+  07-22 jbordner Debugging jbPerf: broken on horizon,platinum,copper (dies
+                 at main.C:373 jbPerf.C:355)
+
+---------------------------------------------------------------------------
+v0_2_3: 2003-07-22
+
+  07-22 jbordner jbPerf-related updates; tagging v0_2_3
+  07-18 jbordner Commented-out extern_hdf5.h includes--was breaking
+                 builds on TG with HDF5-1.6.0, and doesn't seem to be
+                 needed
+  07-18 jbordner Added SDSC TeraGrid support (make mach-tg-sdsc) 
+                 [same HDF5 warning as below]
+  07-18 jbordner Added NCSA TeraGrid support (make mach-tg-ncsa) 
+                 [WARNING--until I find where the system HDF5
+                  libraries are (if anywhere), "make mach-tg-ncsa"
+                  accesses the HDF5 libraries in my account.]
+  07-18 jbordner Updated dependencies in amr_mpi/src/DEPEND
+  07-16 jbordner Added logging of bytes sent/recv'd to MPI jbPerf calls
+  07-15 jbordner Fixed HDF4 libraries/flags bug in Make.arch.mips
+
+---------------------------------------------------------------------------
+v0_2_2: 2003-07-03
+
+  06-20 jbordner Re-introduced "Unigrid = 0" "bug" (06-20 below) since
+                 it bombs otherwise.  (Why is Unigrid a parameter
+                 if it's set to zero??)
+
+---------------------------------------------------------------------------
+v0_2_1: 2003-07-03
+
+  07-03 jbordner Added jbMem support (conflicts with jbPerf :-/ )
+  06-30 jbordner added simple error-checking to config/MAKE.CONFIG.in
+  06-30 jbordner cleaned old unused stuff from config/Make.text
+  06-30 jbordner jbPerf mods
+  06-26 jbordner fixed buglet in jbPerf region name: Isend --> MPI_Isend
+
+---------------------------------------------------------------------------
+v0_2_0: 2003-06-24
+
+  06-24 jbordner added config-file target to amr_mpi/src/Makefile.in;
+                 (called by install to store flags & config info in bin/CONFIG)
+  06-24 jbordner Renamed opt-reckless as opt-aggressive
+  06-23 jbordner Changed VERSION to be exact revision tag 
+  06-21 jbordner Added opt-warn opt-check and opt-reckless configuration 
+                 settings
+  06-21 jbordner Updated DEPEND
+  06-21 jbordner Added OBJECT_MODE = {32|64} to mach.copper{32|64}
+  06-21 jbordner Added CHECK_MPI_ERROR macro to error.h for checking
+                 MPI error codes.  Added to all MPI calls.
+  06-20 jbordner Added performance.h layer between Enzo and jbPerf
+  06-20 jbordner Changed MPI jbperf calls from JBPERF_{SEND|RECV} 
+                  to jb::perf.{start|stop}
+  06-20 jbordner Split config/Make.mach.copper into 
+                 config/Make.mach.copper{32|64}
+  06-20 jbordner Removed Unigrid = 0 bug in CommunicationPartitionGrid.C
+                 (see 5-15 harkness below)
+  06-16 jbordner Added config/MAKE.GLOBAL.in for global non-configuration
+                 targets, like all,install,clean,distclean, help-global
+  06-13 jbordner Added missing explicit 'int' from 'inline grid::ReadGrid()'
+                 declaration
+  06-13 jbordner Instrumenting EvolveLevel.C
+  06-12 jbordner Split perf-on into perf-jbperf and perf-papi
+  06-12 jbordner removed unused code from Grid_ComputeTimeStep.C
+  06-12 jbordner Moved TEST stuff to enzo-test project
+  06-12 jbordner [Giving up on getting amr_mpi/anyl stuff to work;
+                 too buggy: function parameters don't match]
+  06-12 jbordner Merged HDF{4|5}_AnalyzeCluster.C to form enzo_anyl.C
+  06-12 jbordner Added ifdef around amr_mpi/anyl/AnalyzeClusters.h to
+                 prevent multiple includes
+  06-12 jbordner Added top-level include to configuration files
+  06-12 jbordner Created top-level include directory for common include files
+  06-12 jbordner [Getting amr_mpi/anyl stuff to work]
+  06-12 jbordner Removed "UNUSED" code in EvolveLevel.C
+
+---------------------------------------------------------------------------
+v0_2_0pre1: 2003-06-12
+
+  06-12 jbordner Changed config/MAKE.CONFIG to use symbolic not hard links
+  06-12 jbordner Added inits/DEPEND
+  06-12 jbordner Removed conditional source file HDF{4|5} compilation in inits
+  06-11 jbordner Added top-level TEST.sh script to automate basic 
+                 configuration and compilation testing
+  06-11 jbordner Removed unnecessary tests from configure.ac that suddenly 
+                 started crashing on Blue Horizon
+  06-11 jbordner Added HDF libraries to Make.mach.horizon
+  06-11 jbordner META-CHANGE: Removed HDF4_* HDF5_* conditional compilation
+                 from amr_mpi/src/Makefile.in
+  06-10 jbordner InterpretCommandLine.C: fixed bug in 'unknown command-line'
+                 message (%s --> %c for variable c)
+  06-10 jbordner Added PAPI support to Make.arch.i686
+  06-10 jbordner re-revised inits/Makefile.in for single-precision
+                 (to keep changes out of config subdirectory)
+  06-09 jbordner added USE_HDF{4|5} to config files
+  06-06 jbordner amr_src/src/zeus_{xyz}transport.src: "symmetrized"; removed 
+                 commented-out code; fused a couple loops
+  06-06 jbordner config/Make.mach.cosmos-mpich: added and tested
+  06-06 jbordner amr_mpi/src/Makefile.in: updated dependencies; moved
+                 dependencies to DEPEND
+  06-05 jbordner added ERROR_MESSAGE and WARNING_MESSAGE macros to 
+                 error.{def|h}
+  06-05 jbordner removed redundant error messages before fstop_on_error calls
+  06-05 jbordner removed stop_all_cpus; replaced with {c|f}_{warning|error}
+  06-05 jbordner config/Make.arch.sparc: fixed integer sizes to match between
+                 fortran and C++; revised optimization flags
+  06-05 jbordner config/Make.arch.sparc: distinguish between MPI and NOMPI
+                 compilers
+  06-02 akritsuk [jb] amr_mpi/src/twoshock.src
+                 fixed sign error in initial guess
+  06-02 akritsuk [jb] amr_mpi/src/zeus_[xyz]transport.src
+                 Removed density/energy floors 
+  06-02 jbordner  amr_mpi/src/stop_on_error()
+                 Adding to support source file name and line number
+  05-30 jbordner  Uncommented dtDataDump in ShockPool2D for HDF5 testing
+  05-30 jbordner  Adding support for USE_PABLO HDF5 profiling libraries
+  05-28 jbordner  Revised inits/Makefile.in to compile in required single-precision
+
+---------------------------------------------------------------------------
+v0_1_5: 2003-05-23
+
+  Status: Almost finished incorporating E8.6 code changes--just a couple
+          non- amr_mpi source directories left.  Global configuration
+          system more-or-less complete ("make help-config" for usage):
+          tested on cosmos, horizon, TCS, platinum, titan, modi4,
+          copper.
+
+  Todo:   o Debug amr_mpi/anyl code--doesn't compile
+          o Re-merge HDF4/HDF5 files to reduce duplicate code; add
+             USE_HDF5-like defines
+          o Clean old "backup" source file clutter (that's what CVS is for)
+          o Remove unused Makefiles
+          o Incorporate Kritsuk bug fixes
+          o Incorporate Bryan bug fixes
+          o Incorporate Zhiling's load balancing
+          o Instrument top level functions with jbPerf
+
+  05-23 jbordner  Added dependencies to Makefile.in's (didn't add makedepend 
+                  since some machines (e.g. cosmos.ucsd.edu) doesn't seem to 
+                  have it)
+  05-23 jbordner  Added perf configuration
+  05-22 jbordner  inits/make_field*.src: Added IMAG_PART and REAL_PART,
+                  defined in fortran.def (dimag or aimag, etc.)
+  05-21 jbordner  star_maker1.C: changed random_number to enzo_rand
+  05-21 jbordner  enzo_rand.{h|C}: added for portable random numbers in F77
+  05-21 jbordner  added inits/fortran.def for aimag versus imag with USE_F95
+  05-20 jbordner  Make.arch.sparc: writing
+  05-20 jbordner  uniglue/Makefile.in: added
+  05-20 jbordner  ring/Makefile.in: added
+  05-19 harkness [jb]  inits/EvaluatePowerSpectrum.C: Revised prototypes for 
+                  eisenstein_power.C functions
+  05-19 harkness [jb]  inits/eisenstein_power.C: added POW; changed exit to return
+  05-19 harkness [jb]  inits/eisenstein_power.c: renamed to *.C
+  05-19 jbordner  Make.arch.alphaev68: writing
+  05-19 jbordner  Make.arch.mips: writing
+  05-19 jbordner  Makefile.in: added inits
+  05-17 jbordner  Make.mach.copper: wrote
+  05-17 jbordner  Make.arch.{powerpc|rs6000}: wrote and testing
+  05-17 jbordner  amr_mpi/src/mcooling.src: fixed < to be .lt.
+  05-17 jbordner  amr_mpi/src/fourn.src: fixed > to be .gt.
+  05-17 jbordner  config/Make.*.*: changed -D blah to -Dblah in 
+  05-17 jbordner  Make.arch.i686: wrote and tested on platinum
+  05-17 jbordner  amr_mpi/src/hdf4.h: added I686 (*** idiosyncracy:
+                  hdf4.h needed for defining float32 when HDF4 is not used***)
+  05-17 jbordner  amr_mpi/src/macros_and_parameters.h: changed LINUX to I686; removed
+                  IA65 (sic)
+  05-17 jbordner  Make.text: edited; formatted
+  05-16 jbordner  CommunicationPartitionGrid.C: Added missing USE_MPI around 
+                    MPI barrier
+  05-16 jbordner  [GLOBAL]: Massive configuration-related modifications
+  05-16 jbordner  bin/README: Added
+  05-16 jbordner  bin/: Added bin directory for install targets
+  05-16 jbordner  config/Make.arch.ia64: Fixed bug: -hdf5 -> -lhdf5
+  05-16 jbordner  amr_mpi/src/Makefile.in: Added install target
+  05-16 jbordner  config/Make.config: Added FLAGS_IO
+  05-16 jbordner  config/Make.io.*: Added FLAGS_IO; fixed bug: OBJ_* -> OBJS_*
+  05-16 jbordner  config/Make.arch.ia64: Added HDF libraries
+  05-16 jbordner  config/Make.arch.ia64: Added LDFLAGS_ARCH
+  05-16 jbordner  config/Make.opt.*: Added LDFLAGS_OPT
+
+---------------------------------------------------------------------------
+v0_1_4: 2003-05-15
+
+  Status: All algorithmic E8.6 changes have been incorporated in amr_mpi;
+          Revised global configuration system under active development
+
+  05-15 harkness [jb]  HDF4_Grid_CosmologySimulationInitializeGrid.C:
+                  added 2 "ExtraField"s when UseMetallicityField true;
+                  modified initialization of MetalNum
+  05-15 harkness [jb]  Grid_StarParticleHandler.C: added support for 
+                  StarParticleFeedback == 3; don't assume
+                  Metallicity is the last field
+  05-15 harkness [jb]  Grid_CorrectForRefinedFluxes.C: don't assume
+                  Metallicity is the last field
+  05-15 harkness [jb]  Added debug prints to CommunicationPartitionGrid.C 
+                  (??? possible bug: reset Unigrid = 0 ???)
+  05-15 harkness [jb]  Added "stop_all_cpus" write statement to
+                  euler.src int_lin3d.src int_spline.src interp3d.src
+                  interpolate.src lgrg.src ppm_de.src prefourn.src
+                  remap.src smooth_deposit.src solve_cool.src
+                  solve_rate.src tscint1d.src tscint2d.src tscint3d.src
+                  zeus_main.src zeus_source.src zeus_xtransport.src
+                  zeus_ytransport.src zeus_ztransport.src
+  05-15 harkness [jb]  fortio.src ppm_lr.src:  changed comment
+                  characters; added message before stop_all_cpus
+  05-15 harkness [jb]  algorithmic changes to multi_cool.src; changed comment
+                  characters; added message before stop_all_cpus
+  05-15 harkness [jb]  cool_multi_time mods: added mask; changed
+                  comment characters
+  05-15 jbordner  Added config default commands to configure.ac
+  05-15 jbordner  Added config/* files
+  05-14 jbordner  Added config.sub (required by AC_CANONICAL_TARGET)
+  05-14 jbordner  Updated configure; configure.ac: (removed libs notice;
+                  added AC_CANONICAL_TARGET; removed AC_CONFIG_COMMANDS)
+  05-06 jbordner  Modified stop_all_cpus to just stop and not "call exit" 
+                  (function exit not defined) when USE_MPI is not defined
+  05-06 jbordner  Added parameters.H and parameters.C
+  05-06 jbordner  Massive mods in arch/*: added configuration targets
+  05-06 jbordner  Added arch/Make.arch* include to amr_mpi/src/Makefile.in
+  05-06 jbordner  Added arch/Make.arch.ia64-unknown-linux-gnu 
+                  (Titan config.guess sometimes returns this, sometimes 
+                  Make.arch.ia64-unknown-linux)
+  05-06 jbordner  Added stop_all_cpus.src
+  05-06 jbordner  Added star_maker3.src
+  05-06 jbordner  Added HDF5_ExtractSection.C
+  05-06 jbordner  Updated top-level README
+  05-05 jbordner  Fixed JBPERF defines in macros_and_parameters.h
+  05-05 jbordner  Updated stop_all_cpus (harkness)
+  05-05 jbordner  Fixed ac_top_srcdir -> top_srcdir bug in */Makefile.in
+  05-05 jbordner  Replaced stop with stop_all_cpus in amr_mpi/src/*.src
+                  (harkness)
+
+---------------------------------------------------------------------------
+
+v0_1_3: 2003-05-05
+
+  05-05 jbordner  Updated libs/README
+  05-05 jbordner  Revising MakeMacros for configuration restructuring
+  05-05 harkness [jb]  Changed %d to %lld in inits/HDF5_GenerateRealization.C
+  05-05 harkness [jb]  inits/fourn.src modifications (?)
+  05-05 harkness [jb]  sweeping changes in hdf5_tools/{differ.C,logger.C,dumper.C,
+                  newname.C} (???)
+  05-05 harkness [jb]  enzo_jobs/ibm: Changed MP_CPU_USAGE to MP_CP_USE; increased 
+                  nodes and wall_clock_limit
+  05-05 harkness [jb]  Added MPI timing stuff to WriteAllData.C; removed barrier
+  05-05 harkness [jb]  Added ExtraType0 and ExtraType1 to field_type in typedefs.h
+  05-05 oshea [jb]    star_maker2.src: Updated comments; removed call to stop 
+                  (oshea)
+  05-05 harkness [jb]  star_maker1.C: Changed rand -> random; fixed comment bug; 
+                  removed call to stop
+  05-05 harkness [jb]  SetDefaultGlobalValues.C: Changed defaults for 
+                  PPMDiffusionParameter; added Unigrid, ExtractFieldsOnly, 
+                  MultiMetals defaults
+  05-05 harkness [jb]  Added Unigrid,ExtractFieldsOnly, MultiMetals to 
+                  ReadParameterFile.C 
+  05-05 harkness [jb]  RadiationFieldCalculateRates.C: precision fixes; 
+                  RadiationFieldType==12 mods
+  05-05 harkness [jb]  Added 'append' mode to mpi_error_file.src: 
+                  OPEN_MPI_ERROR_FILE()
+  05-05 harkness [jb]  Added 'input_done' to mcooling:ATREAD
+  05-05 harkness [jb]  HDF5_Grid_CosmologySimulationInitializeGrid.C: Changed 
+                  initialization of Total_Energy, corrected scalings for 
+                  initial T
+  05-05 harkness [jb]  Unigrid changes to Grid_ZeroSolutionUnderSubgrid
+  05-05 harkness [jb]  Added MetalNum+1 and MetalNum+2 to Grid_SolveHydroEquations.C
+  05-05 harkness [jb]  Added MultiMetals, Ungrid, ExtractFieldsOnly to global_data.h
+  05-05 harkness [jb]  fourn.src modifications (?)
+  05-05 harkness [jb]  Added Z_Field1 and Z_Field2 to CosmologySimulationInitialize;
+                  added SetNumberOfParticles loop (?)
+  05-05 harkness [jb]  cool1d_multi mods: added mask; call
+                  open/close_mpi_error; call stop_all_cpus; changed
+                  comment/continuation characters
+  05-05 harkness [jb]  Added CommunicationAllSumIntegerValues() to 
+                  CommunicationUtilities.C
+  05-05 harkness [jb]  Added MPI_Barrier to CommunicationPartitionGrid
+  05-05 harkness [jb]  Incorporated harkness E8.5 (or before) anyl/HDF5 mods
+  05-05 jbordner  Added anyl/Makefile.in
+  04-25 jbordner  Added arch subdirectory; updated README
+  04-25 jbordner  Added AUTHORS, INSTALL
+  04-25 jbordner  Updated README with libs subdirectory
+  04-25 jbordner  Added Makefile.in's; removed Makefiles
+  04-25 jbordner  Removed Makefile.* in amr_mpi/src
+  04-25 jbordner  Incorporating autoconf: added install-sh, config.guess, 
+                  missing (does nothing now)
+  04-25 jbordner  Adding "libs" top-level directory to point to hdf5, hdf
+                  libraries
+  04-25 jbordner  Added JBPERF_LOG_MPI to macros_and_parameters.h
+
+---------------------------------------------------------------------------
+
+v0_1_2: 2003-04-25
+
+  04-25 jbordner  Incorporated harkness some E8.? "int level" anyl refactorings
+  04-25 jbordner  Incorporated harkness E8.6 Makefile system
+
+---------------------------------------------------------------------------
+
+v0_1_1: 2003-04-24
+
+  04-24 jbordner  Incorporated harkness E8.3 pow->POW fix for brain-dead IBM's
+
+-----------------------------------------------------------------------
+
+v0_1_0: 2003-04-24
+
+  04-21 jbordner  Fixed PERF_OBJ bug in Makefile (included in v0_0_3 revision)
+
+=======================================================================
+
+v0_0_3: 2003-04-21
+
+  04-21 jbordner  Reverted hdf5 path to 5-1.4.4 for Make.ia64_vmi.hdf5 
+                     (5-1.4.5 disappeared!)
+  04-21 jbordner  Added PERF_OBJ to Make.perf.* and Makefile
+  04-19 jbordner  Changed HDF paths in Make.sp2.hdf5
+  04-18 jbordner  Added jbPerf MPI log calls
+  04-18 jbordner  Fixed jbPerf bug in EvolveHierarchy (switched
+                  next() and stop()
+  04-17 jbordner  Added USE_MPI around stray MPI call in 
+                  HDF5_Grid_CosmologySimulationInitializeGridVV.C
+  04-17 jbordner  Added "{titan|platinum}" targets for both serial and parallel
+  04-17 jbordner  Added "{titan|platinum}-{serial|parallel}" make targets
+  04-17 jbordner  Added ".serial" suffix to enzo5 for non-MPI compiles
+  04-17 jbordner  Updated Make.{i686|ia32}_{vmi|serial}.hdf5
+  04-09 jbordner  Updated Make.i686_vmi.hdf5 to compile-in MPI
+  04-09 jbordner  Added Make.i686_vmi.hdf5 for platinum
+  04-08 jbordner  Renamed inits/MakeInits and amr_mpi/src/MakeEnzo as
+                  Makefile
+
+-----------------------------------------------------------------------
+
+v0_0_2: 2003-04-08
+
+  04-08 jbordner  Added #ifdef USE_MPI around MPI calls in 
+                    HDF5_Grid_CosmologySimulationInitializeGridVV.C
+  04-08 jbordner  Fixed HDF5 buglet in HDF5_ReadFile.C
+  03-21 jbordner  Added VERSION file
+  03-21 jbordner  Changed README from CVS tutorial to an actual README
+  03-21 jbordner  Removed outdated README.CHANGES
+  03-18 jbordner  Updated ring/Make.ia64_vmi and amr_mpi/src/Make.ia64_vmi
+                  mainly $COMPILER_HOME and $HDF5_HOME for NCSA titan
+
+-----------------------------------------------------------------------
+
+v0_0_1: 2002-??-??
+
+  [QL]  jbordner  Added amr_mpi/src/config.doxygen for doxygen
+                  (www.doxygen.org) automatic documentation tool
+  [ L]  ppaschos  Added support for "RadiationFieldType == 12" to
+                  RadiationFieldCalculateRates.C
+  [QL]  jbordner  Added "-lintrins" to Make.ia64_vmi.hdf5
+  [QL]  jbordner  Added "-L/usr/lib -lz" to Make.ia64_vmi
+  [QL]  jbordner  Revised "README" (which should be renamed to README.CVS)
+
+
+-----------------------------------------------------------------------
+
+v0_0_0: 2002-??-??
+
+  [QL]  bwoshea   Initial import of Harkness's HDF5 version "1.5"
+
+---------------------------------------------------------------
+
+James Bordner
+jbordner@cosmos.ucsd.edu

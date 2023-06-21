@@ -1,0 +1,74 @@
+
+      subroutine calc_fluxAIN1_mhd(gamma,wl,wr,flux,index,iflux,csmin)
+      implicit none
+      integer index,iflux
+      real gamma,wl(8),wr(8),flux,csmin
+c
+c...  local variable
+c
+      real wl_un, wr_un, v_S_lf, v_S_rf, v_cf_lf, v_cf_rf
+      real flux_l, flux_r, bb_l, bb_r, a2r,a2l,c2l,c2r
+      real gm1,pr, pl
+      real ampx, ammx, am
+      real  denr, denl
+      integer printflag
+c      common /printff/printflag
+
+      gm1 = gamma - 1.0e0
+
+      denr = wr(1)
+      denl = wl(1)
+
+      wl_un = wl(index+1)
+      wr_un = wr(index+1)
+      bb_l = (wl(5)*wl(5) + wl(6)*wl(6) + wl(7)*wl(7))
+      bb_r = (wr(5)*wr(5) + wr(6)*wr(6) + wr(7)*wr(7))
+                 
+      pr = wr(8)
+      pl = wl(8)
+
+      c2l = max(csmin,gamma*pl/denl)
+      c2r = max(csmin,gamma*pr/denr)
+
+      a2l = wl(index+4)**2/denl
+      a2r = wr(index+4)**2/denr
+     
+      v_cf_lf = sqrt(0.5e0*(c2l+bb_l/denl + sqrt((c2l+bb_l/denl)**2
+     $     -4e0*c2l*a2l)))
+      v_cf_rf = sqrt(0.5e0*(c2r+bb_r/denr + sqrt((c2r+bb_r/denr)**2
+     $     -4e0*c2r*a2r)))
+
+      v_S_rf = pr/(denr**gm1)
+      v_S_lf = pl/(denl**gm1)
+c
+c...  calculate flux at right and left interface
+c
+      flux_l = v_S_lf*wl_un
+      flux_r = v_S_rf*wr_un  
+c.... HLL family flux
+      ampx = max(wl_un + v_cf_lf,  wr_un + v_cf_rf)
+      ammx = min(wr_un - v_cf_rf,  wl_un - v_cf_lf) 
+      if (ammx.ge.0e0) then
+         flux = flux_l
+      else if (ampx.le.0e0) then
+         flux = flux_r
+      else 
+         if (iflux.eq.1) then
+            flux = (ampx*flux_l - ammx*flux_r + 
+     &           ampx*ammx*(v_S_rf - v_S_lf))/(ampx - ammx)
+         else
+            pr = pr + 0.5e0*bb_r
+            pl = pl + 0.5e0*bb_l
+            am = (pr - pl
+     $           + denl*wl_un*(ammx-wl_un)-denr*wr_un*(ampx-wr_un))/
+     &           (denl*(ammx-wl_un) - denr*(ampx-wr_un))
+            if (am .ge.0e0) then
+               flux = am*v_S_lf*(ammx - wl_un)/(ammx - am)
+            else 
+               flux = am*v_S_rf*(ampx - wr_un)/(ampx - am)
+            end if              ! if (am)
+         end if
+            
+      end if
+      return
+      end 

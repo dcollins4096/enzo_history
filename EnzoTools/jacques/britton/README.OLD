@@ -1,0 +1,55 @@
+Welcome to Jaques.0.2
+
+Jaques is still a dirty hack, since I'm learning how to use the IDL
+widgets and basically most features of IDL. So sorry for the
+mess. However, I think it is already useful. I hope that the use of
+Jaques is worth an acknoledgemnt in the scientific papers and talks
+you use it for.
+
+
+1) What is Jaques ?
+
+It's a whole bunch of IDL routine to visualize multiple mesh data.
+Jaques is enzo's best friend.
+
+2) How to install it?
+
+create a directory in which you want your idl routines to live and
+untar the jaques.tar file.
+
+mkdir Jaques
+mv jaques.tar Jaques/jaques.tar
+cd Jaques
+tar -xvf jaques.tar
+
+doit is a simple shell script to set one enviroment variable and start
+up jaques. clean and install are also trivial shell scripts. 
+Make them executable:
+chmod u+x doit clean install
+
+Now type 
+./install 
+
+IDL will be started and all source files will be precompiled.  I use
+RESOLVE_ALL to also precompile all functions ever needed by
+Jaques. This yields to a ~4Mbyte large binary file but have better
+interactive use. If this is to large for your disk quota simply remove
+the RESOLVE_ALL line in TOOLS/pre_compile.com
+
+The binary file will be found in TOOLS/SAV/jaques.sav
+
+3) How to run it?
+simply type:
+
+./doit
+
+4) Problems ?
+
+There are many many possible situations the tool will crash.
+
+FIX: none 
+you have to exit idl and restart it ;-)
+
+
+5) Check out the WHATSNEW and BUGS files of the distribution.
+In particular the WHATSNEW file gives hints of what jaques can do for you.

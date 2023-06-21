@@ -1,0 +1,37 @@
+#
+# macros for ia64
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /g/g18/bordner/public
+endif
+
+ifeq ($(MPI_INSTALL),$(null))
+MPI_INSTALL = /usr/local/bin
+endif
+
+CPP          = /usr/bin/cpp
+DEFINES      = -D${PRECISION} -DIA64 -DUSE_MPI
+
+## Fortran compiler
+FC           = $(MPI_INSTALL)/mpiifort
+FC_OPT       = -O2 -DIA64
+
+## C Compiler
+CC           = $(MPI_INSTALL)/mpiicc
+CC_OPT       = -O2 -ftz -mp -DIA64
+
+## C++ Compiler
+CCxx         = $(MPI_INSTALL)/mpiicc
+CCxx_OPT     = -O2 -ftz -mp -DIA64 -DUSE_MPI
+
+## Linker/loader
+LDR          = $(MPI_INSTALL)/mpiicc -Wl,-noinhibit-exec -lifcore -lifport -lpthread -ldl
+
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib -lz -ljpeg
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I$(MPI_INSTALL)/include
+
+OPTS         = -c -DIA64 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

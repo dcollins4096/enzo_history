@@ -1,0 +1,70 @@
+c
+c     2d monotonicity constraint from Barth
+c      
+
+      subroutine ppml_barth(Nx,Ny,Nz,Qplx,Qprx,Qply,Qpry,Qplz,Qprz,Qpm)
+
+      Real Qpm(Nx,ny,nz)
+      Real Qprx(Nx,ny,nz),Qplx(Nx,ny,nz)
+      Real Qpry(Nx,ny,nz),Qply(Nx,ny,nz)
+      Real Qprz(Nx,ny,nz),Qplz(Nx,ny,nz)
+      
+      eps=1.e-7
+      
+      do k=2,Nz-1
+         do j=2,Ny-1
+            do i=2,Nx-1
+               
+               qm1=qpm(i,j,k)
+               qm2=qpm(i,j,k)
+               
+               do k1=k-1,k+1 
+                  do j1=j-1,j+1 
+                     do i1=i-1,i+1 
+                        
+                        qm1=amin1(qm1,qpm(i1,j1,k1))   
+                        qm2=amax1(qm2,qpm(i1,j1,k1))   
+                        
+                     enddo 
+                  enddo 
+               enddo 
+               
+               qr1=amin1(qplx(i,j,k),qpm(i,j,k),qprx(i,j,k))
+               qr1=amin1(qr1,qply(i,j,k),qpry(i,j,k))
+               qr1=amin1(qr1,qplz(i,j,k),qprz(i,j,k))
+               
+               qr2=amax1(qplx(i,j,k),qpm(i,j,k),qprx(i,j,k))
+               qr2=amax1(qr2,qply(i,j,k),qpry(i,j,k))
+               qr2=amax1(qr2,qplz(i,j,k),qprz(i,j,k))
+               
+               sq1=abs(qpm(i,j,k)-qm1)
+               sq2=abs(qpm(i,j,k)-qm2)
+               st1=abs(qpm(i,j,k)-qr1)
+               st2=abs(qpm(i,j,k)-qr2)
+               
+               f0=amin1(1.,sq2/(st2+eps),sq1/(st1+eps))  
+               
+               sn=qprx(i,j,k)-qplx(i,j,k)
+               qn=qprx(i,j,k)+qplx(i,j,k)-2.*qpm(i,j,k)
+               
+               qprx(i,j,k)=qpm(i,j,k)+f0*(sn/2.+qn/2.)
+               qplx(i,j,k)=qpm(i,j,k)-f0*(sn/2.-qn/2.)
+               
+               sn=qpry(i,j,k)-qply(i,j,k)
+               qn=qpry(i,j,k)+qply(i,j,k)-2.*qpm(i,j,k)
+               
+               qpry(i,j,k)=qpm(i,j,k)+f0*(sn/2.+qn/2.)
+               qply(i,j,k)=qpm(i,j,k)-f0*(sn/2.-qn/2.)
+               
+               sn=qprz(i,j,k)-qplz(i,j,k)
+               qn=qprz(i,j,k)+qplz(i,j,k)-2.*qpm(i,j,k)
+               
+               qprz(i,j,k)=qpm(i,j,k)+f0*(sn/2.+qn/2.)
+               qplz(i,j,k)=qpm(i,j,k)-f0*(sn/2.-qn/2.)
+               
+            enddo 
+         enddo 
+      enddo 
+
+      Return
+      End

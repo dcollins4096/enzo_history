@@ -1,0 +1,67 @@
+========================================================================
+Enzo: README.versions
+========================================================================
+
+Versions are tagged using the following:
+
+Stable releases are of the form v?_?_?.  The first number is the major
+release, the second number the minor release, and the third number the
+revision.
+
+Pre-releases are of the form v?_?_?-pre?
+
+Post-releases (bug-fixes) are of the form v?_?_?-patch?
+
+v1_0_0-pre1
+
+   23rd January 2006
+
+   Grid->MPI task map for Unigrid 2048^3 on DataStar
+   Pre-computed random number tables
+   Permuted indices in XHDF5_ReadFile.C for prism
+   Out-of-core mods for top grid BCs
+   Fixed mpi_error_file.src for 64-bit addr.
+   Incorporates updated anyl from Oct 17
+
+   Notes for 31 January 2006 version
+
+   IMPORTANT!
+
+   In macros_and_parameters.h there are two settings that
+   you may need to change:
+
+   #define MAX_NUMBER_OF_SUBGRIDS           2500
+
+   #define MAX_POTENTIAL_ITERATIONS            0
+
+   For AMR, set MAX_NUMBER_OF_SUBGRIDS = 50000
+   for a reasonable size AMR run.  I have had to use
+   up to 300,000 for the 512^3 500Mpc runs.
+   2500 is enough for any reasonable unigrid run.
+
+   You should probably set MAX_POTENTIAL_ITERATIONS = 1
+   since this is how ENZO has been running for years.
+   There is a caveat: the answers do not remain bitwise
+   identical if you set this to > 0 and you use the
+   fast sibling mods.  I found that the results are
+   the same if you set this parameter to > 100
+   but that is too expensive and doesn't make any
+   sense given the approximation used anyway.
+
+   The Makefile parameters as set appear to be safe
+   and fairly optimal for unigrid and for AMR.
+
+   Many details still need to be addressed in this version.
+   Among these:
+
+     - Assign a tiny mass to tracer particles
+     - Make the potential iteration a parameter
+     - Perhaps add FFTE (and NOT FFTW!) if it is better
+       than Singleton for cases without system FFTs.
+     - Something causes David and Rick's flux corrector
+       to crash to often.  This may be as simple as adding
+       reasonable floors to things which should be > 0.
+
+   Robert
+
+------------------------------------------------------------------------

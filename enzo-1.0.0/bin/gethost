@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+
+use Socket;
+use Sys::Hostname;
+
+$hosts{"10.128.5.124"} = "tcs";
+$hosts{"10.128.5.125"} = "tcs";
+$hosts{"132.239.66.38"} = "jbpc";
+$hosts{"132.239.66.40"} = "diapason";
+$hosts{"132.239.66.42"} = "cosmos";
+$hosts{"141.142.15.13"} = "modi4";
+$hosts{"141.142.30.77"} = "copper";
+$hosts{"141.142.40.13"} = "platinum";
+$hosts{"141.142.40.14"} = "platinum";
+$hosts{"141.142.40.15"} = "platinum";
+$hosts{"141.142.40.16"} = "platinum";
+$hosts{"141.142.34.2"} = "tungsten";
+$hosts{"141.142.38.2"} = "tungsten";
+$hosts{"141.142.52.2"} = "tungsten";
+$hosts{"141.142.54.2"} = "tungsten";
+$hosts{"141.142.44.4"} = "titan";
+$hosts{"141.142.48.5"} = "tg-ncsa";
+$hosts{"192.168.0.4"} = "diapason";
+$hosts{"192.168.0.6"} = "nordlys";
+$hosts{"192.67.21.230"} = "etf-sdsc";
+$hosts{"192.67.20.33"} = "tg-sdsc"; # Old(?)
+$hosts{"192.67.20.34"} = "tg-sdsc"; # Old(?)
+$hosts{"198.202.112.33"} = "tg-sdsc";
+$hosts{"198.202.112.34"} = "tg-sdsc";
+$hosts{"192.67.21.205"} = "horizon";
+$hosts{"192.67.21.206"} = "horizon";
+$hosts{"192.67.82.4"} = "horizon";
+$hosts{"192.67.82.5"} = "horizon";
+$hosts{"192.168.236.64"} = "ds-sdsc";
+$hosts{"10.1.1.128"} = "paolo";
+
+$host = hostname();
+$ip = inet_ntoa(scalar gethostbyname($host || 'localhost'));
+
+## Uncomment below to test specific address using e.g. 
+## "echo 141.142.2.5 | gethost"
+## $ip = <STDIN>; chop($ip);
+
+if ($hosts{$ip} ne "") {
+## Check specific ip address
+    print "$hosts{$ip}\n";
+} else {
+## Check range of ip addresses
+
+    ## first break up $ip into fields ($ip0 $ip1 $ip2 $ip3)
+    $left = 0;
+    $len = index($ip,".");
+    $ip0 = substr($ip,$left,$len-$left);
+    $left = $len+1;
+    $len = index($ip,".",$left);
+    $ip1 = substr($ip,$left,$len-$left);
+    $left = $len+1;
+    $len = index($ip,".",$left);
+    $ip2 = substr($ip,$left,$len-$left);
+    $left = $len+1;
+    $len = index($ip,".",$left);
+    $ip3 = substr($ip,$left,3);
+
+    $result = unknown;
+# NCSA TG = 141.142.{48-49}.*
+    if ($ip0==141 && $ip1==142 && (48 <= $ip2 && $ip2 <= 49)) {
+	$result = "tg-ncsa";
+    }
+# SDSC TG = 192.67.20.{32-162}
+    if ($ip0==192 && $ip1==67 && $ip2==20 && (32<=$ip3 && ip3<=162)) {
+	$result = "tg-sdsc";
+    }
+   print "$result\n";
+}
+

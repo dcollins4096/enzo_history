@@ -1,0 +1,72 @@
+RAVEN-20061130
+
+Raven is a simple tool for examining ENZO data, and then plotting it using the
+application HippoDraw.  Right now, it's pretty undocumented.  So, good luck.
+However, I did include a couple examples in examples/ that should help you get
+started.  (And really, they explore most of the complicated functionality.)
+
+You'll need either pyhdf or pytables, depending on which type of ENZO data you
+want to read -- HDF4 or HDF5, respectively.  Additionally, you'll need
+NumArray, and if you want to use any plotting functionality from hippo_plot,
+you will need a version of HippoDraw that supports the Variable Mesh type of
+plot.
+
+I've tried to make things pretty straightforward and easy to read, and I've
+also tried to speed them up wherever possible.  Unfortunately, this is not
+always at the greatest memory efficiency, although I do aim for that.  Usually
+commands are what you would normally say -- for instance, if you want a
+Projection, you use the addProj() function.  To set the width to 10
+kiloparsecs, you use the call setWidth(10,"kpc").  You can add more units, and
+it will attempt to find any units defined in the units dictionary.  You can, of
+course, also feed in raw width information.
+
+The API may change in the future to allow for the hierarchy to be assigned to
+the EnzoPlot instances rather than the EnzoHippo instance.  For right now,
+however, each EnzoHippo instance carries its own, and the method of plotting
+multiple hierarchy simultaneously is to create multiple canvases and EnzoHippos
+with a single application.
+
+A couple places you might want to make changes to the code:
+
+    EnzoHierarchy.setUnits : you can add other units in here
+    fields                 : this is where new fields can be added.
+                             Follow the examples therein.
+    ravenDefs              : miscellaneous changes and global values
+
+Let me know how you like it.  The terms of its distribution are in COPYING.
+
+FORTRAN WRAPPING:
+
+I've put in a basic wrapper for solve_rate_cool, which is a fortran module we
+use here.  You can follow the example in the .pyf and .pfp files to make your
+own wrapper for other fortran modules.  To add more fortran modules, add them
+to enzo_routines.pyf and the source files to enzo_routines.pfp.  Then run:
+
+    pyfort -i enzo_routines.pfp
+
+You should then be able to import the enzo_routines module and call them.  Note
+that input arrays can be anything, but input/output arrays must be of Numeric
+type.  (See src_wrapper.py for an idea of how to use this.)
+
+KNOWN BUGS:
+
+* Right now, HippoDraw doesn't seem to like having multiple axes of a plot
+added simultaneously.  There's something up with the way it accesses memory,
+and I think python is dereferencing something earlier than it should.  So if
+you get funky errors, try only plotting a single axis in slice or projection
+mode at a time.  (Note that EnzoHippo.addProj and EnzoHippo.addSlice default to
+adding all three axes at once, in anticipation of a bug fix.)
+
+* Also, it had the notable shortcoming that once you add more than a few plots,
+it gets a bit cumbersome.  I'm working on that.
+
+* For some reason off-screen rendering doesn't seem to work just yet anywhere I
+have been able to test.  This is probably again due to a subtle bug between how
+I am interacting with HippoDraw and how it expects me to interact.  Some people
+have reported issues with on-screen rendering over X11.  This is currently
+being looked at in the HippoDraw development group.
+
+These bugs aside, it's really pretty fun and useful to use.  :)
+
+Matthew Turk
+mturk@stanford.edu

@@ -1,0 +1,18 @@
+#======================================================================
+#
+# Make.obj for 32-bit object files
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-09-10  Created
+#
+#======================================================================
+
+TEXT_OBJ = $(TEXT_OBJ_32)
+
+OBJECT_MODE = 32
+
+HDF4_DIR_OBJ = $(HDF4_DIR_OBJ_32_ARCH)$(HDF4_DIR_ARCH)
+HDF5_DIR_OBJ = $(HDF5_DIR_OBJ_32_ARCH)$(HDF5_DIR_ARCH)
+
+FLAGS_OBJ = $(FLAGS_OBJ_32_ARCH)

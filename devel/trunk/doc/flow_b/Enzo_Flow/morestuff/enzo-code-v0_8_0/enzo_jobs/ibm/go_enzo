@@ -1,0 +1,3 @@
+#!/bin/ksh
+poe ring ParticlePositions ParticleVelocities
+poe enzo5 -d AMRCosmologySimulation

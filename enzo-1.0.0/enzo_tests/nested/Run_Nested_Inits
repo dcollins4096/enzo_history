@@ -1,0 +1,6 @@
+
+Two nested grids:
+
+./inits5 -d -s SubGrid    TopGrid
+./inits5 -d -s SubSubGrid SubGrid
+./inits5 -d               SubSubGrid

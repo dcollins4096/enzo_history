@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/yt/!svn/ver/812/branches/yt-1.0
+END
+LICENSE.txt
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/yt/!svn/ver/666/branches/yt-1.0/LICENSE.txt
+END
+epydoc.cfg
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/yt/!svn/ver/666/branches/yt-1.0/epydoc.cfg
+END
+ez_setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/yt/!svn/ver/811/branches/yt-1.0/ez_setup.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/yt/!svn/ver/721/branches/yt-1.0/setup.py
+END
+freezer.py
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/yt/!svn/ver/666/branches/yt-1.0/freezer.py
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/yt/!svn/ver/666/branches/yt-1.0/README
+END
+setup.cfg
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/yt/!svn/ver/666/branches/yt-1.0/setup.cfg
+END

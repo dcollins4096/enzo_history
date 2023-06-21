@@ -1,0 +1,63 @@
+c     ppml_ppm
+c     A routine for simplifying the PPML program
+c     by replacing the interface evolution (which is clever, don't
+c     get me wrong) with something that's much simpler,
+c     namely the reconstruction from Colella and Woodward, J.Comp.Phys 54, 174-201, 1984.
+c
+c     Interested readers should read that paper.  This part comes
+c     from eqn. 1.6, setting the cell widths equal to eachother.
+c     The final reconstruction is
+c     a(i+1/2) = a(i) + 1/2(a(i+1) - a(i) ) - 1/6 \delta a(i+1) + 1/6 \delta a(i)
+c     and \delta a(i) = min( |1/2(a(i+1)-a(i-1)) | , 2|a(i) - a(i-1)| , 2|a(i+1) - a(i)| ) 
+c                                if ( a(i+1) - a(i) )(*(a(i) - a(i-1) ) > 0
+c                     = 0        otherwise.
+c     (This is the monotonicity preserving slope limiter from Van Leer.)
+
+      subroutine ppml_ppm(nx, nf, right, left, aa)
+      implicit none
+      integer nx, nf                                !number of cells, and number of fields. 
+      real right(nx,nf), left(nx,nf), aa(nx,nf) !data at i+1/2, i-1/2, i
+      integer i,m
+c     The constants
+      real OneSixth
+c     The finite differences:
+      real a2m0  ! a(i+2) - a(i  )  ( a(i) = a(i+0) )
+      real a2p1  ! a(i+2) - a(i+1) 
+      real a1m0  ! a(i+1) - a(i  )
+      real a0mm1 ! a(i  ) - a(i-1)
+      real a1mm1 ! a(i+1) - a(i-1)
+      real dap1, da ! \dealta a(i+1) , \delta a(i)
+      real tiny_number 
+
+      tiny_number = 1e-20
+      OneSixth = 1.0/6.0
+
+      do m=1,nf
+         do i=2,nx-2
+            a2m0  = aa(i+2,m) - aa(i  ,m)
+            a2p1  = aa(i+2,m) - aa(i+1,m)
+            a1m0  = aa(i+1,m) - aa(i  ,m)
+            a0mm1 = aa(i  ,m) - aa(i-1,m)
+            a1mm1 = aa(i+1,m) - aa(i-1,m)
+            dap1 = 0.0
+            if( a2p1 * a1m0 .gt. tiny_number ) then 
+               dap1 = min( 0.5*abs(a2m0), 2*abs(a2p1), 2*abs(a1m0) )
+     +              *sign(1.0, a1m0)
+            endif
+            da = 0.0
+            if( a1m0 * a0mm1 .gt. tiny_number) then
+               da = min( 0.5*abs(a1mm1), 2*abs(a1m0), 2*abs(a0mm1) )
+     +              * sign(1.0, a0mm1)
+            endif
+            right(i,m) = 0.5*aa(i,m) + 0.5*aa(i+1,m) - 
+     +           OneSixth*(da-dap1)
+
+            left(i+1,m) = right(i,m)
+
+         enddo
+      enddo
+c     Then limit the slope
+      call qdd6(nx,right,left,aa)
+
+      end
+      

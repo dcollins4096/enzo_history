@@ -1,0 +1,13 @@
+#======================================================================
+#
+# Make.opt for runtime checking (bounds, fp exeptions, etc.)
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-06-21  Created
+#
+#======================================================================
+
+TEXT_OPT = $(TEXT_OPT_CHECK)
+
+FLAGS_OPT = $(FLAGS_OPT_CHECK_ARCH) $(FLAGS_OPT_DEBUG_ARCH)

@@ -1,0 +1,85 @@
+      program preallocate
+
+      implicit none
+
+      integer*8 :: n1, n2, n3
+
+      read(*,*) n1, n2, n3
+
+!     n1=128
+!     n2=128
+!     n3=128
+
+      call preall(n1, n2, n3)
+
+      end
+
+      subroutine preall(nx, ny, nz)
+
+      implicit none
+
+      integer*8 :: nx, ny, nz
+      integer*8 :: i, j, l, m, n
+      integer*8 :: lrec
+      real*8, allocatable :: ranbuf(:,:,:,:)
+
+!     NAG Mark 20
+
+      integer*4 :: iseed(4), igen
+      real*8 g05kaf
+
+      external g05kaf
+      external g05kbf
+
+!     1 <= igen <= 273 for Wichman-Hill generator
+!     W-H has a period of 2^92 but actually > 2^80
+!     NAG advise not using more than the sqrt of this
+!     so < 2^40 trials == 1.09e+12
+
+      igen = 137
+
+      iseed(1) = 1762543
+      iseed(2) = 9324783
+      iseed(3) =   42344
+      iseed(4) =  742335
+
+      call a00aaf()
+      call g05kbf(igen, iseed)
+
+      lrec = 8 * (2 * 5 * (2*(nx/2)+1) * (2*(nx/2)+1) )
+
+      write(0,'("Allocate ",i8," for random buffer")') lrec
+      allocate( ranbuf(1:2, 1:5, -nx/2 : nx/2, -nx/2 : nx/2) )
+
+      ranbuf = 0.0d0
+
+      write(0,'("Open direct access file with recl = ",i8," nx = ",i4)')
+     &      lrec, nx
+      open(120, file='random_numbers', form='unformatted',
+     &          status='unknown', access='direct',
+     &          recl = 8 * (2 * 5 * (2*(nx/2)+1) * (2*(nx/2)+1) ) )
+
+      do n=1,nx/2
+
+        do i = -nx/2, nx/2
+          do j = -nx/2, nx/2
+            do m = 1, 5
+              do l = 1, 2
+                ranbuf(l,m,j,i) = g05kaf(igen, iseed)
+              end do
+            end do
+          end do
+        end do
+
+        write(120, rec=n)
+     &  ((((ranbuf(l,m,j,i),l=1,2),m=1,5),j=-nx/2,nx/2),i=-nx/2,nx/2)
+
+      end do
+
+      close(120)
+
+      deallocate( ranbuf )
+
+      return
+
+      end

@@ -1,0 +1,141 @@
+#include "fortran.def"
+#include "error.def"
+
+      subroutine center_magnetic_field(bxface, byface, bzface,
+     +     bxc, byc, bzc, energy, dx, dy, dz, idim, jdim, kdim, 
+     +     i1, i2, j1, j2, k1, k2, method)
+
+      implicit none
+c This averages the magnetic field to the center of 
+c      the volume for use in the calculation of the time step
+c      as well as the solution of the riemann problem.
+c      It's done in Calculate Time Step becaues the centered field
+c      is needed here first, and there's already a loop over grids here.
+c      Since pointer chasing is expensive (lots of cash loading) I
+c      felt it best to piggy back this calculation here.
+c     dcc 03/35/04
+c     Currently, dx dy and dz aren't used,
+c     but left in for other interpolation routines.
+c     method = 0: undefined centering method.  Crash.
+c     method = 1: with a correction to the energy, to reflect change in B.  Doesn't conserve.
+c     method = 2: No correction.  Conserves energy.
+      
+
+
+      integer i1, i2, j1, j2, k1, k2
+      integer i, j, k      
+
+      real oldmageng, newmageng
+
+      integer is, ie, js, je, ks, ke
+      integer idim, jdim, kdim
+      integer method
+      REALSUB dx(idim), dy(jdim), dz(kdim)
+      real bxc(idim, jdim, kdim), byc(idim, jdim, kdim)
+      real bzc(idim, jdim, kdim)
+      real energy(idim, jdim, kdim)
+ 
+      real bxface(idim+1,jdim,kdim)
+      real byface(idim,jdim+1,kdim)
+      real bzface(idim,jdim,kdim+1)
+
+
+
+c     Direct Averaging method
+
+c	 write(*,*)  "======== in center_magnetic_field ========="
+
+c      write(*,*) "kludge: center mag: b=1"
+      if( 2 .eq. 2 ) then
+         
+         if( method .eq. 1) then
+
+c	Correct energy for change in magnetic field
+            is = 1
+            ie = idim
+            js = 1
+            je = jdim
+            ks = 1
+            ke = kdim
+
+            do k = ks, ke
+               do j = js, je
+                  do i = is, ie
+                     oldmageng = 0.5*(bxc(i,j,k)**2 + byc(i,j,k)**2 +
+     +                                bzc(i,j,k)**2)
+
+                     bxc(i,j,k) = 0.5*( bxface(i,j,k)+bxface(i+1,j,k) )
+                     byc(i,j,k) = 0.5*( byface(i,j,k)+byface(i,j+1,k) )
+                     bzc(i,j,k) = 0.5*( bzface(i,j,k)+bzface(i,j,k+1) )
+
+                     newmageng = 0.5*(bxc(i,j,k)**2 + bzc(i,j,k)**2 +
+     +                                byc(i,j,k)**2)
+
+                 energy(i,j,k) = energy(i,j,k) + newmageng - oldmageng
+                  enddo
+               enddo
+            enddo
+            
+
+         elseif( method .eq. 2 ) then
+
+c	without correcion.  Conserves energy..
+            is = 1
+            ie = idim
+            js = 1
+            je = jdim
+            ks = 1
+            ke = kdim
+
+            do k = ks, ke
+               do j = js, je
+                  do i = is, ie
+
+                     bxc(i,j,k) = 0.5*( bxface(i,j,k)+bxface(i+1,j,k) )
+                     byc(i,j,k) = 0.5*( byface(i,j,k)+byface(i,j+1,k) )
+                     bzc(i,j,k) = 0.5*( bzface(i,j,k)+bzface(i,j,k+1) )
+
+c                     bxc(i,j,k) = 1.0 
+c                     byc(i,j,k) = 1.0
+c                     bzc(i,j,k) = 1.0
+
+                  enddo
+               enddo
+            enddo
+
+         elseif( method .eq. 3 ) then
+
+c     The dt only update.
+            is = 1
+            ie = idim
+            js = 1
+            je = jdim
+            ks = 1
+            ke = kdim
+
+            do k = ks, ke
+               do j = js, je
+                  do i = is, ie
+
+                     bxc(i,j,k) = bxc(i,j,k) + 
+     +                            0.5*( bxface(i,j,k)+bxface(i+1,j,k) )
+                     byc(i,j,k) = byc(i,j,k) +
+     +                            0.5*( byface(i,j,k)+byface(i,j+1,k) )
+                     bzc(i,j,k) = bzc(i,j,k) +
+     +                            0.5*( bzface(i,j,k)+bzface(i,j,k+1) ) 
+                  enddo
+               enddo
+            enddo
+
+
+         else
+	       write(6,*) "center_mag: Please define centering method",
+     +           method
+
+            ERROR_MESSAGE
+         endif
+         
+      endif 
+
+      return
+      end

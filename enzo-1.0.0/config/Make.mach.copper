@@ -1,0 +1,51 @@
+#======================================================================
+#
+# Make.mach for NCSA Copper
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_COPPER)
+
+#----------------------------------------------------------------------
+# Libraries if there IS NO distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_DIR_ARCH = 
+HDF5_DIR_ARCH = 
+
+#----------------------------------------------------------------------
+# Libraries if there IS a distinction for 32- and 64-bit objects
+#----------------------------------------------------------------------
+
+HDF4_ROOT = /afs/ncsa.uiuc.edu/packages/hdf
+HDF5_ROOT = /u/ac/bordner/public
+
+HDF4_DIR_OBJ32_ARCH = $(HDF4_ROOT)/hdf4-aix5-32
+HDF5_DIR_OBJ32_ARCH = $(HDF5_ROOT)/hdf5-32
+
+HDF4_DIR_OBJ64_ARCH = $(HDF4_ROOT)/hdf4-aix5-64
+HDF5_DIR_OBJ64_ARCH = $(HDF5_ROOT)/hdf5-64
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = /usr/local/apps/tools/papi
+PERF_PAPI_DIR_OBJ32_ARCH = -L$(PERF_PAPI_DIR)/lib -lpapi
+PERF_PAPI_DIR_OBJ64_ARCH = -L$(PERF_PAPI_DIR)/lib -lpapi64
+
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI
+FLAGS_PERF_PAPI_ARCH = -I$(PERF_PAPI_DIR)/include
+LIBS_PERF_PAPI_ARCH = $(PERF_PAPI_DIR_OBJ) -L /usr/pmapi/lib -lpmapi
+
+#======================================================================
+# MPE libraries
+#======================================================================
+PERF_MPE_DIR = /usr/local/apps/tools/mpe
+DEFINES_PERF_MPE_ARCH = -DUSE_MPE
+FLAGS_PERF_MPE_ARCH = -I$(PERF_MPE_DIR)/include
+LIBS_PERF_MPE_ARCH = -L$(PERF_MPE_DIR)/lib -lmpe

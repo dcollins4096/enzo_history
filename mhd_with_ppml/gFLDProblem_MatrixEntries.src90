@@ -1,0 +1,954 @@
+!=======================================================================
+!
+! Copyright 2006 Daniel R. Reynolds
+! Copyright 2006 Laboratory for Computational Astrophysics
+! Copyright 2006 Regents of the University of California
+!
+! This software is released under the terms of the "Enzo Public License"
+! in the accompanying LICENSE file.
+!
+!=======================================================================
+subroutine gFLDProblem_MatrixEntries(matentries, EgCur, EgOld, Temp, &
+     sigmaA, sigmaS, adjvec, LimImp, dt, a, theta, dx, dy, dz, Nx,   &
+     Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, BCxL, BCxR, BCyL,   &
+     BCyR, BCzL, BCzR, xlface, xrface, ylface, yrface, zlface, zrface, ier)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       September, 2006
+!  modified1:
+!
+!  PURPOSE: Computes the array of matrix stencil elements for the 
+!           Gray FLD problem,
+!              -dt/a*Div(D(Eg)*Grad(Eg))
+!           where D(Eg) is a nonlinear flux-limiter depending on Eg.  
+!           We define the values
+!              R_i = |Grad(Eg)_i|/sigT/omega/Eg,
+!              omega = (sigA*B + sigS*E)/(sigT*E)
+!              sigA = absorption coefficient
+!              sigS = scattering coefficient
+!              sigT = total extinction coefficient.
+!           The '_i' subscript implies the gradient in the ith 
+!           direction; these quantities are all required at cell faces, 
+!           as that is the location of the divergence calculations.
+!           With these components, we allow any of the following three 
+!           forms of the limiter, 
+!             [Levermore-Pomraning, 1981],
+!                 D_i(Eg) = c/sigT/R_i/omega*[coth(R_i)-1/R_i],
+!             [rational approx. to above, Levermore-Pomraning, 1981],
+!                 D_i(Eg) = c/sigT/omega*(2+R_i)/(6+3*R_i+R_i**2),
+!             [Reynolds approximation to LP],
+!                 D_i(Eg) = 2/pi*c/sigT/R_i/omega*atan(R_i*pi/6).
+!           The limiter type is determined through pre-processor 
+!           directives:
+!               DLIM_LPR    rational approx. to LP lim. (LP, 1981)
+!               DLIM_DRR    Reynolds approx to LP lim.
+!               DLIM_NONE   turns off the limiter (constant of 1/3)
+!               (default)   standard Levermore-Pomraning lim. (LP, 1981)
+!
+!           As the stencil has 7 non-zero elements per matrix row, we 
+!           set these entries over the computational domain, with the 
+!           proper adjustments due to the choice of limiter.
+!
+!  INPUTS:
+!     EgCur      - Gray radiation energy density
+!     EgOld      - Gray radiation energy density (old time step)
+!     Temp       - fluid temperature
+!     sigmaA     - absorption coefficient in cell
+!     sigmaS     - scattering coefficient in cell
+!     adjvec     - Schur complement adjustment vector (for diagonal)
+!     LimImp     - integer flag denoting implicitness of flux limiter:
+!                       0 -> fully lagged to previous time step
+!                       1 -> fully lagged to previous newton iterate
+!                       2 -> lag only temperature dependence
+!     a          - cosmological expansion parameter
+!     dt         - time step size
+!     theta      - overall implicitness parameter
+!     dx,dy,dz   - mesh spacing in each direction
+!     Nx,Ny,Nz   - active mesh size in each direction
+!     NG*l/NG*r  - left/right ghost cells in each direction
+!     BC*        - boundary condition type in each direction, face
+!                  [0 -> periodic, 1 -> Dirichlet, 2-> Neumann]
+!     *{l,r}face - integer flag denoting whether direction/face 
+!                  is external to the domain (0->int, 1->ext)
+!
+!     Note: the vector inputs are of size (Nx + NGxl + NGxr) in 
+!     the x-direction, others are similar.
+!
+!  OUTPUT ARGUMENTS: 
+!     matentries - array of stencil values over the active domain, 
+!                  including appropriate boundary conditions.  Since 
+!                  the stencil has 7 nonzero entries, and as this 
+!                  array should not include ghost cells, it has 
+!                  dimensions (7,Nx,Ny,Nz).
+!     ier        - success/failure flag (0->failure, 1->success)
+!
+!  EXTERNALS: 
+!
+!  LOCALS:
+!
+!=======================================================================
+#include "fortran.def"
+  implicit none
+
+!--------------
+! argument declarations
+  integer, intent(in) :: LimImp
+  integer, intent(in) :: Nx, NGxl, NGxr, BCxL, BCxR, xlface, xrface
+  integer, intent(in) :: Ny, NGyl, NGyr, BCyL, BCyR, ylface, yrface
+  integer, intent(in) :: Nz, NGzl, NGzr, BCzL, BCzR, zlface, zrface
+  integer, intent(out) :: ier
+  REALSUB, intent(in) :: a
+  REALSUBR, intent(in) :: dx, dy, dz, dt, theta
+  REALSUBR, intent(in), target,                                 &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr) &
+       :: EgCur, EgOld
+  REALSUBR, intent(in),                                         &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr) &
+       :: Temp, sigmaA, sigmaS, adjvec
+  real*8, intent(out) :: matentries(7,Nx,Ny,Nz)
+
+!--------------
+! locals
+  integer :: i, j, k
+  REALSUBR :: c, pi, StBz, dxi, dyi, dzi
+  REALSUBR :: dtfac, dxi2, dyi2, dzi2
+  REALSUBR :: Egf, B, omega, R, sigA, sigS, sigT, AGradEg
+  REALSUBR :: GradEg, Dlim, Alim, Glim, datanR, dcothR
+  REALSUBR :: fltzero, one
+  REALSUBR, pointer :: Eg(:,:,:)
+
+!=======================================================================
+  
+!!$  write(*,*) 'Entering gFLDProblem::MatrixEntries routine'
+!!$  write(*,*) '     ||EgCur||_1 =',sum(abs(EgCur))
+!!$  write(*,*) '     ||EgOld||_1 =',sum(abs(EgOld))
+!!$  write(*,*) '      ||Temp||_1 =',sum(abs(Temp))
+!!$  write(*,*) '    ||sigmaA||_1 =',sum(abs(sigmaA))
+!!$  write(*,*) '    ||sigmaS||_1 =',sum(abs(sigmaS))
+!!$  write(*,*) '    ||adjvec||_1 =',sum(abs(adjvec))
+
+  ! initialize output flag, and set matentries to have all zero values
+  ier = 1
+  matentries = 0.d0
+
+  ! set shortcut values
+  dtfac = dt*theta      ! time step factor
+  one   = 1.d0
+  dxi   = 1.d0/dx
+  dxi2  = dxi*dxi 
+  dyi   = 1.d0/dy
+  dyi2  = dyi*dyi
+  dzi   = 1.d0/dz
+  dzi2  = dzi*dzi
+  c  = 2.99792458d10     ! speed of light [cm/s]
+  StBz = 5.6704e-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
+  pi = 4.d0*datan(1.d0)
+  datanR = 0.d0
+  dcothR = 0.d0
+#undef tiny
+  ! get rid of bad macro (1e-20??: >> min, << roundoff, nonsensical)
+  fltzero = tiny(fltzero)  ! use f90 built-in function for min instead
+
+
+  ! set Eg and ec to point at appropriate arrays for limiter evaluation
+  select case (LimImp)
+  case(1)       ! fully lagged to previous newton iterate
+     Eg=>EgCur
+  case(2)       ! lag only temperature
+     Eg=>EgCur
+  case default  ! fully lagged to previous time step
+     Eg=>EgOld
+  end select
+
+
+  ! iterate over the domain
+  do k=1,Nz,1
+     do j=1,Ny,1
+        do i=1,Nx,1
+
+           ! initialize matrix entries
+           matentries(:,i,j,k) = 0.d0
+           matentries(4,i,j,k) = adjvec(i,j,k)
+
+           !--------------
+           ! x-directional limiter, lower face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k) - Eg(i-1,j,k))*dxi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i-1,j,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i-1,j,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i-1,j,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i-1,j,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute gradients of current Eg
+           GradEg = (EgCur(i,j,k) - EgCur(i-1,j,k))*dxi
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           Dlim = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           Dlim = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (c*B*sigA/Egf/Egf/sigT/sigT/omega/omega       &
+                   *(2.d0+R)/(6.d0+3.d0*R+R*R) +                   &
+                   c/sigT/omega*2.d0*R                             &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)    &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf  &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = -c/sigT/omega*2.d0*R                        &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)  &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_DRR
+           datanR = datan(R*pi/6.d0)
+           Dlim = 2.d0/pi*c/omega/sigT*datanR/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (2.d0*c*B*sigA/Egf/Egf/sigT/sigT/omega/omega/pi*datanR/R &
+                   - (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R              &
+                   -2.d0*c/sigT/omega/pi*datanR/R/R)                          &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf             &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R  &
+                   - 2.d0*c/sigT/omega/pi*datanR/R/R)             &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_NONE
+!!$           Dlim = 1.d0/3.d0
+           Dlim = c/omega/sigT/3.d0
+           Alim = 0.d0
+           Glim = 0.d0
+#else
+           dcothR = cosh(R)/sinh(R)
+           Dlim = c/omega/sigT*(dcothR-1.d0/R)/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = c/sigT/omega*(B*sigA/Egf/Egf/sigT/omega*(dcothR-1.d0/R) &
+                   - ((1.d0-dcothR*dcothR+1.d0/R/R)                            &
+                   - 1.d0*(dcothR-1.d0/R)/R)                                   &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf              &
+                   + GradEg/sigT/omega/Egf/Egf))/R*GradEg
+              Glim = c/sigT/omega*((1.d0-dcothR*dcothR+1.d0/R/R)  &
+                   -1.D0*(dcothR-1.d0/R)/R)/R                         &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#endif
+
+           !    set the relevant matrix entries
+           !      dep. on x-left Eg
+           matentries(3,i,j,k) = matentries(3,i,j,k)           &
+                - dtfac*dxi/a*((Dlim + Glim)*dxi/a - 0.5d0*Alim)
+           !      dep. on self Eg
+           matentries(4,i,j,k) = matentries(4,i,j,k)           &
+                + dtfac*dxi/a*((Dlim + Glim)*dxi/a + 0.5d0*Alim)
+
+!!$           write(*,*) '  location =',i,j,k,',  x-left face:'
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '    datanR =',datanR
+!!$           write(*,*) '      Dlim =',Dlim
+!!$           write(*,*) '      Glim =',Glim
+!!$           write(*,*) '      Alim =',Alim
+!!$           write(*,*) '    mat(3) =',matentries(3,i,j,k)
+!!$           write(*,*) '    mat(4) =',matentries(4,i,j,k)
+!!$           write(*,*) '   '
+
+
+           !--------------
+           ! x-directional limiter, upper face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i+1,j,k) - Eg(i,j,k))*dxi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i+1,j,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i+1,j,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i+1,j,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i+1,j,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute gradients of current Eg
+           GradEg = (EgCur(i+1,j,k) - EgCur(i,j,k))*dxi
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           Dlim = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           Dlim = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (c*B*sigA/Egf/Egf/sigT/sigT/omega/omega       &
+                   *(2.d0+R)/(6.d0+3.d0*R+R*R) +                   &
+                   c/sigT/omega*2.d0*R                             &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)    &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf  &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = -c/sigT/omega*2.d0*R                        &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)  &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_DRR
+           datanR = datan(R*pi/6.d0)
+           Dlim = 2.d0/pi*c/omega/sigT*datanR/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (2.d0*c*B*sigA/Egf/Egf/sigT/sigT/omega/omega/pi*datanR/R &
+                   - (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R              &
+                   -2.d0*c/sigT/omega/pi*datanR/R/R)                          &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf             &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R  &
+                   - 2.d0*c/sigT/omega/pi*datanR/R/R)             &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_NONE
+!!$           Dlim = 1.d0/3.d0
+           Dlim = c/omega/sigT/3.d0
+           Alim = 0.d0
+           Glim = 0.d0
+#else
+           dcothR = cosh(R)/sinh(R)
+           Dlim = c/omega/sigT*(dcothR-1.d0/R)/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = c/sigT/omega*(B*sigA/Egf/Egf/sigT/omega*(dcothR-1.d0/R) &
+                   - ((1.d0-dcothR*dcothR+1.d0/R/R)                            &
+                   - 1.d0*(dcothR-1.d0/R)/R)                                   &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf              &
+                   + GradEg/sigT/omega/Egf/Egf))/R*GradEg
+              Glim = c/sigT/omega*((1.d0-dcothR*dcothR+1.d0/R/R)  &
+                   -1.D0*(dcothR-1.d0/R)/R)/R                         &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#endif
+
+           !    set the relevant matrix entries
+           !       dep. on x-right Eg
+           matentries(5,i,j,k) = matentries(5,i,j,k)           &
+                - dtfac*dxi/a*((Dlim + Glim)*dxi/a + 0.5d0*Alim)
+           !       dep. on self Eg
+           matentries(4,i,j,k) = matentries(4,i,j,k)           &
+                + dtfac*dxi/a*((Dlim + Glim)*dxi/a - 0.5d0*Alim)
+
+!!$           write(*,*) '  location =',i,j,k,',  x-right face:'
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '    datanR =',datanR
+!!$           write(*,*) '      Dlim =',Dlim
+!!$           write(*,*) '      Glim =',Glim
+!!$           write(*,*) '      Alim =',Alim
+!!$           write(*,*) '    mat(5) =',matentries(5,i,j,k)
+!!$           write(*,*) '    mat(4) =',matentries(4,i,j,k)
+!!$           write(*,*) '   '
+
+           !--------------
+           ! y-directional limiter, lower face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k) - Eg(i,j-1,k))*dyi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j-1,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j-1,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j-1,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j-1,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute gradients of current Eg
+           GradEg = (EgCur(i,j,k) - EgCur(i,j-1,k))*dyi
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           Dlim = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           Dlim = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (c*B*sigA/Egf/Egf/sigT/sigT/omega/omega       &
+                   *(2.d0+R)/(6.d0+3.d0*R+R*R) +                   &
+                   c/sigT/omega*2.d0*R                             &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)    &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf  &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = -c/sigT/omega*2.d0*R                        &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)  &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_DRR
+           datanR = datan(R*pi/6.d0)
+           Dlim = 2.d0/pi*c/omega/sigT*datanR/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (2.d0*c*B*sigA/Egf/Egf/sigT/sigT/omega/omega/pi*datanR/R &
+                   - (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R              &
+                   -2.d0*c/sigT/omega/pi*datanR/R/R)                          &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf             &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R  &
+                   - 2.d0*c/sigT/omega/pi*datanR/R/R)             &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_NONE
+!!$           Dlim = 1.d0/3.d0
+           Dlim = c/omega/sigT/3.d0
+           Alim = 0.d0
+           Glim = 0.d0
+#else
+           dcothR = cosh(R)/sinh(R)
+           Dlim = c/omega/sigT*(dcothR-1.d0/R)/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = c/sigT/omega*(B*sigA/Egf/Egf/sigT/omega*(dcothR-1.d0/R) &
+                   - ((1.d0-dcothR*dcothR+1.d0/R/R)                            &
+                   - 1.d0*(dcothR-1.d0/R)/R)                                   &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf              &
+                   + GradEg/sigT/omega/Egf/Egf))/R*GradEg
+              Glim = c/sigT/omega*((1.d0-dcothR*dcothR+1.d0/R/R)  &
+                   -1.D0*(dcothR-1.d0/R)/R)/R                         &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#endif
+
+           !    set the relevant matrix entries
+           !      dep. on y-left Eg
+           matentries(2,i,j,k) = matentries(2,i,j,k)           &
+                - dtfac*dyi/a*((Dlim + Glim)*dyi/a - 0.5d0*Alim)
+           !      dep. on self Eg
+           matentries(4,i,j,k) = matentries(4,i,j,k)           &
+                + dtfac*dyi/a*((Dlim + Glim)*dyi/a + 0.5d0*Alim)
+
+!!$           write(*,*) '  location =',i,j,k,',  y-left face:'
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '    datanR =',datanR
+!!$           write(*,*) '      Dlim =',Dlim
+!!$           write(*,*) '      Glim =',Glim
+!!$           write(*,*) '      Alim =',Alim
+!!$           write(*,*) '    mat(2) =',matentries(2,i,j,k)
+!!$           write(*,*) '    mat(4) =',matentries(4,i,j,k)
+!!$           write(*,*) '   '
+
+           !--------------
+           ! y-directional limiter, upper face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j+1,k) - Eg(i,j,k))*dyi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j+1,k))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j+1,k))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j+1,k))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j+1,k))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute gradients of current Eg
+           GradEg = (EgCur(i,j+1,k) - EgCur(i,j,k))*dyi
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           Dlim = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           Dlim = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (c*B*sigA/Egf/Egf/sigT/sigT/omega/omega       &
+                   *(2.d0+R)/(6.d0+3.d0*R+R*R) +                   &
+                   c/sigT/omega*2.d0*R                             &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)    &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf  &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = -c/sigT/omega*2.d0*R                        &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)  &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_DRR
+           datanR = datan(R*pi/6.d0)
+           Dlim = 2.d0/pi*c/omega/sigT*datanR/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (2.d0*c*B*sigA/Egf/Egf/sigT/sigT/omega/omega/pi*datanR/R &
+                   - (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R              &
+                   -2.d0*c/sigT/omega/pi*datanR/R/R)                          &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf             &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R  &
+                   - 2.d0*c/sigT/omega/pi*datanR/R/R)             &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_NONE
+!!$           Dlim = 1.d0/3.d0
+           Dlim = c/omega/sigT/3.d0
+           Alim = 0.d0
+           Glim = 0.d0
+#else
+           dcothR = cosh(R)/sinh(R)
+           Dlim = c/omega/sigT*(dcothR-1.d0/R)/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = c/sigT/omega*(B*sigA/Egf/Egf/sigT/omega*(dcothR-1.d0/R) &
+                   - ((1.d0-dcothR*dcothR+1.d0/R/R)                            &
+                   - 1.d0*(dcothR-1.d0/R)/R)                                   &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf              &
+                   + GradEg/sigT/omega/Egf/Egf))/R*GradEg
+              Glim = c/sigT/omega*((1.d0-dcothR*dcothR+1.d0/R/R)  &
+                   -1.D0*(dcothR-1.d0/R)/R)/R                         &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#endif
+
+           !    set the relevant matrix entries
+           !       dep. on y-right Eg
+           matentries(6,i,j,k) = matentries(6,i,j,k)           &
+                - dtfac*dyi/a*((Dlim + Glim)*dyi/a + 0.5d0*Alim)
+           !       dep. on self Eg
+           matentries(4,i,j,k) = matentries(4,i,j,k)           &
+                + dtfac*dyi/a*((Dlim + Glim)*dyi/a - 0.5d0*Alim)
+
+!!$           write(*,*) '  location =',i,j,k,',  y-right face:'
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '    datanR =',datanR
+!!$           write(*,*) '      Dlim =',Dlim
+!!$           write(*,*) '      Glim =',Glim
+!!$           write(*,*) '      Alim =',Alim
+!!$           write(*,*) '    mat(6) =',matentries(6,i,j,k)
+!!$           write(*,*) '    mat(4) =',matentries(4,i,j,k)
+!!$           write(*,*) '   '
+
+           !--------------
+           ! z-directional limiter, lower face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k) - Eg(i,j,k-1))*dzi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j,k-1))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j,k-1))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j,k-1))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j,k-1))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute gradients of current Eg
+           GradEg = (EgCur(i,j,k) - EgCur(i,j,k-1))*dzi
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           Dlim = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           Dlim = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R)
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (c*B*sigA/Egf/Egf/sigT/sigT/omega/omega       &
+                   *(2.d0+R)/(6.d0+3.d0*R+R*R) +                   &
+                   c/sigT/omega*2.d0*R                             &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)    &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf  &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = -c/sigT/omega*2.d0*R                        &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)  &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_DRR
+           datanR = datan(R*pi/6.d0)
+           Dlim = 2.d0/pi*c/omega/sigT*datanR/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (2.d0*c*B*sigA/Egf/Egf/sigT/sigT/omega/omega/pi*datanR/R &
+                   - (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R              &
+                   -2.d0*c/sigT/omega/pi*datanR/R/R)                          &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf             &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R  &
+                   - 2.d0*c/sigT/omega/pi*datanR/R/R)             &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_NONE
+!!$           Dlim = 1.d0/3.d0
+           Dlim = c/omega/sigT/3.d0
+           Alim = 0.d0
+           Glim = 0.d0
+#else
+           dcothR = cosh(R)/sinh(R)
+           Dlim = c/omega/sigT*(dcothR-1.d0/R)/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = c/sigT/omega*(B*sigA/Egf/Egf/sigT/omega*(dcothR-1.d0/R) &
+                   - ((1.d0-dcothR*dcothR+1.d0/R/R)                            &
+                   - 1.d0*(dcothR-1.d0/R)/R)                                   &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf              &
+                   + GradEg/sigT/omega/Egf/Egf))/R*GradEg
+              Glim = c/sigT/omega*((1.d0-dcothR*dcothR+1.d0/R/R)  &
+                   -1.D0*(dcothR-1.d0/R)/R)/R                         &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#endif
+
+           !    set the relevant matrix entries
+           !      dep. on z-left Eg
+           matentries(1,i,j,k) = matentries(1,i,j,k)           &
+                - dtfac*dzi/a*((Dlim + Glim)*dzi/a - 0.5d0*Alim)
+           !      dep. on self Eg
+           matentries(4,i,j,k) = matentries(4,i,j,k)           &
+                + dtfac*dzi/a*((Dlim + Glim)*dzi/a + 0.5d0*Alim)
+
+!!$           write(*,*) '  location =',i,j,k,',  z-left face:'
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '    datanR =',datanR
+!!$           write(*,*) '      Dlim =',Dlim
+!!$           write(*,*) '      Glim =',Glim
+!!$           write(*,*) '      Alim =',Alim
+!!$           write(*,*) '    mat(1) =',matentries(1,i,j,k)
+!!$           write(*,*) '    mat(4) =',matentries(4,i,j,k)
+!!$           write(*,*) '   '
+
+           !--------------
+           ! z-directional limiter, upper face
+           !    radiation energy gradient on face
+           AGradEg = abs(Eg(i,j,k+1) - Eg(i,j,k))*dzi
+
+           !    face-centered radiation energy value
+           Egf = (Eg(i,j,k) + Eg(i,j,k+1))*0.5d0
+
+           !    black-body energy at face
+           B = StBz/pi*((Temp(i,j,k)+Temp(i,j,k+1))*0.5d0)**4
+
+           !    absorption, scattering, total extinction coeffs on face
+           sigA = (sigmaA(i,j,k)+sigmaA(i,j,k+1))*0.5d0
+           sigS = (sigmaS(i,j,k)+sigmaS(i,j,k+1))*0.5d0
+           sigT = sigA+sigS
+
+           !    scaling coefficient ('effective albedo' -- LP)
+           omega = sigA/sigT*B + sigS/sigT
+
+           !    face-centered R value
+           R = AGradEg/Egf/sigT/omega
+           R = max(R,fltzero)  ! force away from 0 to avoid NaN
+
+           !    compute gradients of current Eg
+           GradEg = (EgCur(i,j,k+1) - EgCur(i,j,k))*dzi
+
+           !    compute limiter
+#ifdef DLIM_LPR
+c$$$           Dlim = c/omega/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R) 
+           Dlim = c/sigT*(2.d0+R)/(6.d0+3.d0*R+R*R) 
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (c*B*sigA/Egf/Egf/sigT/sigT/omega/omega       &
+                   *(2.d0+R)/(6.d0+3.d0*R+R*R) +                   &
+                   c/sigT/omega*2.d0*R                             &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)    &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf  &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = -c/sigT/omega*2.d0*R                        &
+                   /(36.d0+36.d0*R+3.d1*R*R+6.d0*R*R*R+R*R*R*R)  &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_DRR
+           datanR = datan(R*pi/6.d0)
+           Dlim = 2.d0/pi*c/omega/sigT*datanR/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = (2.d0*c*B*sigA/Egf/Egf/sigT/sigT/omega/omega/pi*datanR/R &
+                   - (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R              &
+                   -2.d0*c/sigT/omega/pi*datanR/R/R)                          &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf             &
+                   +GradEg/sigT/omega/Egf/Egf))*GradEg
+              Glim = (c/3.d0/sigT/omega/(1.d0+R*R*pi*pi/36.d0)/R  &
+                   - 2.d0*c/sigT/omega/pi*datanR/R/R)             &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#elif DLIM_NONE
+!!$           Dlim = 1.d0/3.d0
+           Dlim = c/omega/sigT/3.d0
+           Alim = 0.d0
+           Glim = 0.d0
+#else
+           dcothR = cosh(R)/sinh(R)
+           Dlim = c/omega/sigT*(dcothR-1.d0/R)/R
+           if (LimImp < 2) then
+              Alim = 0.d0
+              Glim = 0.d0
+           else
+              Alim = c/sigT/omega*(B*sigA/Egf/Egf/sigT/omega*(dcothR-1.d0/R) &
+                   - ((1.d0-dcothR*dcothR+1.d0/R/R)                            &
+                   - 1.d0*(dcothR-1.d0/R)/R)                                   &
+                   *((sigT-sigA)*GradEg/omega/omega/sigT/sigT/Egf              &
+                   + GradEg/sigT/omega/Egf/Egf))/R*GradEg
+              Glim = c/sigT/omega*((1.d0-dcothR*dcothR+1.d0/R/R)  &
+                   -1.D0*(dcothR-1.d0/R)/R)/R                         &
+                   *sign(one,GradEg)/sigT/omega/Egf*GradEg
+           endif
+#endif
+
+           !    set the relevant matrix entries
+           !       dep. on z-right Eg
+           matentries(7,i,j,k) = matentries(7,i,j,k)           &
+                - dtfac*dzi/a*((Dlim + Glim)*dzi/a + 0.5d0*Alim)
+           !       dep. on self Eg
+           matentries(4,i,j,k) = matentries(4,i,j,k)           &
+                + dtfac*dzi/a*((Dlim + Glim)*dzi/a - 0.5d0*Alim)
+
+!!$           write(*,*) '  location =',i,j,k,',  z-right face:'
+!!$           write(*,*) '        pi =',pi
+!!$           write(*,*) '         c =',c
+!!$           write(*,*) '     omega =',omega
+!!$           write(*,*) '      sigT =',sigT
+!!$           write(*,*) '    datanR =',datanR
+!!$           write(*,*) '      Dlim =',Dlim
+!!$           write(*,*) '      Glim =',Glim
+!!$           write(*,*) '      Alim =',Alim
+!!$           write(*,*) '    mat(7) =',matentries(7,i,j,k)
+!!$           write(*,*) '    mat(4) =',matentries(4,i,j,k)
+!!$           write(*,*) '   '
+!!$           pause
+
+        enddo
+     enddo
+  enddo
+
+!!$  write(*,*) '    ||matentries||_1 =',sum(abs(matentries))
+!!$  pause
+
+  ! adjust left x-face for boundary conditions
+  if (xlface==1) then
+     i = 1
+     ! Dirichlet
+     if (BCxL==1) then
+        do k=1,Nz,1
+           do j=1,Ny,1
+              matentries(1:3,i,j,k) = 0.d0
+              matentries(4,i,j,k)   = 1.d0
+              matentries(5:7,i,j,k) = 0.d0
+           enddo
+        enddo
+     ! Neumann
+     else if (BCxL == 2) then
+        do k=1,Nz,1
+           do j=1,Ny,1
+              matentries(4,i,j,k) = matentries(4,i,j,k) + matentries(3,i,j,k)
+              matentries(3,i,j,k) = 0.d0
+           enddo
+        enddo
+     endif
+  endif
+
+  ! adjust right x-face for boundary conditions
+  if (xrface==1) then
+     i = Nx
+     ! Dirichlet
+     if (BCxR==1) then
+        do k=1,Nz,1
+           do j=1,Ny,1
+              matentries(1:3,i,j,k) = 0.d0
+              matentries(4,i,j,k)   = 1.d0
+              matentries(5:7,i,j,k) = 0.d0
+           enddo
+        enddo
+     ! Neumann
+     else if (BCxR==2) then
+        do k=1,Nz,1
+           do j=1,Ny,1
+              matentries(4,i,j,k) = matentries(4,i,j,k) + matentries(5,i,j,k)
+              matentries(5,i,j,k) = 0.d0
+           enddo
+        enddo
+     endif
+  endif
+
+  ! adjust left y-face for boundary conditions
+  if (ylface==1) then
+     j = 1
+     ! Dirichlet
+     if (BCyL==1) then
+        do k=1,Nz,1
+           do i=1,Nx,1
+              matentries(1:3,i,j,k) = 0.d0
+              matentries(4,i,j,k)   = 1.d0
+              matentries(5:7,i,j,k) = 0.d0
+           enddo
+        enddo
+     ! Neumann
+     else if (BCyL==2) then
+        do k=1,Nz,1
+           do i=1,Nx,1
+              matentries(4,i,j,k) = matentries(4,i,j,k) + matentries(2,i,j,k)
+              matentries(2,i,j,k) = 0.d0
+           enddo
+        enddo
+     endif
+  endif
+
+  ! adjust right y-face for boundary conditions
+  if (yrface==1) then
+     j = Ny
+     ! Dirichlet
+     if (BCyR==1) then
+        do k=1,Nz,1
+           do i=1,Nx,1
+              matentries(1:3,i,j,k) = 0.d0
+              matentries(4,i,j,k)   = 1.d0
+              matentries(5:7,i,j,k) = 0.d0
+           enddo
+        enddo
+     ! Neumann
+     else if (BCyR==2) then
+        do k=1,Nz,1
+           do i=1,Nx,1
+              matentries(4,i,j,k) = matentries(4,i,j,k) + matentries(6,i,j,k)
+              matentries(6,i,j,k) = 0.d0
+           enddo
+        enddo
+     endif
+  endif
+
+
+  ! adjust left z-face for boundary conditions
+  if (zlface==1) then
+     k = 1
+     ! Dirichlet
+     if (BCzL==1) then
+        do j=1,Ny,1
+           do i=1,Nx,1
+              matentries(1:3,i,j,k) = 0.d0
+              matentries(4,i,j,k)   = 1.d0
+              matentries(5:7,i,j,k) = 0.d0
+           enddo
+        enddo
+     ! Neumann
+     else if (BCzL==2) then
+        do j=1,Ny,1
+           do i=1,Nx,1
+              matentries(4,i,j,k) = matentries(4,i,j,k) + matentries(1,i,j,k)
+              matentries(1,i,j,k) = 0.d0
+           enddo
+        enddo
+     endif
+  endif
+
+  ! adjust right z-face for boundary conditions
+  if (zrface==1) then
+     k = Nz
+     ! Dirichlet
+     if (BCzR==1) then
+        do j=1,Ny,1
+           do i=1,Nx,1
+              matentries(1:3,i,j,k) = 0.d0
+              matentries(4,i,j,k)   = 1.d0
+              matentries(5:7,i,j,k) = 0.d0
+           enddo
+        enddo
+     ! Neumann
+     else if (BCzR==2) then
+        do j=1,Ny,1
+           do i=1,Nx,1
+              matentries(4,i,j,k) = matentries(4,i,j,k) + matentries(7,i,j,k)
+              matentries(7,i,j,k) = 0.d0
+           enddo
+        enddo
+     endif
+  endif
+
+
+  ! nullify pointers
+  nullify(Eg)
+
+!!$  write(*,*) 'Exiting gFLDProblem::MatrixEntries routine'
+
+
+  return
+end subroutine gFLDProblem_MatrixEntries
+!=======================================================================

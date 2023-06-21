@@ -1,0 +1,41 @@
+#
+# macros for sgi (r8000 compiler)
+#
+CPP           = /lib/cpp
+DEFINES       = -DIRIS4
+OPTIONS       = -DSGI_MATH
+
+## Fortran compiler
+FC            = f77
+FC_OPTIMIZE   = -O3 -OPT:roundoff=3 -g3
+FC_PARALLEL   = 
+
+## C Compiler
+CC            = cc
+CC_OPTIMIZE   = -g -pca keep -Wk,-mc=0
+
+## C++ Compiler
+CCxx	      = CC
+CCxx_OPTIMIZE = -O2 -fullwarn
+#CCxx	      = KCC
+#CCxx_OPTIMIZE = +K3 -O --abstract_pointer --abstract_float
+
+## Linker/loader
+LDR           = CC
+#LDR           = KCC -p
+LDR_OPTIMIZE  = -O2 -g
+#LIB           = -L/usr/ncsa/lib -lF77 -lU77 -lI77 -ldf -lm
+#LIB           = -L/afs/ncsa/packages/hdf/IRIX_6.0/lib64 \
+#	        -lF77 -lU77 -lI77 -ldf -lcomplib.sgimath_mp -lm -lmalloc
+LIB           = -L/afs/ncsa/packages/hdf/IRIX_6.0/lib \
+	        -lftn -ldf -ljpeg -lz -lcomplib.sgimath \
+		-lm -lC -lmp 
+PARALLEL_LIB  = -L/afs/ncsa/packages/hdf/IRIX_6.0/lib \
+	        -lF77 -lU77 -lI77 -ldf -ljpeg -lz -lcomplib.sgimath_mp \
+		-lm -lC -lmp 
+#	        -L/usr/lib64/mips4 -lmp
+#INCLUDE       = -I/afs/ncsa/packages/hdf/IRIX_6.0/include
+INCLUDE       = -I${HOME}/include
+
+OPTS          = -c -DIRIS4 ${OPTIONS} ${INCLUDE}
+DEBUG         = 

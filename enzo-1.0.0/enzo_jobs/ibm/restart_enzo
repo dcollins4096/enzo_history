@@ -1,0 +1,2 @@
+#!/bin/ksh
+poe enzo5 -d -r output_0011

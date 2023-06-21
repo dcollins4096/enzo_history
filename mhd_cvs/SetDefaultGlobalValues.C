@@ -1,0 +1,379 @@
+/*****************************************************************************
+ *                                                                           *
+ * Copyright 2004 Greg Bryan                                                 *
+ * Copyright 2004 Laboratory for Computational Astrophysics                  *
+ * Copyright 2004 Board of Trustees of the University of Illinois            *
+ * Copyright 2004 Regents of the University of California                    *
+ *                                                                           *
+ * This software is released under the terms of the "Enzo Public License"    *
+ * in the accompanying LICENSE file.                                         *
+ *                                                                           *
+ *****************************************************************************/
+/***********************************************************************
+/
+/  SETS THE DEFAULT GLOBAL VALUES
+/
+/  written by: Greg Bryan
+/  date:       November, 1994
+/  modified1:
+/
+/  PURPOSE:
+/
+/  RETURNS: SUCCESS or FAIL
+/
+************************************************************************/
+
+// This routine intializes a new simulation based on the parameter file.
+//
+
+#include <string.h>
+#include <stdio.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "TopGridData.h"
+#include "StarParticleData.h"
+
+/* character strings */
+
+char DefaultDimUnits[] = "cm";
+char *DefaultDimLabel[] = {"x", "y", "z"};
+char DefaultRestartName[] = "restart";
+char DefaultDataName[] = "data";
+char DefaultHistoryName[] = "history";
+char DefaultRedshiftName[] = "RedshiftOutput";
+char DefaultMovieName[] = "MovieOutput";
+char DefaultAnalysisName[] = "AnalysisOutput";
+int SetDefaultGlobalValues(TopGridData &MetaData)
+{
+
+  /* declarations */
+
+  const float Pi = 3.14159;
+  int dim, i;
+
+  /* set the default MetaData values. */
+
+  MetaData.CycleNumber     = 0;
+  MetaData.Time            = 0.0;
+  MetaData.CPUTime         = 0.0;
+  
+  MetaData.StopTime        = FLOAT_UNDEFINED;  // This must be set be the user
+  MetaData.StopCycle       = 10000;            // 10000 timesteps
+  MetaData.StopCPUTime     = 100.0*3600.0;     // 100 hours
+  
+  MetaData.TimeLastRestartDump = 0.0;
+  MetaData.dtRestartDump       = 5.0*3600.0;   // every 5 hours
+  MetaData.TimeLastDataDump    = FLOAT_UNDEFINED;
+  MetaData.dtDataDump          = 0.0;
+  MetaData.TimeLastHistoryDump = FLOAT_UNDEFINED;
+  MetaData.dtHistoryDump       = 0.0;
+  MetaData.TimeLastMovieDump   = FLOAT_UNDEFINED;
+  MetaData.dtMovieDump         = 0.0;
+
+  MetaData.CycleLastRestartDump = 0;
+  MetaData.CycleSkipRestartDump = 0;
+  MetaData.CycleLastDataDump    = INT_UNDEFINED;
+  MetaData.CycleSkipDataDump    = 0;
+  MetaData.CycleLastHistoryDump = INT_UNDEFINED;
+  MetaData.CycleSkipHistoryDump = 0;
+  MetaData.CycleSkipGlobalDataDump = 0;//INT_UNDEFINED;
+  MetaData.OutputFirstTimeAtLevel = 0; // zero is off
+  MetaData.StopFirstTimeAtLevel   = 0; // zero is off
+
+  MetaData.RestartDumpNumber   = 0;            // starting restart id number
+  MetaData.RestartDumpName     = DefaultRestartName;
+  MetaData.DataDumpNumber      = 0;
+  MetaData.DataDumpName        = DefaultDataName;
+  MetaData.HistoryDumpNumber   = 0;
+  MetaData.HistoryDumpName     = DefaultHistoryName;
+  MetaData.MovieDumpNumber     = 0;
+  MetaData.MovieDumpName       = DefaultMovieName;
+  MetaData.RedshiftDumpName    = DefaultRedshiftName;
+
+  MetaData.AnalysisName        = DefaultAnalysisName; 
+
+  for (i = 0; i < MAX_TIME_ACTIONS; i++) {
+    TimeActionType[i]      = 0;
+    TimeActionRedshift[i]  = -1;
+    TimeActionTime[i]      = 0;
+    TimeActionParameter[i] = FLOAT_UNDEFINED;
+  }
+
+  MetaData.StaticHierarchy     = TRUE;
+
+  MetaData.TopGridRank = INT_UNDEFINED;
+  for (dim = 0; dim < MAX_DIMENSION; dim++) {
+    MetaData.TopGridDims[dim]                = INT_UNDEFINED;  
+    MetaData.LeftFaceBoundaryCondition[dim]  = reflecting;
+    MetaData.RightFaceBoundaryCondition[dim] = reflecting;
+  }
+  MetaData.BoundaryConditionName = NULL;
+
+  MetaData.GravityBoundary        = TopGridPeriodic;
+
+  MetaData.ParticleBoundaryType   = periodic;  // only one implemented!
+  MetaData.NumberOfParticles      = 0;         // no particles
+
+  MetaData.CourantSafetyNumber    = 0.6;
+  MetaData.PPMFlatteningParameter = 0;    // off
+  MetaData.PPMDiffusionParameter  = 0;    // off
+  MetaData.PPMSteepeningParameter = 0;    // off
+
+  MetaData.ProjectionParams = NULL;
+  MetaData.PDFGeneratorParams = NULL;
+
+  /* set MHD parameters */
+  MHD_Equation = 1;
+  MaximumSubgridSize = 2000;
+  LoadBalancing = 1; //0-off, 1-on (regular) 2-(future use)
+  LoadBalancingRatio = 1.05; //Max Memory Use/ Min Memory Use.
+  for(i=0;i<MAX_DIMENSION;i++){
+    TopLeftBoundary[i] = BoundaryUndefined;
+    TopRightBoundary[i]= BoundaryUndefined;
+  }
+
+  GlobalStatsCycleSkip= 0;
+  GlobalStatsLastCycleDump=0;
+  GlobalStatsDT=0.0;
+  GlobalStatsLastTimeDump=0.0;
+
+  MetaData.TimeLastAnalysis    = FLOAT_UNDEFINED;
+  MetaData.dtAnalysis          = 0.0;
+  MetaData.AnalysisName        = DefaultAnalysisName; 
+  for(i=0;i<4;i++) MHDBlastNormal[i] = 0.0;
+  SuggestFailure = FALSE;
+  MHD_FixedTimestep               = -1;   // forces dt.  Might be trouble, be careful.
+  //Slope for the Piecewise Linear interpolation.
+  //See Grid_MHD_Athena for details.
+#ifdef ATHENA
+  MHD_ElectricRecon              = 0;    // Switch for electric reconstruction.
+  MHD_DivBparam              = 0.0; //Parameter (multiple uses) for electric reconstruction
+  MHD_DiffusionParameter    = 0.0;
+  for(i=0;i < MAX_NUMBER_OF_BARYON_FIELDS + 2; i++)
+    MHD_PLM_Slope[i] = -1;
+
+
+  MHD_ReconField[0]         = 0; //pressure
+  MHD_ReconField[1]         = 0; //velocity.
+
+  for( i=0; i< NUMBER_OF_INTEGRATION_STEPS; i++){
+    MHD_Recon[i]              = -1; //1;
+    MHD_Riemann[i]            = -1; //2;
+    MHD_DiffusionMethod[i]    = 0; 
+  }  
+
+
+  EquationOfState           = 0; //0 = adiabatic, 1=isothermal.  1 only works for hydro = 4.
+  IsothermalSoundSpeed      = 1.0; //Only good for EquationOfState = 1.
+#ifdef  PRGIO_HACK
+  PRGIOhack                 = FALSE;
+#endif // PRGIO_HACK
+  MHDPreviousGlobal         = 0;
+  MHDPreviousCurrent        = 0;
+
+  MHD_Flattening            = 0;
+#endif
+
+  dccCounter                = 0; //used in Rebuild Hierarchy
+  dccCounter2               = 0; //used in InterpolateBoundary
+  dccCounter3               = 0; //used in EvolveLevelRoutinesOptimized
+  dccCounter4               = 0; 
+  dccCounter5               = 0; 
+  dccCounter6               = 0; 
+  dccCounter7               = 0; 
+  dccCounter8               = 0; 
+  dccCounter9               = 0; 
+  dccCounter10               = 0; 
+  dccCounter11               = 0; 
+  dccCounter12               = 0;
+  dccCounter13               = 0; 
+  dccCounter14               = 0; 
+  dccCounter15               = 0; //For acceleration field.
+  dccCounter0                = 0; //for dumping the Flagging Field (alexei) 
+  dccCubeCounter             = 0;
+  dccWriteFlaggingField      = FALSE;
+  for(int dccdbg=0; dccdbg<N_DbgWrites;dccdbg++) WriteInThisA[dccdbg]=0;
+  MHD_Used                  = FALSE;                 
+  MHD_SendFace              = TRUE;
+  MHD_FluxCorrection        = FALSE;
+  MHD_Hack2d                = FALSE;
+  MHD_CenteringMethod       = MHD_Split;
+  MHD_DivB                  = MHD_DivB_none;
+  MHD_WriteDivB             = TRUE;
+  MHD_Verbose               = FALSE;
+  dccTempVerbosity          = FALSE;
+  MHD_pout                  = FALSE;
+  MHD_dump                  = FALSE;
+  WriteBoundary             = FALSE;
+  MHD_WriteFace             = TRUE;
+  MHD_WriteElectric         = FALSE;
+  MHD_WriteCentered         = TRUE;
+  MHD_WriteCurrent          = FALSE;
+  MHD_WriteAcceleration          = FALSE;
+  MHD_InterpolationMethod   = BalsaraDirect;
+  MHD_ProjectE              = TRUE;
+  MHD_ProjectB              = FALSE;
+  MHD_ProjectThisFace[0]        = FALSE;          
+  MHD_ProjectThisFace[1]        = FALSE;          
+  MHD_ProjectThisFace[2]        = FALSE;          
+  ProcessorTopology[0]      = INT_UNDEFINED;
+  ProcessorTopology[1]      = INT_UNDEFINED;
+  ProcessorTopology[2]      = INT_UNDEFINED;
+
+#ifdef DCC_EXTERNAL_CYCLE_COUNT
+  for(i=0; i<MAX_DEPTH_OF_HIERARCHY; i++)
+    LevelCycleCount[i] = 0;
+#endif //!DCC_EXTERNAL_CYCLE_COUNT
+
+
+#ifdef NSS
+  MHD_Eps[0]                = 0.2;
+  MHD_Eps[1]                = 0.1;
+  MHD_Eps[2]                = 0.05;
+  MHD_Eps[3]                = 0.05;
+#endif //NSS
+  /* set the default global data. */
+                                                 // Debug flag set in main
+  ProblemType               = 0;                 // None
+  HydroMethod               = PPM_DirectEuler;   //
+  huge_number               = 1.0e+20;
+  tiny_number               = 1.0e-20;
+   tiny_pressure             = tiny_number;
+   tiny_density              = tiny_number;
+#ifdef HAOXU
+
+   
+    MHDTVDESeta[0]            = 0.05;
+    MHDTVDESeta[1]            = 1.0;
+    MHDTVDESeta[2]            = 1.0;
+    MHDTVDESeta[3]            = 0.0;
+
+    MHDLi[0]                 = 2;
+    MHDLi[1]                 = 1;
+    MHDLi[2]                 = 5;
+    MHDLi[3]                 = 1;
+    MHDLi[4]                 = 0;
+#endif /* HAOXU */
+
+#ifndef HAOXU
+    MHDLi[0]                 = 2;
+    MHDLi[1]                 = 1;
+    MHDLi[2]                 = 5;
+    MHDLi[3]                 = 1;
+    MHDLi[4]                 = 0;
+#endif
+
+#ifdef EMF_BOUNDARY
+    EMF_Boundary =  FALSE;
+#endif //EMF_BOUNDARY
+
+#ifdef BIERMANN
+  BiermannBattery = FALSE;
+  WriteBiermannTerm = FALSE;
+#endif
+
+  Gamma                     = 5.0/3.0;           // 5/3
+  PressureFree              = FALSE;             // use pressure (duh)
+  RefineBy                  = 4;                 // Refinement factor
+#ifdef HAOXU
+  RefineBy                  = 2;  
+#endif
+  MaximumRefinementLevel    = 2;                 // three levels (w/ topgrid)
+  MaximumGravityRefinementLevel = INT_UNDEFINED;
+  MaximumParticleRefinementLevel = -1;            // unused if negative
+  FluxCorrection            = TRUE;
+  InterpolationMethod       = SecondOrderA;      // ?
+  ConservativeInterpolation = TRUE;              // true for ppm
+  MinimumEfficiency         = 0.2;               // between 0-1, usually ~0.1
+  NumberOfBufferZones       = 1;
+
+  for (i = 0; i < MAX_FLAGGING_METHODS; i++) {
+    CellFlaggingMethod[i]       = INT_UNDEFINED;
+    MinimumMassForRefinement[i] = FLOAT_UNDEFINED;   // usually set by:
+    MinimumOverDensityForRefinement[i]       = 1.5; 
+    MinimumMassForRefinementLevelExponent[i] = 0;
+  }
+
+  for (dim = 0; dim < MAX_DIMENSION; dim++) {
+    DomainLeftEdge[dim]             = 0.0;
+    DomainRightEdge[dim]            = 1.0;
+    GridVelocity[dim]               = 0.0;
+    DimLabels[dim]                  = DefaultDimLabel[dim];
+    DimUnits[dim]                   = DefaultDimUnits;
+    RefineRegionLeftEdge[dim]       = FLOAT_UNDEFINED;
+    RefineRegionRightEdge[dim]      = FLOAT_UNDEFINED;
+    MetaData.MovieRegionLeftEdge[dim]  = FLOAT_UNDEFINED;
+    MetaData.MovieRegionRightEdge[dim] = FLOAT_UNDEFINED;
+    PointSourceGravityPosition[dim] = 0.0;
+  }
+
+  for (i = 0; i < MAX_STATIC_REGIONS; i++)
+    StaticRefineRegionLevel[i] = INT_UNDEFINED;
+
+  ParallelRootGridIO          = FALSE;
+  ParallelParticleIO          = FALSE;
+  Unigrid                     = FALSE;
+  ExtractFieldsOnly           = FALSE;
+
+  UniformGravity              = FALSE;             // off
+  UniformGravityDirection     = 0;                 // x-direction
+  UniformGravityConstant      = 1.0;
+
+  PointSourceGravity           = FALSE;             // off
+  PointSourceGravityConstant   = 1.0;
+  PointSourceGravityCoreRadius = 0.0;
+
+  SelfGravity                 = FALSE;             // off
+  GravitationalConstant       = 4*Pi;              // G = 1
+  S2ParticleSize              = 3.0;               // ~3 is reasonable
+  GravityResolution           = 1.0;               // equivalent to grid
+  ComputePotential            = FALSE;
+  BaryonSelfGravityApproximation = TRUE;           // less accurate but faster
+
+  GreensFunctionMaxNumber     = 1;                 // only one at a time
+  GreensFunctionMaxSize       = 1;                 // not used yet
+
+  DualEnergyFormalism         = FALSE;             // off
+  DualEnergyFormalismEta1     = 0.001;             // typical 0.001
+  DualEnergyFormalismEta2     = 0.1;               // 0.08-0.1
+  ParticleCourantSafetyNumber = 0.5;
+  RandomForcing               = FALSE;             // off //AK
+  RandomForcingEdot           = -1.0;              //AK
+  RandomForcingMachNumber     = 0.0;               //AK
+  RadiativeCooling            = FALSE;             // off
+  GadgetEquilibriumCooling    = FALSE;             // off
+  MultiSpecies                = FALSE;             // off
+  RadiationFieldType          = 0;
+  RadiationFieldLevelRecompute = 0;
+  CoolData.alpha0             = 1.5;               // radiation spectral slope
+  CoolData.f3                 = 1.0e-21;           // radiation normalization
+
+  ZEUSLinearArtificialViscosity    = 0.0;
+  ZEUSQuadraticArtificialViscosity = 2.0;
+  UseMinimumPressureSupport        = FALSE;
+  MinimumPressureSupportParameter  = 100.0;
+  
+  MinimumSlopeForRefinement        = 0.3;          // 30% change in value
+  MinimumShearForRefinement        = 1.0;          //AK
+  MinimumPressureJumpForRefinement = 0.33;         // As in PPM method paper
+  MinimumEnergyRatioForRefinement  = 0.1;          // conservative!
+  RefineByJeansLengthSafetyFactor  = 4.0;
+  RefineByJeansLengthUnits         = 0;            // dcc
+  ComovingCoordinates              = FALSE;        // No comoving coordinates
+  StarParticleCreation             = FALSE;
+  StarParticleFeedback             = FALSE;
+  StarMakerOverDensityThreshold    = 100;          // times mean total density
+  StarMakerMassEfficiency          = 1;
+  StarMakerMinimumMass             = 1.0e9;        // in solar masses
+  StarMakerMinimumDynamicalTime    = 1.0e6;        // in years
+  StarMassEjectionFraction         = 0.25;
+  StarMetalYield                   = 0.02;
+  StarEnergyToThermalFeedback      = 1.0e-5;
+  StarEnergyToStellarUV            = 3.0e-6;
+  StarEnergyToQuasarUV             = 5.0e-6;
+  MultiMetals                      = FALSE;
+  NumberOfParticleAttributes       = INT_UNDEFINED;
+
+  return SUCCESS;
+}

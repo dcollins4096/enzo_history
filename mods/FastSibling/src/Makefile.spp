@@ -1,0 +1,30 @@
+#
+# macros for spp (but use HP/GNU compilers)
+#
+CPP           = /lib/cpp
+DEFINES       = -DSPP
+OPTIONS       = -DVECLIB
+
+## Fortran compiler
+FC            = fc -fpp
+FC_OPTIMIZE   = -cxpar -O2 -cxpar
+
+## C Compiler
+CC            = cc
+CC_OPTIMIZE   = -cxpar -O2 -cxpar
+
+## C++ Compiler
+CCxx	      = CC
+CCxx_OPTIMIZE = -cxpar +O2 -cxpar
+
+## Linker/loader
+LDR           = CC
+LDR_OPTIMIZE  = -cxpar +O2 -Wl,+onenode -cxpar
+LIB           = -L/usr/ncsa/lib -lveclib \
+                -L/afs/.ncsa.uiuc.edu/packages/hdf/exemplar/lib -ldf -ljpeg -lz
+PARALLEL_LIB  = ${LIB}
+INCLUDE       = -I/u/ncsa/gbryan/include
+
+OPTS          = -c -DSPP ${OPTIONS} ${INCLUDE}
+DEBUG         = 
+

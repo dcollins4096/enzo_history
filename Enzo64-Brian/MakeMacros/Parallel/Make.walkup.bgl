@@ -1,0 +1,56 @@
+#
+# macros for bgl
+#
+
+BGL_SYS = /BlueLight/floor/bglsys
+MPI_INC = -I$(BGL_SYS)/include
+TRACE = /u/walkup/mpi_trace/bgl/libmpitrace_c.a
+MPI_LIB = $(TRACE) -L$(BGL_SYS)/lib -lmpich.rts -lmsglayer.rts -lrts.rts -ldevices.rts
+MASS = /u/walkup/codes/massv/libmassv.a
+FORTRAN_LIBS = $(MASS) /opt/ibmcmp/xlf/8.1/blrts_lib/libxlf90.a /opt/ibmcmp/xlf/8.1/blrts_lib/libxlfmath.a /BlueLight/ppcfloor/blrts-gnu/powerpc-bgl-blrts-gnu/lib/libc.a
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /tmp/walkup/blrts_hdf5/hdf5
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /usr/local/apps/hdf4
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+CPP          = cpp 
+ DEFINES      = -D${PRECISION} -DUSE_MPI -DUSE_VECTOR -traditional
+#DEFINES      = -D${PRECISION} -DUSE_MPI -traditional
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = blrts_xlf90
+FC_OPT       = -g -O -qarch=440 -qmaxmem=64000
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed=132
+
+## C Compiler
+CC           = blrts_xlc
+CC_OPT       = -g -O -qarch=440 -qmaxmem=64000 -DBGL
+CFLAGS       = 
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = blrts_xlC
+CCxx_OPT     = -g -O -qarch=440 -qmaxmem=64000 -DBGL -DUSE_MPI
+CCxxFLAGS    = 
+
+#CCxx	     = xlC128
+#CCxx_OPT    = -O -DSP2 -DUSE_MPI -qldbl128
+
+## Linker/loader
+LDR          = blrts_xlC
+LDR_OPT      = 
+
+LIB          = -L${HDF5_INSTALL}/lib -lhdf5 -lz \
+               $(MPI_LIB) $(FORTRAN_LIBS)
+
+OPTS         = -c -I${HDF5_INSTALL}/include $(MPI_INC)
+DEBUG        = 

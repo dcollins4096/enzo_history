@@ -1,0 +1,18 @@
+#!/bin/csh -f
+
+# Clear Makefile.config / DEPEND include files that should be clear by default
+
+foreach file ( \
+              src/enzo/Make.config.override \
+              src/enzo/DEPEND \
+              src/inits/DEPEND \
+             )
+
+   rm -f $file
+   touch $file
+
+end
+
+cd src/enzo;  ln -s Makefile.config Makefile; cd ../..
+cd src/inits; ln -s Makefile.config Makefile; cd ../..
+

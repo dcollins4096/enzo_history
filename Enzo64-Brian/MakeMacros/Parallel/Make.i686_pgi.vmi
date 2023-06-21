@@ -1,0 +1,38 @@
+#
+# macros for ia32
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(HOME)/hdf5/5-1.4.4-ia32
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+VMI          = /usr/local/vmi
+INT          = /usr/local/intel/compiler/ia32/lib
+
+CPP          = /usr/bin/cpp
+DEFINES      = -I$(VMI)/mpich/include -D${PRECISION} -DIA64 -DUSE_MPI
+
+## Fortran compiler
+FC           = pgf90
+FC_OPT       = -O0
+
+## C Compiler
+CC           = pgcc
+CC_OPT       = -O0 -DIA64 -prec_div -fp_port -align
+
+## C++ Compiler
+CCxx         = pgCC
+CCxx_OPT     = -O0 -DIA64 -DUSE_MPI
+
+## Linker/loader
+LDR          = pgCC -Wl,-noinhibit-exec
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/lib -lz -ljpeg \
+               -L$(VMI)/mpich/lib/pgi -lmpich -lvmi -lpthread -ldl \
+               -lpgf90 -lpgf90_rpm1 -lpgf902 -lpgf90rtl -lpgftnrtl
+
+INCLUDE      = -I$(HDF5_INSTALL)/include -I$(VMI)/mpich/include
+
+OPTS         = -c -DIA64 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g

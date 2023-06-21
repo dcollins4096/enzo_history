@@ -1,0 +1,40 @@
+#
+# macros for TCS
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = $(HOME)/hdf5/5-1.4.3-osf1
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = $(HOME)/hdf4/hdf-4.1r4
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+#CPP          = /lib/cpp
+CPP          = /usr/depot/alpha_tcs/gcc.010/gnu/bin/cpp
+DEFINES      = -DCOMPAQ -D$(PRECISION) -DUSE_MPI
+
+## Fortran compiler
+FC           = f90
+FC_OPT       = -O4 -fno-second-underscore
+
+## C Compiler
+CC           = cc
+CC_OPT       =
+
+## C++ Compiler
+CCxx	     = cxx
+CCxx_OPT     = -O4 -DCOMPAQ -DUSE_MPI
+
+## Linker/loader
+LDR          = cxx
+LDR_OPT      = 
+LIB          = $(HDF5_INSTALL)/lib/libhdf5.a $(HDF4_INSTALL)/lib/libz.a \
+               -L$(DECF90_LIB_DIR) -lfor \
+               -lz -lm \
+               -L/usr/lib -lmpi
+
+OPTS         = -c -I$(HDF5_INSTALL)/include -I$(HDF4_INSTALL)/include
+DEBUG        =

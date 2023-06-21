@@ -1,0 +1,53 @@
+#include "error.def"
+
+      subroutine nrx_2d(x, rank, n1, n2, n3, dir)
+
+      implicit none
+
+      integer :: rank, n1, n2, n3, dir
+      complex :: x(n1,n2)
+ 
+      complex, allocatable :: y(:,:)
+      integer :: n(3)
+      integer :: i,j
+      real :: factor
+
+!     write(*,*) 'NROT_2D ',rank,n1,n2,n3,dir
+
+      if( rank /= 2 ) then
+        write(0,*) 'NROT_2D rank != 2'
+        ERROR_MESSAGE
+      end if
+
+      if( n3 /= 1 ) then
+        write(0,*) 'NROT_2D dim3 > 1'
+        ERROR_MESSAGE
+      end if
+
+      factor = 1.0/real(n1*n2)
+
+      n(1) = n1
+      n(2) = 1
+      n(3) = 1
+
+      do j=1,n2
+      call fourn(x(1,j), n, 1, dir)
+      end do
+
+      allocate( y(n2,n1) )
+      call rotate2d(x,n1,n2,y)
+
+      n(1) = n2
+      do i=1,n1
+      call fourn(y(1,i), n, 1, dir)
+      end do
+
+      call rotate2d(y,n2,n1,x)
+      deallocate(y)
+
+      if( dir == 1 ) then
+        x = x * factor
+      end if
+
+      return
+      end

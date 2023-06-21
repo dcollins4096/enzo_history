@@ -1,0 +1,16 @@
+#PSC
+HDF4_INSTALL = $(HOME)/hdf4/hdf-4.1r4
+HDF5_INSTALL = $(HOME)/hdf5/5-1.4.3-osf1
+
+CCxx         = cxx
+CCxx_OPT     = -DHDF5_BE
+
+LDR          = cxx
+LDR_OPT      =
+
+LIB          = $(HDF5_INSTALL)/lib/libhdf5.a $(HDF4_INSTALL)/lib/libz.a \
+               -L$(DECF90_LIB_DIR) -lfor \
+               -lmpio -lz -lm \
+               -L/usr/lib -lmpi -lelan -lelan3
+
+OPTS         = -c -I$(HDF5_INSTALL)/include

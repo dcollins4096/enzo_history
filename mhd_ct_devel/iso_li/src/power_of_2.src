@@ -1,0 +1,40 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+      logical function power_of_2(in)
+c
+c     return TRUE iff in = 2**k for some integer k
+c
+      implicit none
+      integer in
+      integer iq,ir
+
+      if (in.le.0) power_of_2 = .false.
+      if (in.eq.1) power_of_2 = .true.
+      if (in.eq.2) power_of_2 = .true.
+      if (in.ge.3) then
+         iq = in
+ 10     continue
+         ir = mod(iq,2)
+         iq = iq/2
+         if (ir.eq.1) then
+            power_of_2 = .false.
+            goto 20
+         else if (iq.eq.1) then
+            power_of_2 = .true.
+            goto 20
+         endif
+         goto 10
+      end if
+ 20   continue
+      return
+      end

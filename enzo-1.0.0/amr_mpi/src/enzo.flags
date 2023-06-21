@@ -1,0 +1,17 @@
+CPP = /usr/lib/cpp
+CC  =  /usr/local/mpich-1.2.5/bin/mpicc
+CXX =  /usr/local/mpich-1.2.5/bin/mpiCC
+FC  =  /usr/local/mpich-1.2.5/bin/mpif77
+F90 =  /usr/local/mpich-1.2.5/bin/mpif90
+LD  =  /usr/local/mpich-1.2.5/bin/mpiCC
+
+DEFINES = -Dr8 -Dp8 -DUSE_MPI  -DSUN -DFFT_F77  -DUSE_HDF5   -DJB_OPT 
+
+CPPFLAGS = -P
+CFLAGS   = -features=no%conststrings,no%localfor -g0 -xtarget=ultra2 -xarch=v8plusa  -O3  -I/usr/local/mpi/include  -I/usr/local/hdf5/include  
+CXXFLAGS = -features=no%conststrings,no%localfor -g0 -xtarget=ultra2 -xarch=v8plusa  -O3  -I/usr/local/mpi/include  -I/usr/local/hdf5/include  
+FFLAGS   =  -g0 -xtarget=ultra2 -xarch=v8plusa  -O3  -I/usr/local/mpi/include  -I/usr/local/hdf5/include -xtypemap=real:64,double:64,integer:32  
+F90FLAGS =  -g0 -xtarget=ultra2 -xarch=v8plusa  -O3  -I/usr/local/mpi/include  -I/usr/local/hdf5/include -xtypemap=real:64,double:64,integer:32  
+LDFLAGS  =  -g0 -xtarget=ultra2 -xarch=v8plusa  -O3    
+
+LIBS     =  -L/usr/local/mpi/lib-sun -lmpich  -L/usr/local/hdf5/lib -lhdf5 -L/opt/SUNWspro/lib -lM77 -lF77 -lsunmath -L/usr/lib -lnsl

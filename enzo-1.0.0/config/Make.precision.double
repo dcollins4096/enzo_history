@@ -1,0 +1,15 @@
+#======================================================================
+#
+# Make.precision for double precision
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_PRECISION = $(TEXT_PRECISION_DOUBLE)
+
+DEFINES_PRECISION = -Dr8
+FFLAGS_PRECISION = $(FFLAGS_PRECISION_DOUBLE_ARCH)
+LDFLAGS_PRECISION = $(LDFLAGS_PRECISION_DOUBLE_ARCH)

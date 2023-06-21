@@ -1,0 +1,45 @@
+#
+# macros for bgl
+#
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+
+CPP          = cpp 
+# DEFINES      = -D${PRECISION} -DUSE_MPI -DUSE_VECTOR -traditional
+DEFINES      = -D${PRECISION} -DUSE_MPI -traditional
+
+# -DIO_LOG
+# -DTRACE
+
+## Fortran compiler
+FC           = mpxlf90
+FC_OPT       = -g -O -qarch=440 -qmaxmem=64000
+FREE90       = -qsuffix=f=f90 -qfree
+FFLAGS       = -qfixed=132
+
+## C Compiler
+CC           = mpcc
+CC_OPT       = -g -O -qarch=440 -qmaxmem=64000 -DBGL -DSYSCALL
+CFLAGS       = 
+
+## C++ Compiler (qldbl128 required if using p16)
+CCxx	     = mpCC
+CCxx_OPT     = -g -O -qarch=440 -qmaxmem=64000 -DBGL -DUSE_MPI -DSYSCALL
+CCxxFLAGS    = 
+
+## Linker/loader
+LDR          = mpCC
+LDR_OPT      = 
+
+LIB          = -L${HDF5_INSTALL}/lib -lhdf5 -L/opt/ibmcmp/xlf/9.1/blrts_lib -lxlf90 -lxlfmath \
+               -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
+
+OPTS         = -c -I${HDF5_INSTALL}/include
+DEBUG        = 
+
+
+#mpcc -g -o grp grp.c \
+#     -I/home/harkness/hdf5/5-1.6.4-bgl-pp/include \
+#     /home/harkness/hdf5/5-1.6.4-bgl-pp/lib/libhdf5.a \
+#     -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv
+#

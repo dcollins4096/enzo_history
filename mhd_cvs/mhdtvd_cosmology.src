@@ -1,0 +1,895 @@
+c#include "error.def"
+      subroutine mhdtvd_cosmology(dt, dl, nd, w0, flux, gam,gravityon,
+     +                   premin, tiny, a)
+c-----------------------------------------------------------------------
+c  mhd tvd code based on Harten (1983) and Brio and Wu (1988)
+c  written by Dongsu Ryu (October, 1991)
+c-----------------------------------------------------------------------
+      implicit none
+c
+c
+c     input variables
+      integer nd 
+      real dt, dl, gam, premin, tiny
+      real w0(-1:nd+2,14)
+      real a(0:3)
+
+      integer i, j, j1, gravityon
+      real eps1, eps2, eps3, eps4, dtdl, signbt
+      real w1(-1:nd+2,130), w2(-1:nd+2,70), w3(-1:nd+2,70),
+     +     w4(-1:nd+2,130), w5(-1:nd+2,30),
+     +     s(-1:nd+2,3), flux(-1:nd+2, 7),
+     +      wtemp1, wtemp2, wtemp3
+
+      real zero, one, two, onehalf, four, gam1r
+      
+      real m(-1:nd+2,4)
+
+c dcc removed the precision modifier .d0 from all numbers.
+c the numbers are for the potential quick changes.
+
+      zero = 0.0
+      one = 1.0
+      two = 2.0
+      four = 4.0
+      onehalf = 0.5
+
+
+c	kludge: gamma hack
+c      if( (gam - 1 ) .lt. 0.01 ) then
+c         gam1r = 1
+c      else
+         gam1r = one/(gam - one)
+c      endif
+
+c      a(2)=a(0)
+c      a(3)=a(1)
+
+      eps1  = 0.05
+      eps2  = 0.05
+      eps3  = 0.05
+      eps4  = 0.05
+      dtdl = dt/dl
+
+c      write(1668, *) dt," ", dl," ",  nd," ", gam," ", w0
+
+           
+c----------------------------------------------------------------------
+c compute the modified p, B and E for ComovingCoordinates
+c----------------------------------------------------------------------     
+ 
+      do 10 i = -1, nd+2
+      m(i,1) = w0(i,2)
+      m(i,2) = w0(i,3)
+      m(i,3) = w0(i,4)
+      m(i,4) = w0(i,8)
+ 10   continue
+     
+c-----------------------------------------------------------------------
+c  den(i), ux(i), uy(i), uz(i), Bx(i), By(i), Bz(i), pt(i)
+c-----------------------------------------------------------------------
+      do 101 i=-1,nd+2
+         wtemp1 = one/w0(i,1)
+         w1(i,1) = w0(i,1)
+         w1(i,2) = w0(i,2)*wtemp1
+         w1(i,3) = w0(i,3)*wtemp1
+         w1(i,4) = w0(i,4)*wtemp1
+         
+     
+ 
+      w1(i,19) = (gam-one)*(w0(i,8)
+     +        -(w0(i,2)**2+w0(i,3)**2+w0(i,4)**2)
+     +        *onehalf*wtemp1
+     +        -(w0(i,5)**2+w0(i,6)**2+w0(i,7)**2)*onehalf) 
+      w1(i,19) = max(premin,w1(i,19))
+     
+      
+ 
+         if( gravityon .eq. 1 ) then
+            w1(i,2) = w1(i,2) + dt*onehalf*w0(i,11)*a(2)/a(0)
+            w1(i,3) = w1(i,3) + dt*onehalf*w0(i,13)*a(2)/a(0)
+            w1(i,4) = w1(i,4) + dt*onehalf*w0(i,14)*a(2)/a(0)
+         endif
+         
+            w1(i,2) = w1(i,2) - dt*onehalf*a(1)*w1(i,2)/a(0)
+            w1(i,3) = w1(i,3) - dt*onehalf*a(1)*w1(i,3)/a(0)
+            w1(i,4) = w1(i,4) - dt*onehalf*a(1)*w1(i,4)/a(0)
+            w0(i,2)=w1(i,2)*w0(i,1)
+            w0(i,3)=w1(i,3)*w0(i,1)
+            w0(i,4)=w1(i,4)*w0(i,1)
+            w1(i,19) = w1(i,19) 
+     +         -dt*onehalf*3.0*(gam-one)*a(1)*w1(i,19)/a(0)
+         w1(i,19) = max(premin,w1(i,19))
+         w0(i,8)=w1(i,19)/(gam-one) + onehalf*(w0(i,2)*w1(i,2)
+     +      +w0(i,3)*w1(i,3)+w0(i,4)*w1(i,4))+onehalf*(w0(i,5)**2
+     +       +w0(i,6)**2+w0(i,7)**2)
+                    
+        
+         w1(i,5) = w0(i,5)
+         w1(i,6) = w0(i,6)
+         w1(i,7) = w0(i,7)
+         w1(i,8) = w1(i,19) + (w1(i,5)**2+w1(i,6)**2+w1(i,7)**2)*onehalf
+         w1(i,8) = max(premin,w1(i,8))
+ 101  continue
+c-----------------------------------------------------------------------
+c  den(i+1/2), ux(i+1/2), uy(i+1/2), uz(i+1/2),
+c  Bx(i+1/2), By(i+1/2), Bz(i+1/2), pt(i+1/2), p(i+1/2)
+c-----------------------------------------------------------------------
+      do 102 i=-1,nd+1
+         if(.false.) then
+         w1(i,11) = (w1(i,1)+w1(i+1,1))*onehalf
+         w1(i,12) = (w1(i,2)+w1(i+1,2))*onehalf
+         w1(i,13) = (w1(i,3)+w1(i+1,3))*onehalf
+         w1(i,14) = (w1(i,4)+w1(i+1,4))*onehalf
+         w1(i,15) = (w1(i,5)+w1(i+1,5))*onehalf
+         w1(i,16) = (w1(i,6)+w1(i+1,6))*onehalf
+         w1(i,17) = (w1(i,7)+w1(i+1,7))*onehalf
+         w1(i,18) = (w1(i,8)+w1(i+1,8))*onehalf
+         w1(i,19) = (w1(i,19)+w1(i+1,19))*onehalf
+         else
+         w1(i,11) = sqrt(w1(i,1)*w1(i+1,1))         
+         w1(i,12) = (w1(i,2)*sqrt(w1(i,1))+w1(i+1,2)*sqrt(w1(i+1,1)))
+     +              /(sqrt(w1(i,1))+sqrt(w1(i+1,1)))     
+         w1(i,13) = (w1(i,3)*sqrt(w1(i,1))+w1(i+1,3)*sqrt(w1(i+1,1)))
+     +              /(sqrt(w1(i,1))+sqrt(w1(i+1,1)))     
+         w1(i,14) = (w1(i,4)*sqrt(w1(i,1))+w1(i+1,4)*sqrt(w1(i+1,1)))
+     +              /(sqrt(w1(i,1))+sqrt(w1(i+1,1)))     
+         w1(i,15) = (w1(i,5)*sqrt(w1(i,1))+w1(i+1,5)*sqrt(w1(i+1,1)))
+     +              /(sqrt(w1(i,1))+sqrt(w1(i+1,1))) 
+         w1(i,16) = (w1(i,6)*sqrt(w1(i,1))+w1(i+1,6)*sqrt(w1(i+1,1)))
+     +             /(sqrt(w1(i,1))+sqrt(w1(i+1,1)))     
+         w1(i,17) = (w1(i,7)*sqrt(w1(i,1))+w1(i+1,7)*sqrt(w1(i+1,1)))
+     +            /(sqrt(w1(i,1))+sqrt(w1(i+1,1))) 
+         w1(i,18) = (w1(i,8)*sqrt(w1(i,1))+w1(i+1,8)*sqrt(w1(i+1,1)))
+     +            /(sqrt(w1(i,1))+sqrt(w1(i+1,1))) 
+c       w1(i,19) = (w1(i,19)*sqrt(w1(i,1))+w1(i+1,19)*sqrt(w1(i+1,1)))
+c     +            /(sqrt(w1(i,1))+sqrt(w1(i+1,1)))
+      w1(i,19) = w1(i,18)-(w1(i,15)**2+w1(i,16)**2+w1(i,17)**2)*onehalf  
+         endif
+         w1(i,18) = max(premin,w1(i,18))
+         w1(i,19) = max(premin,w1(i,19))
+ 102  continue
+c-----------------------------------------------------------------------
+c  bx(i+1/2), by(i+1/2), bz(i+1/2), a(i+1/2), cf(i+1/2), cs(i+1/2)
+c-----------------------------------------------------------------------
+      do 103 i=-1,nd+1
+         wtemp1   = one/sqrt(w1(i,11))
+         w1(i,21) = w1(i,15)*wtemp1
+         w1(i,22) = w1(i,16)*wtemp1
+         w1(i,23) = w1(i,17)*wtemp1
+         w1(i,24) = sqrt(gam*w1(i,19)/w1(i,11))
+         wtemp2   = sqrt(max(zero,
+     +              (w1(i,24)**2+w1(i,21)**2+w1(i,22)**2+w1(i,23)**2)**2
+     +            -four*w1(i,24)**2*w1(i,21)**2))
+         w1(i,25) = ((w1(i,24)**2+w1(i,21)**2+w1(i,22)**2+w1(i,23)**2)
+     +               +wtemp2)*onehalf
+         w1(i,25) = sqrt(max(zero,w1(i,25)))
+         w1(i,26) = ((w1(i,24)**2+w1(i,21)**2+w1(i,22)**2+w1(i,23)**2)
+     +               -wtemp2)*onehalf
+         w1(i,26) = sqrt(max(zero,w1(i,26)))
+ 103  continue
+c-----------------------------------------------------------------------
+c  alpf(i+1/2), alps(i+1/2), betay(i+1/2), betaz(i+1/2),
+c  theta(i+1/2), Q1(i+1/2), Q2(i+1/2)
+c-----------------------------------------------------------------------
+      wtemp1 = one/sqrt(two)
+c
+      do 104 i=-1,nd+1
+         if ((w1(i,25)**2-w1(i,26)**2).ge.tiny) then
+            wtemp2 = one/sqrt(w1(i,25)**2-w1(i,26)**2)
+            w1(i,31) = sqrt(max(zero,w1(i,25)**2-w1(i,21)**2))*wtemp2
+            w1(i,32) = sqrt(max(zero,w1(i,25)**2-w1(i,24)**2))*wtemp2
+         else
+            w1(i,31) = one
+            w1(i,32) = one
+         endif
+c
+         if ((w1(i,22)**2+w1(i,23)**2).ge.tiny) then
+            wtemp3 = one/sqrt(w1(i,22)**2+w1(i,23)**2)
+            w1(i,33) = w1(i,22)*wtemp3
+            w1(i,34) = w1(i,23)*wtemp3
+         else
+            w1(i,33) = wtemp1
+            w1(i,34) = wtemp1
+c           w1(i,33) = zero
+c           w1(i,34) = zero
+         endif
+c
+         w1(i,35) = w1(i,12)**2+w1(i,13)**2+w1(i,14)**2
+         w1(i,36) = w1(i,31)**2*w1(i,24)**2
+     +               *(w1(i,25)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            + w1(i,32)**2*w1(i,25)**2
+     +               *(w1(i,26)**2+(two-gam)*gam1r*w1(i,24)**2)
+         w1(i,37) = w1(i,31)**2*w1(i,24)*w1(i,25)*sign(one,w1(i,21))
+     +            + w1(i,32)**2*w1(i,26)*w1(i,21)
+ 104  continue
+c-----------------------------------------------------------------------
+c  ak(i+1/2)
+c-----------------------------------------------------------------------
+      do 105 i=-1,nd+1
+         w1(i,41) = (w1(i,12)+w1(i,25))
+         w1(i,42) = (w1(i,12)+w1(i,26))
+         w1(i,43) = (w1(i,12)+abs(w1(i,21)))
+         w1(i,44) = w1(i,12)
+         w1(i,45) = (w1(i,12)-abs(w1(i,21)))
+         w1(i,46) = (w1(i,12)-w1(i,26))
+         w1(i,47) = (w1(i,12)-w1(i,25))
+ 105  continue
+c-----------------------------------------------------------------------
+c  R1k(i+1/2), R2k(i+1/2), R3k(i+1/2), R4k(i+1/2),
+c  R5k(i+1/2), R6k(i+1/2), R7k(i+1/2)
+c-----------------------------------------------------------------------
+      do 106 i=-1,nd+1
+         wtemp1 = one/sqrt(w1(i,11))
+c
+         w2(i, 1) = w1(i,31)
+         w2(i, 2) = w1(i,31)*(w1(i,12)+w1(i,25))
+         w2(i, 3) = w1(i,31)*w1(i,13)-w1(i,32)*w1(i,33)*w1(i,21)
+         w2(i, 4) = w1(i,31)*w1(i,14)-w1(i,32)*w1(i,34)*w1(i,21)
+         w2(i, 5) = w1(i,32)*w1(i,33)*w1(i,25)*wtemp1
+         w2(i, 6) = w1(i,32)*w1(i,34)*w1(i,25)*wtemp1
+         w2(i, 7) = w1(i,31)*w1(i,35)*onehalf
+     +            + w1(i,31)*w1(i,25)**2*gam1r
+     +            + w1(i,31)*w1(i,25)*w1(i,12)
+     +            - w1(i,32)*w1(i,21)
+     +              *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14))
+     +            - (two-gam)*gam1r*w1(i,31)
+     +              *(w1(i,25)**2-w1(i,24)**2)
+c
+         w2(i,11) = w1(i,32)
+         w2(i,12) = w1(i,32)*(w1(i,12)+w1(i,26))
+         w2(i,13) = w1(i,32)*w1(i,13)+w1(i,31)*w1(i,33)*w1(i,24)
+     +              *sign(one,w1(i,21))
+         w2(i,14) = w1(i,32)*w1(i,14)+w1(i,31)*w1(i,34)*w1(i,24)
+     +              *sign(one,w1(i,21))
+         w2(i,15) = -w1(i,31)*w1(i,33)*w1(i,24)**2
+     +              /w1(i,25)*wtemp1
+         w2(i,16) = -w1(i,31)*w1(i,34)*w1(i,24)**2
+     +              /w1(i,25)*wtemp1
+         w2(i,17) = w1(i,32)*w1(i,35)*onehalf
+     +            + w1(i,32)*w1(i,26)**2*gam1r
+     +            + w1(i,32)*w1(i,26)*w1(i,12)
+     +            + w1(i,31)*w1(i,24)*sign(one,w1(i,21))
+     +              *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14))
+     +            - (two-gam)*gam1r*w1(i,32)
+     +              *(w1(i,26)**2-w1(i,24)**2)
+c
+         w2(i,21) = zero
+         w2(i,22) = zero
+         w2(i,23) = -w1(i,34)*sign(one,w1(i,21))
+         w2(i,24) =  w1(i,33)*sign(one,w1(i,21))
+         w2(i,25) =  w1(i,34)*wtemp1
+         w2(i,26) = -w1(i,33)*wtemp1
+         w2(i,27) = -(w1(i,34)*w1(i,13)-w1(i,33)*w1(i,14))
+     +               *sign(one,w1(i,21))
+c
+         w2(i,31) = one
+         w2(i,32) = w1(i,12)
+         w2(i,33) = w1(i,13)
+         w2(i,34) = w1(i,14)
+         w2(i,35) = zero
+         w2(i,36) = zero
+         w2(i,37) = w1(i,35)*onehalf
+c
+         w2(i,41) = zero
+         w2(i,42) = zero
+         w2(i,43) =  w1(i,34)*sign(one,w1(i,21))
+         w2(i,44) = -w1(i,33)*sign(one,w1(i,21))
+         w2(i,45) =  w1(i,34)*wtemp1
+         w2(i,46) = -w1(i,33)*wtemp1
+         w2(i,47) =  (w1(i,34)*w1(i,13)-w1(i,33)*w1(i,14))
+     +               *sign(one,w1(i,21))
+c
+         w2(i,51) = w1(i,32)
+         w2(i,52) = w1(i,32)*(w1(i,12)-w1(i,26))
+         w2(i,53) = w1(i,32)*w1(i,13)-w1(i,31)*w1(i,33)*w1(i,24)
+     +              *sign(one,w1(i,21))
+         w2(i,54) = w1(i,32)*w1(i,14)-w1(i,31)*w1(i,34)*w1(i,24)
+     +              *sign(one,w1(i,21))
+         w2(i,55) = -w1(i,31)*w1(i,33)*w1(i,24)**2
+     +              /w1(i,25)*wtemp1
+         w2(i,56) = -w1(i,31)*w1(i,34)*w1(i,24)**2
+     +              /w1(i,25)*wtemp1
+         w2(i,57) = w1(i,32)*w1(i,35)*onehalf
+     +            + w1(i,32)*w1(i,26)**2*gam1r
+     +            - w1(i,32)*w1(i,26)*w1(i,12)
+     +            - w1(i,31)*w1(i,24)*sign(one,w1(i,21))
+     +              *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14))
+     +            - (two-gam)*gam1r*w1(i,32)
+     +              *(w1(i,26)**2-w1(i,24)**2)
+c
+         w2(i,61) = w1(i,31)
+         w2(i,62) = w1(i,31)*(w1(i,12)-w1(i,25))
+         w2(i,63) = w1(i,31)*w1(i,13)+w1(i,32)*w1(i,33)*w1(i,21)
+         w2(i,64) = w1(i,31)*w1(i,14)+w1(i,32)*w1(i,34)*w1(i,21)
+         w2(i,65) = w1(i,32)*w1(i,33)*w1(i,25)*wtemp1
+         w2(i,66) = w1(i,32)*w1(i,34)*w1(i,25)*wtemp1
+         w2(i,67) = w1(i,31)*w1(i,35)*onehalf
+     +            + w1(i,31)*w1(i,25)**2*gam1r
+     +            - w1(i,31)*w1(i,25)*w1(i,12)
+     +            + w1(i,32)*w1(i,21)
+     +              *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14))
+     +            - (two-gam)*gam1r*w1(i,31)
+     +              *(w1(i,25)**2-w1(i,24)**2)
+ 106  continue
+c
+      do 107 i=-1,nd+1
+         if (w1(i,22).ne.zero) then
+            signbt = sign(one,w1(i,22))
+         else
+            signbt = sign(one,w1(i,23))
+         endif
+c
+         if (w1(i,24).ge.abs(w1(i,21))) then
+            w2(i,11) = w2(i,11)*signbt
+            w2(i,12) = w2(i,12)*signbt
+            w2(i,13) = w2(i,13)*signbt
+            w2(i,14) = w2(i,14)*signbt
+            w2(i,15) = w2(i,15)*signbt
+            w2(i,16) = w2(i,16)*signbt
+            w2(i,17) = w2(i,17)*signbt
+            w2(i,51) = w2(i,51)*signbt
+            w2(i,52) = w2(i,52)*signbt
+            w2(i,53) = w2(i,53)*signbt
+            w2(i,54) = w2(i,54)*signbt
+            w2(i,55) = w2(i,55)*signbt
+            w2(i,56) = w2(i,56)*signbt
+            w2(i,57) = w2(i,57)*signbt
+         else
+            w2(i, 1) = w2(i, 1)*signbt
+            w2(i, 2) = w2(i, 2)*signbt
+            w2(i, 3) = w2(i, 3)*signbt
+            w2(i, 4) = w2(i, 4)*signbt
+            w2(i, 5) = w2(i, 5)*signbt
+            w2(i, 6) = w2(i, 6)*signbt
+            w2(i, 7) = w2(i, 7)*signbt
+            w2(i,61) = w2(i,61)*signbt
+            w2(i,62) = w2(i,62)*signbt
+            w2(i,63) = w2(i,63)*signbt
+            w2(i,64) = w2(i,64)*signbt
+            w2(i,65) = w2(i,65)*signbt
+            w2(i,66) = w2(i,66)*signbt
+            w2(i,67) = w2(i,67)*signbt
+         endif
+ 107  continue
+c-----------------------------------------------------------------------
+c  L1k(i+1/2), L2k(i+1/2), L3k(i+1/2), L4k(i+1/2),
+c  L5k(i+1/2), L6k(i+1/2), L7k(i+1/2)
+c-----------------------------------------------------------------------
+      do 108 i=-1,nd+1
+         wtemp1 = one/w1(i,36)
+         wtemp2 = one/w1(i,37)
+         wtemp3 = sqrt(w1(i,11))
+c
+         w3(i, 1) = w1(i,31)*0.25d0*w1(i,24)**2*w1(i,35)*wtemp1
+     +          - (w1(i,31)*onehalf*w1(i,24)*w1(i,12)*sign(one,w1(i,21))
+     +            -w1(i,32)*onehalf*w1(i,26)
+     +             *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14)))
+     +            *wtemp2
+         w3(i, 2) = -w1(i,31)*onehalf*w1(i,24)**2*w1(i,12)*wtemp1
+     +          + w1(i,31)*onehalf*w1(i,24)*sign(one,w1(i,21))*wtemp2
+         w3(i, 3) = -w1(i,31)*onehalf*w1(i,24)**2*w1(i,13)*wtemp1
+     +          - w1(i,32)*onehalf*w1(i,33)*w1(i,26)*wtemp2
+         w3(i, 4) = -w1(i,31)*onehalf*w1(i,24)**2*w1(i,14)*wtemp1
+     +          - w1(i,32)*onehalf*w1(i,34)*w1(i,26)*wtemp2
+         w3(i, 5) = w1(i,32)*onehalf*w1(i,33)*w1(i,25)
+     +            *(w1(i,26)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i, 6) = w1(i,32)*onehalf*w1(i,34)*w1(i,25)
+     +            *(w1(i,26)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i, 7) = w1(i,31)*onehalf*w1(i,24)**2*wtemp1
+c
+         w3(i,11) = w1(i,32)*0.25d0*w1(i,25)**2*w1(i,35)*wtemp1
+     +          - (w1(i,32)*onehalf*w1(i,21)*w1(i,12)
+     +            +w1(i,31)*onehalf*w1(i,25)
+     +             *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14)))
+     +            *wtemp2
+         w3(i,12) = -w1(i,32)*onehalf*w1(i,25)**2*w1(i,12)*wtemp1
+     +          + w1(i,32)*onehalf*w1(i,21)*wtemp2
+         w3(i,13) = -w1(i,32)*onehalf*w1(i,25)**2*w1(i,13)*wtemp1
+     +          + w1(i,31)*onehalf*w1(i,33)*w1(i,25)*wtemp2
+         w3(i,14) = -w1(i,32)*onehalf*w1(i,25)**2*w1(i,14)*wtemp1
+     +          + w1(i,31)*onehalf*w1(i,34)*w1(i,25)*wtemp2
+         w3(i,15) = -w1(i,31)*onehalf*w1(i,33)*w1(i,25)
+     +            *(w1(i,25)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i,16) = -w1(i,31)*onehalf*w1(i,34)*w1(i,25)
+     +            *(w1(i,25)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i,17) = w1(i,32)*onehalf*w1(i,25)**2*wtemp1
+c
+         w3(i,21) =  (w1(i,34)*w1(i,13)-w1(i,33)*w1(i,14))
+     +               *sign(one,w1(i,21))*onehalf
+         w3(i,22) = zero
+         w3(i,23) = -w1(i,34)*sign(one,w1(i,21))*onehalf
+         w3(i,24) =  w1(i,33)*sign(one,w1(i,21))*onehalf
+         w3(i,25) =  w1(i,34)*wtemp3*onehalf
+         w3(i,26) = -w1(i,33)*wtemp3*onehalf
+         w3(i,27) = zero
+c
+         w3(i,31) = one-(w1(i,31)**2*w1(i,24)**2
+     +                   +w1(i,32)**2*w1(i,25)**2)*onehalf
+     +                 *w1(i,35)*wtemp1
+         w3(i,32) = (w1(i,31)**2*w1(i,24)**2+w1(i,32)**2*w1(i,25)**2)
+     +             *w1(i,12)*wtemp1
+         w3(i,33) = (w1(i,31)**2*w1(i,24)**2+w1(i,32)**2*w1(i,25)**2)
+     +             *w1(i,13)*wtemp1
+         w3(i,34) = (w1(i,31)**2*w1(i,24)**2+w1(i,32)**2*w1(i,25)**2)
+     +             *w1(i,14)*wtemp1
+         w3(i,35) = w1(i,31)*w1(i,32)*w1(i,33)*w1(i,25)
+     +             *(w1(i,25)**2-w1(i,26)**2)*wtemp3*wtemp1
+         w3(i,36) = w1(i,31)*w1(i,32)*w1(i,34)*w1(i,25)
+     +             *(w1(i,25)**2-w1(i,26)**2)*wtemp3*wtemp1
+         w3(i,37) = -(w1(i,31)**2*w1(i,24)**2+w1(i,32)**2*w1(i,25)**2)
+     +             *wtemp1
+c
+         w3(i,41) = -(w1(i,34)*w1(i,13)-w1(i,33)*w1(i,14))
+     +               *sign(one,w1(i,21))*onehalf
+         w3(i,42) = zero
+         w3(i,43) =  w1(i,34)*sign(one,w1(i,21))*onehalf
+         w3(i,44) = -w1(i,33)*sign(one,w1(i,21))*onehalf
+         w3(i,45) =  w1(i,34)*wtemp3*onehalf
+         w3(i,46) = -w1(i,33)*wtemp3*onehalf
+         w3(i,47) = zero
+c
+         w3(i,51) = w1(i,32)*0.25d0*w1(i,25)**2*w1(i,35)*wtemp1
+     +          + (w1(i,32)*onehalf*w1(i,21)*w1(i,12)
+     +            +w1(i,31)*onehalf*w1(i,25)
+     +             *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14)))
+     +            *wtemp2
+         w3(i,52) = -w1(i,32)*onehalf*w1(i,25)**2*w1(i,12)*wtemp1
+     +          - w1(i,32)*onehalf*w1(i,21)*wtemp2
+         w3(i,53) = -w1(i,32)*onehalf*w1(i,25)**2*w1(i,13)*wtemp1
+     +          - w1(i,31)*onehalf*w1(i,33)*w1(i,25)*wtemp2
+         w3(i,54) = -w1(i,32)*onehalf*w1(i,25)**2*w1(i,14)*wtemp1
+     +          - w1(i,31)*onehalf*w1(i,34)*w1(i,25)*wtemp2
+         w3(i,55) = -w1(i,31)*onehalf*w1(i,33)*w1(i,25)
+     +            *(w1(i,25)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i,56) = -w1(i,31)*onehalf*w1(i,34)*w1(i,25)
+     +            *(w1(i,25)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i,57) = w1(i,32)*onehalf*w1(i,25)**2*wtemp1
+c
+         w3(i,61) = w1(i,31)*0.25d0*w1(i,24)**2*w1(i,35)*wtemp1
+     +          + (w1(i,31)*onehalf*w1(i,24)*w1(i,12)*sign(one,w1(i,21))
+     +            -w1(i,32)*onehalf*w1(i,26)
+     +             *(w1(i,33)*w1(i,13)+w1(i,34)*w1(i,14)))
+     +            *wtemp2
+         w3(i,62) = -w1(i,31)*onehalf*w1(i,24)**2*w1(i,12)*wtemp1
+     +          - w1(i,31)*onehalf*w1(i,24)*sign(one,w1(i,21))*wtemp2
+         w3(i,63) = -w1(i,31)*onehalf*w1(i,24)**2*w1(i,13)*wtemp1
+     +          + w1(i,32)*onehalf*w1(i,33)*w1(i,26)*wtemp2
+         w3(i,64) = -w1(i,31)*onehalf*w1(i,24)**2*w1(i,14)*wtemp1
+     +          + w1(i,32)*onehalf*w1(i,34)*w1(i,26)*wtemp2
+         w3(i,65) = w1(i,32)*onehalf*w1(i,33)*w1(i,25)
+     +            *(w1(i,26)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i,66) = w1(i,32)*onehalf*w1(i,34)*w1(i,25)
+     +            *(w1(i,26)**2+(two-gam)*gam1r*w1(i,24)**2)
+     +            *wtemp3*wtemp1
+         w3(i,67) = w1(i,31)*onehalf*w1(i,24)**2*wtemp1
+ 108  continue
+c
+      do 109 i=-1,nd+1
+         if (w1(i,22).ne.zero) then
+            signbt = sign(one,w1(i,22))
+         else
+            signbt = sign(one,w1(i,23))
+         endif
+c
+         if (w1(i,24).ge.abs(w1(i,21))) then
+            w3(i,11) = w3(i,11)*signbt
+            w3(i,12) = w3(i,12)*signbt
+            w3(i,13) = w3(i,13)*signbt
+            w3(i,14) = w3(i,14)*signbt
+            w3(i,15) = w3(i,15)*signbt
+            w3(i,16) = w3(i,16)*signbt
+            w3(i,17) = w3(i,17)*signbt
+            w3(i,51) = w3(i,51)*signbt
+            w3(i,52) = w3(i,52)*signbt
+            w3(i,53) = w3(i,53)*signbt
+            w3(i,54) = w3(i,54)*signbt
+            w3(i,55) = w3(i,55)*signbt
+            w3(i,56) = w3(i,56)*signbt
+            w3(i,57) = w3(i,57)*signbt
+         else
+            w3(i, 1) = w3(i, 1)*signbt
+            w3(i, 2) = w3(i, 2)*signbt
+            w3(i, 3) = w3(i, 3)*signbt
+            w3(i, 4) = w3(i, 4)*signbt
+            w3(i, 5) = w3(i, 5)*signbt
+            w3(i, 6) = w3(i, 6)*signbt
+            w3(i, 7) = w3(i, 7)*signbt
+            w3(i,61) = w3(i,61)*signbt
+            w3(i,62) = w3(i,62)*signbt
+            w3(i,63) = w3(i,63)*signbt
+            w3(i,64) = w3(i,64)*signbt
+            w3(i,65) = w3(i,65)*signbt
+            w3(i,66) = w3(i,66)*signbt
+            w3(i,67) = w3(i,67)*signbt
+         endif
+ 109  continue
+c-----------------------------------------------------------------------
+c  alpk(i+1/2)
+c-----------------------------------------------------------------------
+      do 111 j=1,7
+         j1 = (j-1)*10
+         do 110 i=-1,nd+1
+            w1(i,50+j) = w3(i,j1+1)*(w0(i+1,1)-w0(i,1))
+     +                  +w3(i,j1+2)*(w0(i+1,2)-w0(i,2))
+     +                  +w3(i,j1+3)*(w0(i+1,3)-w0(i,3))
+     +                  +w3(i,j1+4)*(w0(i+1,4)-w0(i,4))
+     +                  +w3(i,j1+5)*(w0(i+1,6)-w0(i,6))
+     +                  +w3(i,j1+6)*(w0(i+1,7)-w0(i,7))
+     +                  +w3(i,j1+7)*(w0(i+1,8)-w0(i,8))
+ 110     continue
+ 111  continue
+c-----------------------------------------------------------------------
+c  ~gk(i+1/2)
+c-----------------------------------------------------------------------
+      j=1
+      wtemp2 = one/eps1
+      do 112 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps1)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps1
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 112  continue
+c
+      j=2
+      wtemp2 = one/eps2
+      do 113 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps2)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps2
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 113  continue
+c
+      j=3
+      wtemp2 = one/eps3
+      do 114 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps3)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps3
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 114  continue
+c
+      j=4
+      wtemp2 = one/eps4
+      do 115 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps4)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps4
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 115  continue
+c
+      j=5
+      wtemp2 = one/eps3
+      do 116 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps3)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps3
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 116  continue
+c
+      j=6
+      wtemp2 = one/eps2
+      do 117 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps2)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps2
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 117  continue
+c
+      j=7
+      wtemp2 = one/eps1
+      do 118 i=-1,nd+1
+         if (dtdl*abs(w1(i,40+j)).ge.(two*eps1)) then
+            w1(i,60+j) = (dtdl*abs(w1(i,40+j))-(dtdl*w1(i,40+j))**2)
+     +                   *onehalf*w1(i,50+j)
+         else
+            w1(i,60+j) = ((dtdl*w1(i,40+j))**2*0.25d0*wtemp2+eps1
+     +                   -(dtdl*w1(i,40+j))**2)*onehalf*w1(i,50+j)
+         endif
+ 118  continue
+c-----------------------------------------------------------------------
+c  gk(i)
+c-----------------------------------------------------------------------
+      do 127 j=1,7
+         do 126 i=0,nd+1
+            w1(i,100+j) = sign(one,w1(i,60+j))
+     +                   *max(zero,min(abs(w1(i,60+j)),
+     +                           sign(one,w1(i,60+j))*w1(i-1,60+j)))
+ 126     continue
+ 127  continue
+c-----------------------------------------------------------------------
+c  gammak(i+1/2)
+c-----------------------------------------------------------------------
+      do 130 j=1,7
+         do 129 i=0,nd
+            if (abs(w1(i,50+j)).ge.tiny) then
+               w1(i,110+j) = (w1(i+1,100+j)-w1(i,100+j))/w1(i,50+j)
+            else
+               w1(i,110+j) = zero
+            endif
+ 129     continue
+ 130  continue
+c-----------------------------------------------------------------------
+c  betak(i+1/2)
+c-----------------------------------------------------------------------
+      j=1
+      wtemp2 = one/eps1
+      do 131 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps1)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps1)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 131  continue
+c
+      j=2
+      wtemp2 = one/eps2
+      do 132 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps2)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps2)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 132  continue
+c
+      j=3
+      wtemp2 = one/eps3
+      do 133 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps3)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps3)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 133  continue
+c
+      j=4
+      wtemp2 = one/eps4
+      do 134 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps4)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps4)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 134  continue
+c
+      j=5
+      wtemp2 = one/eps3
+      do 135 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps3)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps3)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 135  continue
+c
+      j=6
+      wtemp2 = one/eps2
+      do 136 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps2)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps2)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 136  continue
+c
+      j=7
+      wtemp2 = one/eps1
+      do 137 i=0,nd
+         if (abs(dtdl*w1(i,40+j)+w1(i,110+j)).ge.(two*eps1)) then
+            w1(i,120+j) = abs(dtdl*w1(i,40+j)+w1(i,110+j))*w1(i,50+j)
+     +                  - (w1(i,100+j)+w1(i+1,100+j))
+         else
+            w1(i,120+j) = ((dtdl*w1(i,40+j)+w1(i,110+j))**2*0.25d0
+     +            *wtemp2+eps1)*w1(i,50+j) - (w1(i,100+j)+w1(i+1,100+j))
+         endif
+ 137  continue
+c-----------------------------------------------------------------------
+c  -f(i+1/2) dccf begin replace here.
+c-----------------------------------------------------------------------
+c      do 138 i=0,nd
+c         w1(i,131) = (w0(i,2)+w0(i+1,2))*onehalf
+c         w1(i,132) = (w0(i,2)*w1(i,2)+w1(i,8)-w1(i,5)**2
+c     +              +w0(i+1,2)*w1(i+1,2)+w1(i+1,8)-w1(i+1,5)**2)*onehalf
+c         w1(i,133) = (w0(i,3)*w1(i,2)-w1(i,5)*w1(i,6)
+c     +               +w0(i+1,3)*w1(i+1,2)-w1(i+1,5)*w1(i+1,6))*onehalf
+c         w1(i,134) = (w0(i,4)*w1(i,2)-w1(i,5)*w1(i,7)
+c     +               +w0(i+1,4)*w1(i+1,2)-w1(i+1,5)*w1(i+1,7))*onehalf
+c         w1(i,135) = (w1(i,6)*w1(i,2)-w1(i,5)*w1(i,3)
+c     +               +w1(i+1,6)*w1(i+1,2)-w1(i+1,5)*w1(i+1,3))*onehalf
+c         w1(i,136) = (w1(i,7)*w1(i,2)-w1(i,5)*w1(i,4)
+c     +               +w1(i+1,7)*w1(i+1,2)-w1(i+1,5)*w1(i+1,4))*onehalf
+c         w1(i,137) = ((w0(i,8)+w1(i,8))*w1(i,2)
+c     +               +(w0(i+1,8)+w1(i+1,8))*w1(i+1,2)
+c     +               -w1(i,5)*(w1(i,5)*w1(i,2)
+c     +                 +w1(i,6)*w1(i,3)+w1(i,7)*w1(i,4))
+c     +               -w1(i+1,5)*(w1(i+1,5)*w1(i+1,2)
+c     +                +w1(i+1,6)*w1(i+1,3)+w1(i+1,7)*w1(i+1,4)))*onehalf
+c 138  continue
+cc
+c      wtemp1 = one/dtdl
+c      do 140 j=1,7
+c         do 139 i=0,nd
+c            w1(i,130+j) = w1(i,130+j) - (w1(i,121)*w2(i,   j)
+c     +                                  +w1(i,122)*w2(i,10+j)
+c     +                                  +w1(i,123)*w2(i,20+j)
+c     +                                  +w1(i,124)*w2(i,30+j)
+c     +                                  +w1(i,125)*w2(i,40+j)
+c     +                                  +w1(i,126)*w2(i,50+j)
+c     +                                  +w1(i,127)*w2(i,60+j))
+c     +                                 *wtemp1*onehalf
+c 139     continue
+c 140  continue
+cc-----------------------------------------------------------------------
+cc  update
+cc-----------------------------------------------------------------------
+c      do 141 i=1,nd
+c         w0(i,1) = w0(i,1) - dtdl*(w1(i,131)-w1(i-1,131))
+c         w0(i,2) = w0(i,2) - dtdl*(w1(i,132)-w1(i-1,132))
+c         w0(i,3) = w0(i,3) - dtdl*(w1(i,133)-w1(i-1,133))
+c         w0(i,4) = w0(i,4) - dtdl*(w1(i,134)-w1(i-1,134))
+c         w0(i,6) = w0(i,6) - dtdl*(w1(i,135)-w1(i-1,135))
+c         w0(i,7) = w0(i,7) - dtdl*(w1(i,136)-w1(i-1,136))
+c         w0(i,8) = w0(i,8) - dtdl*(w1(i,137)-w1(i-1,137))
+c 141  continue
+
+c-------
+c dcc update for flux correction
+c-------
+      do 138 i=0,nd
+         flux(i,1) = (w0(i,2)+w0(i+1,2))*onehalf
+         flux(i,2) = (w0(i,2)*w1(i,2)+w1(i,8)-w1(i,5)**2
+     +       +w0(i+1,2)*w1(i+1,2)+w1(i+1,8)-w1(i+1,5)**2)*onehalf
+         flux(i,3) = (w0(i,3)*w1(i,2)-w1(i,5)*w1(i,6)
+     +        +w0(i+1,3)*w1(i+1,2)-w1(i+1,5)*w1(i+1,6))*onehalf
+         flux(i,4) = (w0(i,4)*w1(i,2)-w1(i,5)*w1(i,7)
+     +        +w0(i+1,4)*w1(i+1,2)-w1(i+1,5)*w1(i+1,7))*onehalf
+         flux(i,5) = (w1(i,6)*w1(i,2)-w1(i,5)*w1(i,3)
+     +        +w1(i+1,6)*w1(i+1,2)-w1(i+1,5)*w1(i+1,3))*onehalf
+         flux(i,6) = (w1(i,7)*w1(i,2)-w1(i,5)*w1(i,4)
+     +        +w1(i+1,7)*w1(i+1,2)-w1(i+1,5)*w1(i+1,4))*onehalf
+         flux(i,7) = ((w0(i,8)+w1(i,8))*w1(i,2)
+     +               +(w0(i+1,8)+w1(i+1,8))*w1(i+1,2)
+     +               -w1(i,5)*(w1(i,5)*w1(i,2)
+     +                 +w1(i,6)*w1(i,3)+w1(i,7)*w1(i,4))
+     +               -w1(i+1,5)*(w1(i+1,5)*w1(i+1,2)
+     +         +w1(i+1,6)*w1(i+1,3)+w1(i+1,7)*w1(i+1,4)))*onehalf
+ 138  continue
+c
+      wtemp1 = one/dtdl
+      do 140 j=1,7
+         do 139 i=0,nd
+            flux(i,j) = flux(i,j) - (w1(i,121)*w2(i,   j)
+     +                         	         +w1(i,122)*w2(i,10+j)
+     +                                  +w1(i,123)*w2(i,20+j)
+     +                                  +w1(i,124)*w2(i,30+j)
+     +                                  +w1(i,125)*w2(i,40+j)
+     +                                  +w1(i,126)*w2(i,50+j)
+     +                                  +w1(i,127)*w2(i,60+j))
+     +                                 *wtemp1*onehalf
+ 139     continue
+ 140  continue
+ 
+ 
+
+c-----------------------------------------------------------------------
+c  update
+c-----------------------------------------------------------------------
+      do 141 i=1,nd
+
+c     dcc, 02/24/05
+c         if( gravityon .eq. 1 ) then
+c            wtemp1=w0(i,1)
+c            wtemp2=w0(i,2)/w0(i,1)
+c         endif
+
+         w0(i,1) = w0(i,1) - dtdl*(flux(i,1)-flux(i-1,1))
+         m(i,1) = m(i,1) - dtdl*(flux(i,2)-flux(i-1,2))
+         m(i,2) = m(i,2) - dtdl*(flux(i,3)-flux(i-1,3))
+         m(i,3) = m(i,3) - dtdl*(flux(i,4)-flux(i-1,4))
+         w0(i,6) = w0(i,6) - dtdl*(flux(i,5)-flux(i-1,5))
+         w0(i,7) = w0(i,7) - dtdl*(flux(i,6)-flux(i-1,6))
+         m(i,4) = m(i,4) - dtdl*(flux(i,7)-flux(i-1,7))
+         
+                
+c        if( gravityon .eq. 1 ) then
+c           w0(i,2) = w0(i,2)+
+c    +           dt*onehalf*w0(i,11)*(wtemp1/w0(i,1)+1)/a(2)
+c           w0(i,8) = w0(i,8)+
+c    +        dt*onehalf*w0(i,11)*(w0(i,2)+wtemp2/w0(i,1))/a(2)
+c        endif
+         
+ 141   continue
+         
+     
+
+
+c-----------------------------------------------------------------------
+c  fx1, fx2, fy1, fy2, fz1, fz2
+c-----------------------------------------------------------------------
+      do 142 i=0,nd
+         w0(i, 9) = 
+     +     (w1(i,6)*w1(i,2)+w1(i+1,6)*w1(i+1,2))*onehalf
+         w0(i,10) = 
+     +     (w1(i,7)*w1(i,2)+w1(i+1,7)*w1(i+1,2))*onehalf
+ 142  continue
+c
+      wtemp1 = one/dtdl
+      do 143 i=0,nd
+         w0(i, 9) = w0(i, 9) - (w1(i,121)*w2(i, 5)
+     +                         +w1(i,122)*w2(i,15)
+     +                         +w1(i,123)*w2(i,25)
+     +                         +w1(i,124)*w2(i,35)
+     +                         +w1(i,125)*w2(i,45)
+     +                         +w1(i,126)*w2(i,55)
+     +                         +w1(i,127)*w2(i,65))
+     +                        *wtemp1*onehalf
+c
+         w0(i,10) = w0(i,10) - (w1(i,121)*w2(i, 6)
+     +                         +w1(i,122)*w2(i,16)
+     +                         +w1(i,123)*w2(i,26)
+     +                         +w1(i,124)*w2(i,36)
+     +                         +w1(i,125)*w2(i,46)
+     +                         +w1(i,126)*w2(i,56)
+     +                         +w1(i,127)*w2(i,66))
+     +                        *wtemp1*onehalf
+ 143  continue
+ 
+c------------------------------------------------------------------------
+c  real B, E, fx1, fx2, fy1, fy2, fz1, fz2
+c------------------------------------------------------------------------ 
+   
+          do 144 i = -1, nd+2
+          w0(i,8) =m(i,4)
+          w0(i,2) = m(i,1) 
+          w0(i,3) = m(i,2) 
+          w0(i,4) = m(i,3)
+ 144   continue  
+     
+
+c-----------------------------------------------------------------------
+c  end
+c-----------------------------------------------------------------------
+
+
+      return
+
+
+      end
+

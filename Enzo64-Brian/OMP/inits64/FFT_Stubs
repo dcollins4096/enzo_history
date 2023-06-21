@@ -1,0 +1,119 @@
+/***********************************************************************
+/
+/  COMPUTE A FAST FOURIER TRANSFORM USING THE IBM_MATH LIBRARY 
+/
+/  written by: Robert Harkness
+/  date:       February, 2004
+/  modified1:
+/
+/  PURPOSE:
+/
+/  INPUTS:
+/      buffer - field to be FFTed
+/      Rank   - rank of FFT
+/      DimensionReal[] - declared dimensions of buffer
+/      Dimension[]     - active dimensions of buffer
+/      dir             - +1 forward, -1 inverse
+/      type            - RTOC - real-to-complex, 
+/                        CTOC - complex-to-complex
+/
+************************************************************************/
+
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "macros_and_parameters.h"
+
+#ifdef r4
+#define RTOC(X)          scfft##X
+#define RTOC_INVERSE(X)  csfft##X
+#define RTOC_SCALE(X)    sscal##X
+#define CTOC(X)           cfft##X
+#define CTOC_SCALE(X)    cscal##X
+#define CMPLX_CAST    (complex *)
+#endif /* r4 */
+
+#ifdef r8
+#define RTOC(X)          dzfft##X
+#define RTOC_INVERSE(X)  zdfft##X
+#define RTOC_SCALE(X)    dscal##X
+#define CTOC(X)           zfft##X
+#define CTOC_SCALE(X)    zscal##X
+#define CMPLX_CAST    (zomplex *)
+#endif /* r8 */
+
+
+
+
+int FastFourierTransformIBMMATH(FLOAT *buffer, int Rank, int DimensionReal[], 
+				int Dimension[], int dir, int type)
+{
+
+  // IBM routines are ghastly, so we use stubs for all
+
+  // 1D transform
+
+  if (Rank == 1)
+  {
+    if (type == REAL_TO_COMPLEX)
+    {
+      if (dir == FFT_FORWARD)
+      {
+	srcft_stub(buffer, ... );
+      }
+      else
+      {
+        scrft_stub
+      }
+    }
+    else
+    {
+      scft_stub
+    }
+  } // end of 1D FFT
+
+  // 2D transform
+
+  if (Rank == 2)
+  {
+    if (type == REAL_TO_COMPLEX)
+    {
+      if (dir == FFT_FORWARD)
+      {
+        srcft2_stub
+      }
+      else
+      {
+        scrft2_stub
+      }
+    }
+    else
+    {
+      scft2_stub
+    }
+  } // end of 2D FFT
+
+  // 3D transform
+
+  if (Rank == 3)
+  {
+    if (type == REAL_TO_COMPLEX)
+    {
+      if (dir == FFT_FORWARD)
+      {
+        srcft3_stub
+      }
+      else
+      {
+	scrft3_stub
+      }
+    }
+    else
+    {
+      scft3_stub
+    }
+  } // end of 3D FFT
+
+  return SUCCESS;
+
+}

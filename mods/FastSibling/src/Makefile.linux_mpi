@@ -1,0 +1,38 @@
+#
+# macros for linux.
+# Must use EGCS 1.1.1 with complete g77,g++, gcc build.  gcc 2.8.x
+# is not up to the task.
+#
+CPP          = /usr/bin/cpp -traditional
+
+## Fortran compiler
+FC           = mpif77
+# -fno-second-underscore keeps g77 from adding two underscores
+# to the end of external/intrinsic subroutine symbol names (normally
+# you'd only append a single underscore to fortran symbols).
+FC_OPTIMIZE  =  -fast -Knoieee
+#FC_OPTIMIZE  =  -O
+DEFINES      = -D $(PRECISION)
+
+## C Compiler
+CC           = mpicc
+CC_OPTIMIZE  = -O
+
+## C++ Compiler
+CCxx	     = mpiCC
+CCxx_OPTIMIZE = -O
+
+## Linker/loader
+HDF_DIR      = ${HOME}/hdf
+#MPI_DIR      = /usr/parallel/mpich-gm.pgi
+#MPI_DIR      = /usr/parallel/mpich-eth.pgi
+LDR          = mpiCC
+LDR_OPTIMIZE = -O
+
+LIB          = -L${HDF_DIR}/lib -L${MPI_DIR}/lib -lm -lmfhdf -ldf -lz -ljpeg -lg2c -L/usr/pgi/linux86/lib -lpgftnrtl -lpgc
+#LIB          = -L${HDF_DIR}/lib -L${MPI_DIR}/lib -lm -lmfhdf -ldf -lz -ljpeg -lmpich -lpgftnrtl -L/usr/local/rr-gm/lib -lgm
+
+OPTS         = -c -I${HDF_DIR}/include -I${MPI_DIR}/include -D USE_MPI -D LINUX
+#OPTS         = -c -I${HDF_DIR}/include -I${MPI_DIR}/include -I${MPI_DIR}/build/LINUX/ch_gm/include -D USE_MPI -D LINUX
+DEBUG        = 
+

@@ -1,0 +1,14 @@
+
+HDF5_INSTALL = /projects/paci/SciComp/harkness/hdf5/5-1.4.3-sol-64
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+
+CCxx         = /opt/SUNWhpc/HPC4.0/bin/mpCC -xarch=v9
+CCxx_OPT     = -O3 -DSUN -DUSE_MPI -features=no%conststrings,no%localfor
+
+LDR          = /opt/SUNWhpc/HPC4.0/bin/mpCC -xarch=v9 -lmpi
+LDR_OPT      =
+
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 -L/usr/local/lib -lM77 -lF77 \
+               -lsunmath -lnsl -lm -lsocket -lz
+
+OPTS         = -c -I$(HDF5_INSTALL)/include -I/opt/SUNWhpc/include

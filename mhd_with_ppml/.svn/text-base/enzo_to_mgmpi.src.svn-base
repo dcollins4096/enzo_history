@@ -1,0 +1,169 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2005 Daniel R. Reynolds                                         *
+* Copyright 2005 Laboratory for Computational Astrophysics                  *
+* Copyright 2005 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+#include "fortran.def"
+c=======================================================================
+c/////////////////////  SUBROUTINE ENZO_TO_MGMPI  \\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine enzo_to_mgmpi(enzovec, mgmpivec, edim1, edim2, edim3, 
+     &                         mdim1, mdim2, mdim3, es1, es2, es3, 
+     &                         ef1, ef2, ef3, off1, off2, off3)
+c
+c  
+c
+c  written by: Daniel R. Reynolds
+c  date:       October, 2005
+c  modified1:
+c
+c  PURPOSE: Interpolates between Enzo grids (finite-volume) and 
+c           MGMPI grids (finite-differnece) in such a way that the 
+c           interpolated quantity is preserved (when used in 
+c           combination with mgmpi_to_enzo.src).  This is based on 
+c           a simple trilinear interpolation between the two grids, 
+c           except at the domain boundaries, where the mgmpivec 
+c           grid is assumed to extend beyond the enzovec active 
+c           grid, and thus only receives partial weights.
+c
+c  INPUTS:
+c     enzovec      - finite-volume grid, with extents over the 
+c                    indices (1:edim1,1:edim2,1:edim3), and with 
+c                    active indices (es1:ef1,es2:ef2,es3:ef3)
+c
+c     mgmpivec     - finite-difference grid, with extents over the 
+c                    indices (1:mdim1,1:mdim2,1:mdim3).  This grid
+c                    is shifted to the left of the enzovec grid by 
+c                    the offsets (off1, off2, off3), as well as a 
+c                    half-cell shift corresponding to the cell-
+c                    centered to cell-cornered grid indexing, i.e. 
+c                    enzovec(i,j,k) is the cell center with lower 
+c                    cell corner given by 
+c                    mgmpivec(i+off1,j+off2,k+off3)
+c
+c     edim*, mdim*, es*, ef*, off* are all described above
+c
+c  OUTPUT ARGUMENTS: 
+c     mgmpivec     - enzovec field interpolated from cell centers to 
+c                    cell corners
+c
+c  EXTERNALS: 
+c
+c  LOCALS:
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer edim1, edim2, edim3, mdim1, mdim2, mdim3
+      integer es1, es2, es3, ef1, ef2, ef3, off1, off2, off3
+      real    enzovec(edim1, edim2, edim3)
+      real    mgmpivec(mdim1, mdim2, mdim3)
+c
+c  locals
+c
+      integer i, j, k, il, ir, jl, jr, kl, kr
+      real    factor
+c
+c=======================================================================
+c
+c     check that the enzo active extents make sense 
+      if ((es1 .lt. 1) .or. (es2 .lt. 1) .or. (es3 .lt. 1)) then
+         write(0,*) 'enzo_to_mgmpi error: active grid begins too low'
+         return
+      endif
+      if ((ef1 .gt. edim1) .or. (ef2 .gt. edim2) 
+     &                     .or. (ef3 .gt. edim3)) then
+         write(0,*) 'enzo_to_mgmpi error: active grid ends too high'
+         return
+      endif
+c
+c     check that mgmpi grid offsets make sense
+      if ((es1+off1 .lt. 1) .or. (es2+off2 .lt. 1) 
+     &                      .or. (es3+off3 .lt. 1)) then
+         write(0,*) 'enzo_to_mgmpi error: offsets too low'
+         return
+      endif
+      if ((ef1+off1+1 .gt. mdim1) .or. (ef2+off2+1 .gt. mdim2) 
+     &                            .or. (ef3+off3+1 .gt. mdim3)) then
+         write(0,*) 'enzo_to_mgmpi error: offsets too high'
+         return
+      endif
+c
+c     initialize mgmpivec to have all zero values
+      do k=1,mdim3,1
+         do j=1,mdim2,1
+            do i=1,mdim1,1
+               mgmpivec(i,j,k) = 0.d0
+            enddo
+         enddo
+      enddo
+c
+c     iterate over the active enzovec grid, donating 1/8 of each 
+c     cell's value to each of its 8 mgmpivec neighbors
+c     [equivalent to trilinear interpolation, assuming mgmpivec 
+c      extends beyond active enzo domain]
+      do k=es3,ef3,1
+c
+c        get corner indices
+         kl = k + off3
+         kr = kl + 1
+c         
+         do j=es2,ef2,1
+c
+c           get corner indices
+            jl = j + off2
+            jr = jl + 1
+c
+            do i=es1,ef1,1
+c
+c              get weighting factor
+               factor = enzovec(i,j,k)*1.25d-1
+c
+c              get corner indices
+               il = i + off1
+               ir = il + 1
+c
+c              (l,l,l) corner
+               mgmpivec(il,jl,kl) = mgmpivec(il,jl,kl) + factor
+c
+c              (r,l,l) corner
+               mgmpivec(ir,jl,kl) = mgmpivec(ir,jl,kl) + factor
+c
+c              (l,r,l) corner
+               mgmpivec(il,jr,kl) = mgmpivec(il,jr,kl) + factor
+c
+c              (r,r,l) corner
+               mgmpivec(ir,jr,kl) = mgmpivec(ir,jr,kl) + factor
+c
+c              (l,l,r) corner
+               mgmpivec(il,jl,kr) = mgmpivec(il,jl,kr) + factor
+c
+c              (r,l,r) corner
+               mgmpivec(ir,jl,kr) = mgmpivec(ir,jl,kr) + factor
+c
+c              (l,r,r) corner
+               mgmpivec(il,jr,kr) = mgmpivec(il,jr,kr) + factor
+c
+c              (r,r,r) corner
+               mgmpivec(ir,jr,kr) = mgmpivec(ir,jr,kr) + factor
+c
+            enddo
+         enddo
+      enddo
+c
+c     
+      return
+      end
+c
+c=======================================================================

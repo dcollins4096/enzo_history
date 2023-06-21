@@ -1,0 +1,31 @@
+#
+# macros for sp2
+#
+CPP          = /usr/ccs/lib/cpp
+
+## Fortran compiler
+FC           = mpxlf
+FC_OPTIMIZE  = -O -bmaxdata:0x80000000
+DEFINES      = -D${PRECISION}
+
+## C Compiler
+CC           = mpcc
+CC_OPTIMIZE  = 
+
+## C++ Compiler (qldbl128 required if using r16)
+CCxx	     = mpCC
+#CCxx	     = xlC128
+CCxx_OPTIMIZE = -O -DSP2 -DUSE_MPI
+#CCxx_OPTIMIZE = -O -DSP2 -DUSE_MPI -qldbl128
+
+HDF_DIR      = /usr/local/apps/HDF4.1r3
+
+## Linker/loader
+LDR          = mpCC
+#LDR          = xlC128 -qldbl128 -binitfini:poe_remote_main -lmpi -lvtd -v -L/usr/lpp/ppe.poe/lib -L/usr/lpp/ppe.poe/lib/ip
+#LDR	     = xlC128 -qldbl128 -lm
+LDR_OPTIMIZE = -bmaxdata:0x80000000
+LIB          = -L${HDF_DIR}/lib -lmfhdf -ldf -ljpeg -lz -lxlf -lxlfutil -lxlf90
+
+OPTS         = -c -I${HDF_DIR}/include
+DEBUG        = 

@@ -1,0 +1,125 @@
+#======================================================================
+#
+# Make.arch for COMPAQ Alpha
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-19  Created
+#
+#======================================================================
+
+TEXT_ARCH = $(TEXT_ARCH_ALPHAEV68)
+
+#======================================================================
+# Pre-processor cpp
+#======================================================================
+
+CPP_ARCH      = /lib/cpp
+CPPFLAGS_ARCH = -P
+
+#======================================================================
+# Defines
+#======================================================================
+
+DEFINES_ARCH  = -DCOMPAQ
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = cc
+CXX_ARCH   = cxx
+FC_ARCH    = f77
+F90_ARCH   = f90
+LD_ARCH    = cxx
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+# CC_MPI_ARCH    =
+# CXX_MPI_ARCH   =
+# FC_MPI_ARCH    =
+# F90_MPI_ARCH   =
+# LD_MPI_ARCH    =
+
+# CC_NOMPI_ARCH  =
+# CXX_NOMPI_ARCH =
+# FC_NOMPI_ARCH  =
+# F90_NOMPI_ARCH =
+# LD_NOMPI_ARCH  =
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = 
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g3
+FLAGS_OPT_FAST_ARCH       = -O1
+FLAGS_OPT_AGGRESSIVE_ARCH = -O1
+
+#======================================================================
+# Architecture-dependent compiler and linker flags 
+#======================================================================
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = 
+CXXFLAGS_ARCH =
+FFLAGS_ARCH   =
+F90FLAGS_ARCH =
+LDFLAGS_ARCH  = -lm
+
+#----------------------------------------------------------------------
+# General link flags
+#----------------------------------------------------------------------
+
+LIBS_ARCH = 
+
+#----------------------------------------------------------------------
+# Precision-related compiler flags
+#----------------------------------------------------------------------
+
+FFLAGS_PRECISION_SINGLE_ARCH = -real_size 32 -double_size 64
+FFLAGS_PRECISION_DOUBLE_ARCH = -real_size 64 -double_size 64 -fpconstant
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -lUfor -lfor -lFutil
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+OBJS_MPI_ARCH = 
+LIBS_MPI_ARCH = -lmpi -lelan
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+HDF4_DIR = /usr/users/4/bordner/public/hdf4
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -lz $(HDF4_DIR)/lib/libjpeg.a
+
+HDF5_DIR = /usr/local/packages/hdf5-1.4.5_parallel
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_DIR = /usr/local/packages/papi
+DEFINES_PERF_ARCH = -DUSE_PAPI
+FLAGS_PERF_ARCH = -I$(PERF_DIR)/include
+LIBS_PERF_ARCH = -L$(PERF_DIR)/lib -lpapi -L/usr/users/4/bordner/lib -ldadd

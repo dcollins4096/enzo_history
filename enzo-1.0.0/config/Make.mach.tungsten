@@ -1,0 +1,73 @@
+#======================================================================
+#
+# Make.mach for NCSA Tungsten
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2004-02-13  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_TUNGSTEN)
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = 
+CXX_ARCH   = 
+FC_ARCH    = 
+F90_ARCH   = 
+LD_ARCH    = 
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH  = cmpicc -icc
+CXX_MPI_ARCH = cmpicc -icc
+FC_MPI_ARCH  = cmpifc -ifc
+F90_MPI_ARCH = cmpifc -ifc
+LD_MPI_ARCH  = cmpicc -icc
+
+CC_NOMPI_ARCH    = icc
+CXX_NOMPI_ARCH   = icc
+FC_NOMPI_ARCH    = ifort
+F90_NOMPI_ARCH   = ifort
+LD_NOMPI_ARCH    = icc
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -L/usr/local/intel/8.0.058/lib -lifcore
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = 
+LIBS_MPI_ARCH = 
+
+#======================================================================
+# HDF5 libraries
+#======================================================================
+
+HDF4_DIR = /u/ac/bordner/public
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /u/ac/bordner/public
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_PAPI_DIR = /usr/local/apps/tools/papi3
+PERF_PAPI_DIR_OBJ_ARCH = -L$(PERF_PAPI_DIR)/lib -lpapi
+
+DEFINES_PERF_PAPI_ARCH = -DUSE_PAPI -DPAPI3
+FLAGS_PERF_PAPI_ARCH = -I$(PERF_PAPI_DIR)/include
+LIBS_PERF_PAPI_ARCH = -L$(PERF_PAPI_DIR)/lib -lpapi -lperfctr

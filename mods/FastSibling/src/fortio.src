@@ -1,0 +1,264 @@
+c=======================================================================
+c//////////////////////  SUBROUTINE FORTOPEN  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine fortopen(filename, unit)
+c
+c  OPENS AN UNFORMATTED FORTRAN FILE
+c
+c  written by: Greg Bryan
+c  date:       October, 2000
+c  modified1:
+c
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      character*(*) filename
+      integer       unit
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////
+c=======================================================================
+c
+      open(UNIT=unit, FILE=filename, FORM='unformatted', 
+     &     STATUS='unknown')
+c
+      return
+      end
+
+
+
+c=======================================================================
+c//////////////////////  SUBROUTINE FORTCLOSE  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine fortclose(unit)
+c
+c  CLOSES A FORTRAN FILE
+c
+c  written by: Greg Bryan
+c  date:       October, 2000
+c  modified1:
+c
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer unit
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////
+c=======================================================================
+c
+      close(UNIT=unit)
+c
+      return
+      end
+
+
+c=======================================================================
+c//////////////////////  SUBROUTINE FORTWRITE  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine fortwrite(unit, data, rank, shape)
+c
+c  WRITES DATA TO UNFORMATTED FORTRAN FILE
+c
+c  written by: Greg Bryan
+c  date:       October, 2000
+c  modified1:
+c
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer  unit, rank, shape(3), i, j, k
+      real*4   data(1)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////
+c=======================================================================
+c
+      if (rank .eq. 1) then
+c
+c       Particle format
+c
+         write(unit) (data(i),i=1,shape(1))
+c
+      elseif (rank .eq. 3) then
+c
+c       Grid format
+c
+         do k=1,shape(3)
+            write(unit) ((data(i + ((j-1)+(k-1)*shape(2))*shape(1)),
+     &                    i=1,shape(1)),j=1,shape(2))
+         enddo
+c
+      else
+         write(6,*) 'FORTWRITE: rank unsupported:',rank
+         stop
+      endif
+c
+      return
+      end
+
+
+c=======================================================================
+c//////////////////////  SUBROUTINE FORTIWRITE  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine fortiwrite(unit, data, rank, shape)
+c
+c  WRITES DATA TO UNFORMATTED FORTRAN FILE
+c
+c  written by: Greg Bryan
+c  date:       October, 2000
+c  modified1:
+c
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer  unit, rank, shape(3), i, j, k
+      integer  data(1)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////
+c=======================================================================
+c
+      if (rank .eq. 1) then
+c
+c       Particle format
+c
+         write(unit) (data(i),i=1,shape(1))
+c
+      elseif (rank .eq. 3) then
+c
+c       Grid format
+c
+         do k=1,shape(3)
+            write(unit) ((data(i + ((j-1)+(k-1)*shape(2))*shape(1)),
+     &                    i=1,shape(1)),j=1,shape(2))
+         enddo
+c
+      else
+         write(6,*) 'FORTWRITE: rank unsupported:',rank
+         stop
+      endif
+c
+      return
+      end
+
+
+c=======================================================================
+c//////////////////////  SUBROUTINE FORTREAD  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine fortread(unit, data, rank, shape)
+c
+c  READS DATA FROM UNFORMATTED FORTRAN FILE
+c
+c  written by: Greg Bryan
+c  date:       October, 2000
+c  modified1:
+c
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer  unit, rank, shape(3), i, j, k
+      real*4   data(1)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////
+c=======================================================================
+c
+      if (rank .eq. 1) then
+c
+c       Particle format
+c
+         read(unit) (data(i),i=1,shape(1))
+c
+      elseif (rank .eq. 3) then
+c
+c       Grid format
+c
+         do k=1,shape(3)
+            read(unit) ((data(i + ((j-1)+(k-1)*shape(2))*shape(1)),
+     &                    i=1,shape(1)),j=1,shape(2))
+         enddo
+c
+      else
+         write(6,*) 'FORTREAD: rank unsupported:',rank
+         stop
+      endif
+c
+      return
+      end
+
+
+c=======================================================================
+c//////////////////////  SUBROUTINE FORTIREAD  \\\\\\\\\\\\\\\\\\\\\\\
+c
+      subroutine fortiread(unit, data, rank, shape)
+c
+c  READS DATA TO UNFORMATTED FORTRAN FILE
+c
+c  written by: Greg Bryan
+c  date:       October, 2000
+c  modified1:
+c
+c
+c-----------------------------------------------------------------------
+c
+      implicit NONE
+c
+c-----------------------------------------------------------------------
+c
+c  argument declarations
+c
+      integer  unit, rank, shape(3), i, j, k
+      integer  data(1)
+c
+c\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\///////////////////////////////
+c=======================================================================
+c
+      if (rank .eq. 1) then
+c
+c       Particle format
+c
+         read(unit) (data(i),i=1,shape(1))
+c
+      elseif (rank .eq. 3) then
+c
+c       Grid format
+c
+         do k=1,shape(3)
+            read(unit) ((data(i + ((j-1)+(k-1)*shape(2))*shape(1)),
+     &                    i=1,shape(1)),j=1,shape(2))
+         enddo
+c
+      else
+         write(6,*) 'FORTREAD: rank unsupported:',rank
+         stop
+      endif
+c
+      return
+      end
+

@@ -1,0 +1,5 @@
+#! /bin/csh
+
+foreach i (`ls *.src`)
+	ln -s -f $i `basename $i src`f
+end

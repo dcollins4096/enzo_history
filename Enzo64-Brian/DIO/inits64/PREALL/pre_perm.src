@@ -1,0 +1,42 @@
+      program preallocate
+
+      implicit none
+
+      integer*8 :: n1, n2, n3
+
+      read(*,*) n1, n2, n3
+
+!     n1=128
+!     n2=128
+!     n3=128
+
+      call preall(n1, n2, n3)
+
+      end
+
+      subroutine preall(n1, n2, n3)
+
+      implicit none
+
+      integer*8 :: n1, n2, n3
+      integer*8 :: i
+      complex*16, allocatable :: z(:)
+
+      allocate( z(n1*n2) )
+
+      z = cmplx(0.0d0,0.0d0)
+
+      open(77, file='permute', status='unknown', form='unformatted',
+     &         access='direct', recl=16*n1*n2)
+
+      do i=1,n3
+      write(77, rec=i) z
+      end do
+
+      close(77)
+
+      deallocate( z )
+
+      return
+
+      end

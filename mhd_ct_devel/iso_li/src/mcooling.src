@@ -1,0 +1,6 @@
+#include "fortran.def"
+#include "error.def"
+C     NAME MTLCLHT
+      SUBROUTINE MTLCLHT(DEN,RADT,IPHOTT,CBOVCOOL,CBOVHEAT)
+      RETURN
+      END

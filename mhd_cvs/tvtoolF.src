@@ -1,0 +1,134 @@
+
+c     this routine is basically an easy wrapper to get the field quantity information
+c     to the debugger Totalview.  Since enzo declares all variable arrays dynamically,
+c     it's difficult for totalview to map the array, which make it difficult to watch individual
+c     variables or set watch points.  Additionally, there's a debug check here.
+
+c     Electricity comes from other planets.
+
+      subroutine tvtoolf(YesProblem,nx, ny, nz, 
+     +                   den, eng, vx, vy, vz,
+     +                   bcx,bcy,bcz,
+     +                   bx,by,bz)
+
+      implicit none
+
+      integer nx, ny, nz,YesProblem
+      real den(nx,ny,nz), eng(nx,ny,nz), 
+     +     vx(nx,ny,nz), vy(nx,ny,nz), vz(nx,ny,nz),
+     +     bcx(nx,ny,nz), bcy(nx,ny,nz), bcz(nx,ny,nz)
+
+      real bx(nx+1,ny, nz),
+     +     by(nx,ny+1, nz),
+     +     bz(nx,ny, nz+1)
+
+      integer i,j,k
+
+
+      YesProblem=0
+      
+      do k=1,nz
+         do j=1,ny
+            do i=1,nx
+               if( den(i,j,k) .ne. den(i,j,k) ) then
+                  write(*,*) "tv: d(",i,",",j,",",k,")=",den(i,j,k)
+                  YesProblem=1
+               endif
+
+               if( eng(i,j,k) .ne. eng(i,j,k) ) then
+                  write(*,*) "tv: e(",i,",",j,",",k,")=",eng(i,j,k)
+                  YesProblem=1
+               endif
+               if( den(i,j,k) .lt. -1.0e-7) then
+                  write(*,*) "tv: d(",i,",",j,",",k,")=",den(i,j,k)
+                  YesProblem=1
+               endif
+               if( eng(i,j,k) .lt. -1.0e-7) then
+                  write(*,*) "tv: e(",i,",",j,",",k,")=",eng(i,j,k)
+                  YesProblem=1
+               endif
+
+               if( vx(i,j,k) .ne. vx(i,j,k) ) then
+                  write(*,*) "tv: vx(",i,",",j,",",k,")=",vx(i,j,k)
+
+                  YesProblem=1
+               endif
+               if( vy(i,j,k) .ne. vy(i,j,k) ) then
+                  write(*,*) "tv: vy(",i,",",j,",",k,")=",vy(i,j,k)
+                  YesProblem=1
+               endif
+               if( vz(i,j,k) .ne. vz(i,j,k) ) then
+                  write(*,*) "tv: vz(",i,",",j,",",k,")=",vz(i,j,k)
+                  YesProblem=1
+               endif
+               if( bcx(i,j,k) .ne. bcx(i,j,k) ) then
+                  write(*,*) "tv: bcx(",i,",",j,",",k,")=",bcx(i,j,k)
+                  YesProblem=1
+               endif
+               if( bcy(i,j,k) .ne. bcy(i,j,k) ) then
+                  write(*,*) "tv: bcy(",i,",",j,",",k,")=",bcy(i,j,k)
+                  YesProblem=1
+               endif
+               if( bcz(i,j,k) .ne. bcz(i,j,k) ) then
+                  write(*,*) "tv: bcz(",i,",",j,",",k,")=",bcz(i,j,k)
+                  YesProblem=1
+               endif
+
+
+            enddo
+         enddo
+      enddo
+
+      do k=1,nz
+         do j=1,ny
+            do i=1,nx+1
+               if( bx(i,j,k) .ne. bx(i,j,k) ) then
+                  write(*,*) "tv: bx(",i,",",j,",",k,")=",bx(i,j,k)
+                  YesProblem=1
+               endif
+
+c               if( bx(i,j,k) .gt. 2 ) then
+c                  write(*,*) "bx > 2.", i,j,k,nx,ny,nz
+c                  YesProblem=1
+c               endif
+            enddo
+         enddo
+      enddo
+
+      do k=1,nz
+         do j=1,ny+1
+            do i=1,nx
+               if( by(i,j,k) .ne. by(i,j,k) ) then
+                  write(*,*) "tv: by(",i,",",j,",",k,")=",by(i,j,k)
+                  YesProblem=1
+               endif
+
+c               if( by(i,j,k) .gt. 2 ) then
+c                  write(*,*) "by > 2.",i,j,k
+c                  YesProblem=1
+c               endif
+
+            enddo
+         enddo
+      enddo
+
+      do k=1,nz+1
+         do j=1,ny
+            do i=1,nx
+               if( bz(i,j,k) .ne. bz(i,j,k) ) then
+                  write(*,*) "tv: bz(",i,",",j,",",k,")=",bz(i,j,k)
+                  YesProblem=1
+               endif
+c               if( bz(i,j,k) .gt. 2 ) then
+c                  write(*,*) "bz > 2.",i,j,k
+c                  YesProblem=1
+c               endif
+
+
+            enddo
+         enddo
+      enddo
+
+      return 
+      end
+      

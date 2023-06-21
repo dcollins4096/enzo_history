@@ -1,0 +1,30 @@
+#BSUB -M 20000M
+#BSUB -n 64
+#BSUB -W 2:00
+#BSUB -P pqk
+#BSUB -N
+#BSUB -J h5_128Z
+#BSUB -o /u/ncsa/harkness/h5_128Z.out
+#
+set -x
+#export MP_SET_NUMTHREADS=$BSUB_NUMTHREADS
+
+
+cd /scratch-modi4/harkness/h5_128Z
+pwd
+
+#msscmd -b "tar cvf g512.tar GridDensity GridVelocities ParticlePositions ParticleVelocities PowerSpectrum.out"
+
+#cp /scratch-modi4/harkness/h5_128/GridDensity .
+#cp /scratch-modi4/harkness/h5_128/GridVelocities .
+#cp /scratch-modi4/harkness/h5_128/ParticlePositions .
+#cp /scratch-modi4/harkness/h5_128/ParticleVelocities .
+#cp /scratch-modi4/harkness/h5_128/AMR .
+#cp /scratch-modi4/harkness/h5_128/enzo5 .
+
+MPI_TYPE_MAX=8192
+export MPI_TYPE_MAX
+
+#mpirun -prefix "[%g]" -np 64 ./ringforce
+
+mpirun -prefix "[%g]" -np 64 ./enzo5 -d AMR

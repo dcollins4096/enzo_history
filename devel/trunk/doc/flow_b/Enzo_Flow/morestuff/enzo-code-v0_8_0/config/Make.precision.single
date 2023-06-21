@@ -1,0 +1,15 @@
+#======================================================================
+#
+# Make.precision for single precision
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_PRECISION = $(TEXT_PRECISION_SINGLE)
+
+DEFINES_PRECISION = -Dr4
+FFLAGS_PRECISION = $(FFLAGS_PRECISION_SINGLE_ARCH)
+LDFLAGS_PRECISION = $(LDFLAGS_PRECISION_SINGLE_ARCH)

@@ -1,0 +1,27 @@
+#BSUB -M 3200M
+#BSUB -n 32
+#BSUB -W 1:00
+#BSUB -P pqk
+#BSUB -N
+#BSUB -J amr128
+#BSUB -o /u/ncsa/harkness/amr128.out
+#
+set -x
+#export MP_SET_NUMTHREADS=$BSUB_NUMTHREADS
+
+
+cd $SCR
+pwd
+
+#msscmd -b "tar cvf g512.tar GridDensity GridVelocities ParticlePositions ParticleVelocities PowerSpectrum.out"
+
+cp /scratch-modi4/harkness/x128/GridDensity .
+cp /scratch-modi4/harkness/x128/GridVelocities .
+cp /scratch-modi4/harkness/x128/ParticlePositions .
+cp /scratch-modi4/harkness/x128/ParticleVelocities .
+cp /scratch-modi4/harkness/x128/Unigrid128 .
+cp /scratch-modi4/harkness/x128/enzo5 .
+
+mpirun -prefix "[%g]" -np 32 ./enzo5 -d Unigrid128
+
+ls -lt

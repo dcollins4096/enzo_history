@@ -1,0 +1,24 @@
+#!/bin/ksh
+# @ account_no = uic221
+# @ job_type = parallel
+# @ environment = COPY_ALL; \
+                  MP_EUILIB=us; \
+                  MP_CPU_USE=unique; \
+                  MP_CSS_INTERRUPT=yes; \
+                  MP_INTRDELAY=100; \
+                  MP_PULSE=0; \
+                  MP_ADAPTER_USE=dedicated; \
+                  MP_SHARED_MEMORY=yes; \
+                  MP_LABELIO=yes; \
+                  MP_EAGER_LIMIT=65536
+# @ arguments = " "
+# @ output = enzo_out.$(jobid)
+# @ error = enzo_err.$(jobid)
+# @ executable = /gpfs/harkness/X/Run/go_enzo
+# @ network.MPI = css0,not_shared,US
+# @ node = 64
+# @ tasks_per_node = 8
+# @ checkpoint = no
+# @ wall_clock_limit = 36000
+# @ class = high
+# @ queue

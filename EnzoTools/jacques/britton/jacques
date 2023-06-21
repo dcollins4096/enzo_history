@@ -1,0 +1,43 @@
+;;; If environment variable JACQUESDIR exists, then set JDIR to its
+;;; value, else to './'
+JDIR = getenv('JACQUESDIR')
+if JDIR eq '' then JDIR = './'
+
+
+;;; set IDL PATH to include TOOLS directory
+!PATH = JDIR + '/TOOLS/:' + !PATH
+
+
+;;; precompiled routines:
+;;; if the jacques.sav file doesn't exists, compile routines by
+;;; calling tools.com, then save them.
+sav_file_name = JDIR + '/TOOLS/SAV/jacques.sav'
+if file_test(sav_file_name) eq 1 then $
+  restore, filename=sav_file_name
+
+
+;;; set directory and basename
+;data_base_dir = '/mnt/edisk/enzoruns/cl-2S_Run_06_07_13/DataDir0032/'
+;data_base_dir = '/mnt/edisk/enzoruns/cl-3S_Run_06_05_22/DataDir0033/'
+;data_base_dir = '/mnt/edisk/enzoruns/clCOenhanced_Run_06_05_05/DataDir0033/'
+;data_base_dir = '/mnt/edisk/enzoruns/cl-4S_Run_06_05_02/DataDir0031/'
+;data_base_dir = '/mnt/edisk/enzoruns/firstRun_06_04_04/DataDir0033/'
+data_base_dir = '/home/britton/lilstorage/DataDir0006/'
+base_name = 'DataDump0006'
+
+
+;;; call main routine
+AMRslice, grid_info, data_base_dir, base_name=base_name
+
+
+
+;;; print instructions for how to continue
+print,''
+print,'If you have modified any source code, you need to recompile by'
+print,'typing "@tools.com".'
+print,''
+print,'To restart AMRslice, just type "AMRslice, grid_info, data_base_dir".'
+print,''
+
+
+

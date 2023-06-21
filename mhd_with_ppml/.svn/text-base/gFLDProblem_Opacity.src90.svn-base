@@ -1,0 +1,153 @@
+!=======================================================================
+!
+! Copyright 2006 Daniel R. Reynolds
+! Copyright 2006 Laboratory for Computational Astrophysics
+! Copyright 2006 Regents of the University of California
+!
+! This software is released under the terms of the "Enzo Public License"
+! in the accompanying LICENSE file.
+!
+!=======================================================================
+subroutine gFLDProblem_Opacity(Kappa, n_HI, n_HeI, n_HeII, a, Model, &
+     IsE, IsEsHI, IsEsHInu, IsEsHeI, IsEsHeInu, IsEsHeII, IsEsHeIInu, &
+     Nchem, Nx, Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, ier)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       September, 2006
+!  modified1:
+!
+!  PURPOSE: Computes the local photoionization coefficients over the 
+!           domain.
+!
+!  INPUTS:
+!     n_HI       - number density of HI species
+!     n_HeI      - number density of HeI species
+!     n_HeII     - number density of HeII species
+!     a          - cosmological expansion parameter
+!     Model      - flag denoting physical model to use
+!     IsE        - int_{nu0}^{inf} sigE dnu
+!     IsEsHI     - int_{nu0}^{inf} sigE*sigHI dnu
+!     IsEsHInu   - int_{nu0}^{inf} sigE*sigHI/nu dnu
+!     IsEsHeI    - int_{nu0}^{inf} sigE*sigHeI dnu
+!     IsEsHeInu  - int_{nu0}^{inf} sigE*sigHeI/nu dnu
+!     IsEsHeII   - int_{nu0}^{inf} sigE*sigHeII dnu
+!     IsEsHeIInu - int_{nu0}^{inf} sigE*sigHeII/nu dnu
+!     Nchem      - number of chemistry species in problem {0, 1, 3}
+!     Nx,Ny,Nz   - active mesh size in each direction
+!     NG*l/NG*r  - left/right ghost cells in each direction
+!
+!     Note: the vector inputs are of size (Nx + NGxl + NGxr) in 
+!     the x-direction, others are similar.
+!
+!  OUTPUT ARGUMENTS: 
+!     Kappa      - Opacity coefficient
+!     ier        - success/failure flag (0->failure, 1->success)
+!
+!  EXTERNALS: 
+!
+!  LOCALS:
+!
+!=======================================================================
+#include "fortran.def"
+  implicit none
+
+  !--------------
+  ! argument declarations
+  integer, intent(in) :: Model, Nchem
+  integer, intent(in) :: Nx, NGxl, NGxr
+  integer, intent(in) :: Ny, NGyl, NGyr
+  integer, intent(in) :: Nz, NGzl, NGzr
+  integer, intent(out) :: ier
+  REALSUB, intent(in) :: a
+  REALSUBR, intent(in) :: IsE, IsEsHI, IsEsHInu, IsEsHeI
+  REALSUBR, intent(in) :: IsEsHeInu, IsEsHeII, IsEsHeIInu
+  REALSUBR, intent(in),                                          &
+       dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)  &
+       :: n_HI, n_HeI, n_HeII
+  REALSUBR, intent(out) ::                                       &
+       Kappa(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)
+
+  !--------------
+  ! locals
+  integer :: i, j, k
+  REALSUBR :: eV2ergs, hp, mp, HIconst, HeIconst, HeIIconst
+
+  !=======================================================================
+
+!!$  write(*,*) 'Entering gFLDProblem::Opacity routine'
+
+  ! initialize output to zero, flag to success
+  Kappa = 0.d0
+  ier = 1
+
+  ! set shortcut values
+  eV2ergs = 1.60217733d-12       ! coversion factor from eV to ergs
+  hp = 6.6260693d-27             ! Planck's constant [ergs*s]
+  mp = 1.67262171d-24            ! mass of a proton [g]
+
+  ! compute opacity shortcuts, incorporate scaling 
+  ! coefficient for density to convert from comoving to proper
+  HIconst   = IsEsHI/a/a/a/mp
+  HeIconst  = IsEsHeI/a/a/a/mp
+  HeIIconst = IsEsHeII/a/a/a/mp
+
+  ! compute opacity over domain depending on number of chemical species 
+  select case (Model)
+
+  !   test case for checking solvers
+  case (0)
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+!              Kappa(i,j,k) = 7.0d-30*n_HI(i,j,k)*HIconst
+              Kappa(i,j,k) = 1.0d-25*n_HI(i,j,k)*HIconst
+           enddo
+        enddo
+     enddo
+
+  !   constant opacity test case
+  case (10)
+
+     do k=1,Nz,1
+        do j=1,Ny,1
+           do i=1,Nx,1
+              Kappa(i,j,k) = 1.0d-2
+           enddo
+        enddo
+     enddo
+
+  !   default case
+  case default
+
+     ! Hydrogen only
+     if (Nchem == 1) then
+        do k=1,Nz,1
+           do j=1,Ny,1
+              do i=1,Nx,1
+                 Kappa(i,j,k) = n_HI(i,j,k)*HIconst
+              enddo
+           enddo
+        enddo
+
+     ! Hydrogen plus Helium
+     else if (Nchem == 3) then
+        do k=1,Nz,1
+           do j=1,Ny,1
+              do i=1,Nx,1
+                 Kappa(i,j,k) = n_HI(i,j,k)  *HIconst   &
+                              + n_HeI(i,j,k) *HeIconst  &
+                              + n_HeII(i,j,k)*HeIIconst
+              enddo
+           enddo
+        enddo
+
+     else
+        write(0,*) 'gFLDProblem_Opacity ERROR: illegal Nchem =',Nchem
+        ier = 0
+     endif
+
+  end select
+
+  return
+end subroutine gFLDProblem_Opacity
+!=======================================================================

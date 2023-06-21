@@ -1,0 +1,56 @@
+*****************************************************************************
+*                                                                           *
+* Copyright 2004 Greg Bryan                                                 *
+* Copyright 2004 Laboratory for Computational Astrophysics                  *
+* Copyright 2004 Board of Trustees of the University of Illinois            *
+* Copyright 2004 Regents of the University of California                    *
+*                                                                           *
+* This software is released under the terms of the "Enzo Public License"    *
+* in the accompanying LICENSE file.                                         *
+*                                                                           *
+*****************************************************************************
+
+#include "error.def"
+      subroutine fortfft(x, rank, idim1, idim2, idim3, idir)
+c
+c SELECTS WHICH FFT KERNEL TO USE
+c
+c     written by: Robert Harkness
+c     date:       May 2003
+c     modified1:  James Bordner
+c     date:       December 2003
+
+      implicit none
+
+      integer rank, idim1, idim2, idim3, idir
+      complex x(idim1,idim2,idim3)
+
+      integer powers(3)
+
+#if !defined(FFT_F90) && !defined(FFT_F77)
+#define FFT_F90
+#endif
+
+#if defined(FFT_F90)
+      if (rank .eq. 1) call s90_1d(x, rank, idim1, idim2, idim3, idir)
+      if (rank .eq. 2) call s90_2d(x, rank, idim1, idim2, idim3, idir)
+      if (rank .eq. 3) call s90_3d(x, rank, idim1, idim2, idim3, idir)
+#elif defined(FFT_F77)
+      call  fourn(x, rank, idim1, idim2, idim3, idir)
+#endif
+
+C     if( rank == 3 ) then
+C     if( method == 1 )
+C     &   call nr_3d(x, rank, dim1, dim2, dim3, dir)
+C     if( method == 2 )
+C     &   call nrx_3d(x, rank, dim1, dim2, dim3, dir)
+C     if( method == 3 )
+C     &   call s90_3d(x, rank, dim1, dim2, dim3, dir)
+C     if( method == 4 )
+C     &   call s66_3d(x, rank, dim1, dim2, dim3, dir)
+C     end if
+
+
+
+      return
+      end

@@ -1,0 +1,31 @@
+========================================================================
+Enzo: BUGS
+========================================================================
+
+This file maintains a list of Enzo bug reports.  It will be maintained
+primarily by Bordner.  See README.bugs for the IEEE standards for bug
+reporting.
+
+========================================================================
+Identifier:       EB-001
+Date:             2006-01-31
+Description:      "Something causes David and Rick's flux corrector
+Description:      to crash to often."
+Finder:           harkness
+Author:           bordner
+Notes:            "This may be as simple as adding reasonable floors to 
+Notes:              things which should be > 0."
+Platform:         
+Version:          
+Source:           
+Symptom:          
+Severity:         
+Project activity: 
+Project cost:     
+Project phase:    
+Project schedule: 
+Type:             
+Actual cause:     
+Resolution:       
+Disposition:      
+-----------------------------------------------------------------------

@@ -1,0 +1,21 @@
+#======================================================================
+#
+# Make.mpi for no MPI
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_MPI = $(TEXT_MPI_OFF)
+
+CC_MPI = $(CC_NOMPI_ARCH)
+CXX_MPI = $(CXX_NOMPI_ARCH)
+FC_MPI = $(FC_NOMPI_ARCH)
+LD_MPI = $(LD_NOMPI_ARCH)
+
+DEFINES_MPI = 
+
+FLAGS_MPI = 
+LIBS_MPI = 

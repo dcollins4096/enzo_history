@@ -1,0 +1,111 @@
+#======================================================================
+#
+# Make.mach for fnord.ucsd.edu (O'Shea's G4 GNU laptop)
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-08-08  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_FNORD)
+
+#======================================================================
+# Pre-processor cpp
+#======================================================================
+
+CPP_ARCH      = /usr/bin/cpp
+CPPFLAGS_ARCH = -P
+
+#======================================================================
+# Defines
+#======================================================================
+
+# Argh! 
+DEFINES_ARCH  = -DGNU
+
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = g++
+CXX_ARCH   = g++
+FC_ARCH    = /sw/bin/g77
+LD_ARCH    = g++
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    =
+CXX_MPI_ARCH   =
+FC_MPI_ARCH    =
+LD_MPI_ARCH    =
+
+CC_NOMPI_ARCH  =
+CXX_NOMPI_ARCH =
+FC_NOMPI_ARCH  =
+LD_NOMPI_ARCH  =
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = -Wall
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -O2
+FLAGS_OPT_AGGRESSIVE_ARCH = -O3
+
+LDFLAGS_OPT = 
+
+#----------------------------------------------------------------------
+# General compiler flags
+#----------------------------------------------------------------------
+
+CFLAGS_ARCH   = -Wno-long-double
+CXXFLAGS_ARCH = -Wno-long-double
+FFLAGS_ARCH   = -fno-second-underscore -ff90
+LDFLAGS_ARCH  = -Wl
+
+#----------------------------------------------------------------------
+# General link flags
+#----------------------------------------------------------------------
+
+LIBS_ARCH = -lstdc++
+
+#----------------------------------------------------------------------
+# Precision-related compiler flags
+#----------------------------------------------------------------------
+
+FFLAGS_PRECISION_SINGLE_ARCH = 
+FFLAGS_PRECISION_DOUBLE_ARCH = 
+
+#======================================================================
+# Libraries for linking Fortran-77 with C++ main programs
+#======================================================================
+
+LIBS_F77_ARCH = -lg2c
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+# WARNING! Accesses MPI library in personal directory
+
+MPI_DIR = /Users/bwoshea/mpich-1.2.5
+FLAGS_MPI_ARCH = -I$(MPI_DIR)/include
+LIBS_MPI_ARCH = -L$(MPI_DIR)/lib -lmpich
+
+#======================================================================
+# HDF5 libraries
+#======================================================================
+
+HDF4_DIR = 
+FLAGS_HDF4_ARCH = 
+LIBS_HDF4_ARCH = 
+
+HDF5_DIR = /usr/local
+FLAGS_HDF5_ARCH = 
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5 -L/sw/lib -lz -ljpeg

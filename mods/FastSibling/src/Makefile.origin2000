@@ -1,0 +1,56 @@
+#
+# macros for Origin2000
+#
+CPP           = /lib/cpp
+DEFINES       = -DIRIS4 -D${PRECISION}
+OPTIONS       = -DSGI_MATH
+
+## Fortran compiler
+FC            = f77 -64 -mips4
+#FC_OPTIMIZE   = -g
+FC_OPTIMIZE   = -O2 -OPT:roundoff=3:Olimit=0 -g3 -TARG:platform=ip27 -r10000
+
+## C Compiler
+CC            = cc -64 -mips4
+CC_OPTIMIZE   = -g3 -O2 -TARG:platform=ip27 -OPT:Olimit=0:alias=typed -r10000
+
+## C++ Compiler
+CCxx	      = CC -64 -mips4
+#CCxx_OPTIMIZE = -g
+CCxx_OPTIMIZE = -O2 -prelink -TARG:platform=ip27 -OPT:Olimit=0:alias=typed \
+	       -r10000 -DMPI_NO_CPPBIND
+# -TARG:platform=ip27 : Means optimize for the cache architecture on an
+#                       origin2000 system
+# -LNO : (loop nest optimizer) Reorganize loop nesting for optimal performance.
+# -IPA : (interprocedural analyzer).  Automatic inlining and other
+#        such optimization.
+# -OPT:Olimit=0 : No limit to the size of the optimization window. 
+#                 Same as Olimit=infinity (but no such option exists)
+# -OPT:alias=typed : Assumes C & C++ data structures point only to
+#            objects of the type (or in the case of C++ the base type)
+#            specified.  IE. no overlapping arrays or array indices.
+# -fullwarn creates bogus warning messages about the -LNO option
+# they are actually harmless, so you can add -fullwarnd for debuggin
+# purposes, but it might confuse most people.
+# -prelink :  This tells the compiler that it has to go through a 
+#             2-stage linking process in order to deal with C++ templates.
+#             The first link determines which templates to instantiate and
+#             the second actually instantiates them.  LDR had to be
+#             changed to CC (from cc).
+
+## Linker/loader
+LDR           = CC -64 -mips4
+#LDR_OPTIMIZE   = -g
+LDR_OPTIMIZE  = -g3 -O2
+#HDF_DIR       = /afs/ncsa.uiuc.edu/packages/hdf/IRIX64_6.5
+HDF_DIR       = /scr0/gbryan
+LIB           = -L${HDF_DIR}/lib \
+		-lmfhdf -ldf -ljpeg -lz /usr/lib64/mips4/libcomplib.sgimath.a \
+		-lblas -lftn -lm -lC -lmalloc_ss -lmpi
+#INCLUDE       = -I/afs/ncsa/packages/hdf/IRIX_6.4/include
+INCLUDE       = -I${HDF_DIR}/include
+
+#OPTS          = -c -DIRIS4 ${OPTIONS} ${INCLUDE}
+OPTS          = -c -DIRIS4 -DUSE_MPI -DNO_USE_FLEXIO ${OPTIONS} ${INCLUDE}
+#DEBUG         = -DEBUG:trap_uninitialized=ON:verbose_runtime=ON
+DEBUG          =

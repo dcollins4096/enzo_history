@@ -1,0 +1,376 @@
+      subroutine mhdtvd_es_switches(is,ie,js,je,ks,ke,
+     + idim,jdim,kdim,dx,dy,dz,d,vx,vy,vz,
+     + bxc,byc,bzc,ge,e,gamma,premin,idirection)
+
+      implicit none
+c
+c     arguments
+c
+      integer is,ie,js,je,ks,ke
+      integer idim,jdim,kdim
+      integer idirection
+      real gamma,premin
+
+      real d(idim,jdim,kdim),dx,dy,dz
+      real vx(idim,jdim,kdim),vy(idim,jdim,kdim),vz(idim,jdim,kdim)
+      real bxc(idim,jdim,kdim),byc(idim,jdim,kdim),bzc(idim,jdim,kdim)
+      real e(idim,jdim,kdim),ge(idim,jdim,kdim)
+
+c
+c     internal varialbes
+c
+      integer i,j,k
+      real divv(idim,jdim,kdim),c(idim,jdim,kdim)
+      real ge_temp(idim,jdim,kdim)
+      real eta1,eta2,eta3,eta4,eta5
+      logical justpre,balsara
+      integer fcinb
+      integer flag_x(idim,jdim,kdim)
+      integer flag_y(idim,jdim,kdim)
+      integer flag_z(idim,jdim,kdim)        
+
+      eta1 = 0.008
+      eta2 = 1.0e10
+      eta3 = 1.0e10
+      eta4 = 0.001
+      justpre = .false.
+      balsara = .true.
+
+      if(idirection .eq. 1) then
+      if (balsara) then
+c      eta4 = 0.0
+c      eta5 = 0.0
+      do j=js,je
+         do k=ks,ke
+           do i=is,ie
+      divv(i,j,k)=vx(fcinb(i+1,idim),j,k)
+     +  -vx(fcinb(i-1,idim),j,k) +dx*(vy(i,fcinb(j+1,jdim),k)
+     + -vy(i,fcinb(j-1,jdim),k))/dy +dx*(vz(i,j,fcinb(k+1,kdim))
+     + -vz(i,j,fcinb(k-1,kdim)))/dz
+      c(i,j,k)= sqrt(max(0.0,gamma*ge(i,j,k)/d(i,j,k)+
+     +  (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)/d(i,j,k)))
+c      eta4 = eta4+c(i,j,k)
+c      eta5 = eta5+ge(i,j,k)     
+      ge_temp(i,j,k) = ge(i,j,k)
+           enddo
+         enddo
+       enddo
+c      eta4=eta4/((ie-is+1)*(je-js+1)*(ke-ks+1))
+c      eta5=eta5/((ie-is+1)*(je-js+1)*(ke-ks+1))
+c      write(*,*) eta4,eta5
+      do j=js,je
+         do k=ks,ke
+           do i=is+2,ie-2
+c         if((ge(i,j,k)/(gamma-1.0) .lt. eta1*e(i,j,k)) .and.
+          if((e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2) .lt. eta1*e(i,j,k))
+     +  .and.
+
+c        if( (e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)) .lt.
+c     +  eta1*e(i,j,k) .and.
+     + ((divv(i,j,k) .gt. -eta3*max(c(i,j,k),c(fcinb(i+1,idim),j,k),
+     + c(fcinb(i-1,idim),j,k),c(i,fcinb(j+1,jdim),k),4*eta4,
+     +  c(i,fcinb(j-1,jdim),k),
+     +  c(i,j,fcinb(k+1,kdim)),c(i,j,fcinb(k-1,kdim)))) .or.
+     + (abs(ge_temp(i+1,j,k)-ge_temp(i-1,j,k))
+     +  +abs(ge_temp(i,fcinb(j+1,jdim),k)-ge_temp(i,fcinb(j-1,jdim),k))
+     + +abs(ge_temp(i,j,fcinb(k+1,kdim))-ge_temp(i,j,fcinb(k-1,kdim)))
+     + .lt. eta2*min(ge_temp(i,j,k),ge_temp(i+1,j,k),
+     + ge_temp(i-1,j,k),
+     + ge_temp(i,fcinb(j+1,jdim),k),ge_temp(i,fcinb(j-1,jdim),k)
+     +  ,ge_temp(i,j,fcinb(k+1,kdim)),ge_temp(i,j,fcinb(k-1,kdim)))))
+     + .or. justpre
+c     + .or. ge_temp(i,j,k) .gt. (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+     +  )then
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+       flag_x(i,j,k) = 1
+       else
+       ge(i,j,k) = (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       flag_x(i,j,k)  = 0  
+c       if(ge(i,j,k) .eq. premin ) then
+c         e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+c       endif
+
+       endif
+c       if(j .eq. 4 .and. k .eq. 4) then
+c         write(*,*) i, 
+c     + flag_x(i,4,4),vx(i,j,k),ge_temp(i,j,k),ge(i,j,k),
+c     +  divv(i,j,k),c(i,j,k)
+c       endif
+            enddo
+         enddo
+       enddo
+        
+       else
+        do j=js,je
+         do k=ks,ke
+           do i=is,ie
+      divv(i,j,k)=vx(fcinb(i+1,idim),j,k)
+     +  -vx(fcinb(i-1,idim),j,k) 
+      c(i,j,k)= sqrt(max(0.0,gamma*ge(i,j,k)/d(i,j,k)+
+     +  (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)/d(i,j,k)))
+      ge_temp(i,j,k) = ge(i,j,k)
+           enddo
+         enddo
+       enddo
+
+       do j=js,je
+         do k=ks,ke  
+           do i=is+2,ie-2
+         if((ge(i,j,k)/(gamma-1.0) .lt. eta1*e(i,j,k)) .and.
+     + ((divv(i,j,k) .gt. -eta3*max(c(i,j,k),c(fcinb(i+1,idim),j,k),
+     + c(fcinb(i-1,idim),j,k)))  .or.
+     + (abs(ge_temp(i+1,j,k)-ge_temp(i-1,j,k))
+     + .lt. eta2*min(ge_temp(i,j,k), ge_temp(i+1,j,k),ge_temp(i-1,j,k)
+     +  )))
+     + .or. justpre
+c     + .or. (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5* 
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+c     + .le. ge_temp(i,j,k)
+     +  )then
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+       else 
+       ge(i,j,k) = (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       endif
+            enddo
+         enddo
+       enddo
+
+       endif      
+
+       endif
+  
+
+       if(idirection .eq. 2) then
+       if (balsara) then
+       do i=is,ie
+         do k=ks,ke
+           do j=js,je
+      divv(i,j,k)=vy(i,fcinb(j+1,jdim),k)-vy(i,fcinb(j-1,jdim),k)
+     +  +dy*(vx(fcinb(i+1,idim),j,k) -vx(fcinb(i-1,idim),j,k))/dx
+     + +dy*(vz(i,j,fcinb(k+1,kdim))-vz(i,j,fcinb(k-1,kdim)))/dz
+      c(i,j,k)= sqrt(max(0.0,gamma*ge(i,j,k)/d(i,j,k)+
+     +  (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)/d(i,j,k)))
+      ge_temp(i,j,k) =ge(i,j,k)
+           enddo
+         enddo
+       enddo
+       
+       do i=is,ie
+         do k=ks,ke
+           do j=js+2,je-2
+c            if ((ge(i,j,k)/(gamma-1.0) .lt.  eta1*(e(i,j,k))) .and.
+         if((e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2) .lt. eta1*e(i,j,k))
+     +  .and.
+
+
+     + (divv(i,j,k) .gt. -eta3*max(c(i,j,k),c(fcinb(i+1,idim),j,k),
+     + c(fcinb(i-1,idim),j,k), c(i,j+1,k),c(i,j-1,k),eta1,
+     +  c(i,j,fcinb(k+1,kdim)),c(i,j,fcinb(k-1,kdim)))) .or.
+     + (abs(ge_temp(fcinb(i+1,idim),j,k)-ge_temp(fcinb(i-1,idim),j,k))
+     +  +abs(ge_temp(i,j+1,k)-ge_temp(i,j-1,k)) +
+     +  abs(ge_temp(i,j,fcinb(k+1,kdim)) -ge_temp(i,j,fcinb(k-1,kdim)))
+     +  .lt. eta2*min(ge_temp(i,j,k), ge_temp(fcinb(i+1,idim),j,k),
+     +  ge_temp(fcinb(i-1,idim),j,k),ge_temp(i,j+1,k)
+     + ,ge_temp(i,j-1,k), ge_temp(i,j,fcinb(k+1,kdim)),
+     + ge_temp(i,j,fcinb(k-1,kdim)))) .or. justpre
+c     + .or. ge_temp(i,j,k) .gt. (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+     + ) then
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+       flag_y(i,j,k) = 1
+       else
+       ge(i,j,k) = (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       flag_y(i,j,k) = 0
+c       if(ge(i,j,k) .eq. premin ) then
+c         e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+c       endif
+
+          endif
+           enddo
+         enddo
+       enddo
+       
+       else 
+        do i=is,ie
+          do k=ks,ke
+           do j=js,je
+      divv(i,j,k)=vy(i,fcinb(j+1,jdim),k)-vy(i,fcinb(j-1,jdim),k)
+      c(i,j,k)= sqrt(max(0.0,gamma*ge(i,j,k)/d(i,j,k)+
+     +  (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)/d(i,j,k)))
+      ge_temp(i,j,k) =ge(i,j,k)
+           enddo
+         enddo
+       enddo
+     
+       do i=is,ie
+         do k=ks,ke
+           do j=js+2,je-2
+            if ((ge(i,j,k)/(gamma-1.0) .lt.  eta1*(e(i,j,k))) .and.
+     + (divv(i,j,k) .gt. -eta3*max(c(i,j,k),c(i,j+1,k),c(i,j-1,k) )) 
+     +  .or.
+     + (abs(ge_temp(i,j+1,k)-ge_temp(i,j-1,k))
+     +  .lt. eta2*min(ge_temp(i,j,k), ge_temp(i,j+1,k)
+     + ,ge_temp(i,j-1,k))) .or. justpre
+c     + .or. (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5* 
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+c     + .le. ge(i,j,k)
+     + ) then
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+       else
+       ge(i,j,k) = (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+       ge(i,j,k)=max(premin,ge(i,j,k))
+          endif
+           enddo
+         enddo     
+       enddo
+
+       endif
+
+       endif
+
+
+       if(idirection .eq. 3) then
+       if(balsara) then 
+       do i=is,ie
+         do k=ks,ke
+           do j=js,je
+      divv(i,j,k)=vz(i,j,fcinb(k+1,kdim))-vz(i,j,fcinb(k-1,kdim))+
+     +  dz*(vx(fcinb(i+1,idim),j,k)-vx(fcinb(i-1,idim),j,k))/dx +
+     +  dz*(vy(i,fcinb(j+1,jdim),k)-vy(i,fcinb(j-1,jdim),k))/dy
+      c(i,j,k)= sqrt(max(0.0,gamma*ge(i,j,k)/d(i,j,k)+
+     +  (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)/d(i,j,k)))
+      ge_temp(i,j,k) = ge(i,j,k)
+           enddo
+         enddo
+       enddo
+       
+        do i=is,ie
+         do j=js,je
+           do k=ks+2,ke-2
+c            if( (ge(i,j,k)/(gamma-1.0) .lt.  eta1*(e(i,j,k))) .and.
+          if((e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2) .lt. eta1*e(i,j,k))
+     +  .and.
+
+
+     + (divv(i,j,k) .gt. -eta3*max(c(i,j,k),c(fcinb(i+1,idim),j,k),
+     + c(fcinb(i-1,idim),j,k),c(i,fcinb(j+1,jdim),k),eta1,
+     + c(i,fcinb(j-1,jdim),k),c(i,j,k+1),c(i,j,k-1))) .or.
+     + (abs(ge_temp(fcinb(i+1,idim),j,k)-ge_temp(fcinb(i-1,idim),j,k))
+     + +abs(ge_temp(i,fcinb(j+1,jdim),k)-ge_temp(i,fcinb(j-1,jdim),k))
+     + +abs(ge_temp(i,j,k+1)-ge_temp(i,j,k-1)) .lt.
+     + eta2*min(ge_temp(i,j,k),
+     + ge_temp(fcinb(i+1,idim),j,k),ge_temp(fcinb(i-1,idim),j,k),
+     + ge_temp(i,fcinb(j+1,jdim),k),ge_temp(i,fcinb(j-1,jdim),k),
+     + ge_temp(i,j,k+1),ge_temp(i,j,k-1))).or. justpre
+c     + .or. ge_temp(i,j,k) .gt. (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+     + )then
+        ge(i,j,k)=max(premin,ge(i,j,k))
+       e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+       flag_z(i,j,k) = 1
+       else
+       ge(i,j,k) = (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+       ge(i,j,k)=max(premin,ge(i,j,k))
+       flag_z(i,j,k) = 0
+c       if(ge(i,j,k) .eq. premin ) then
+c         e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+c       endif
+
+          endif
+           enddo
+         enddo
+       enddo
+
+      else
+       do i=is,ie
+         do k=ks,ke
+           do j=js,je
+      divv(i,j,k)=vz(i,j,fcinb(k+1,kdim))-vz(i,j,fcinb(k-1,kdim))
+      c(i,j,k)= sqrt(max(0.0,gamma*ge(i,j,k)/d(i,j,k)+
+     +  (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)/d(i,j,k)))
+      ge_temp(i,j,k) = ge(i,j,k)
+           enddo
+         enddo 
+       enddo
+       
+       do i=is,ie
+         do j=js,je
+           do k=ks+2,ke-2
+            if( (ge(i,j,k)/(gamma-1.0) .lt.  eta1*(e(i,j,k))) .and.
+     + (divv(i,j,k) .gt. -eta3*max(c(i,j,k),
+     + c(i,j,k+1),c(i,j,k-1))) .or.
+     + (abs(ge_temp(i,j,k+1)-ge_temp(i,j,k-1)) .lt.
+     + eta2*min(ge_temp(i,j,k),
+     + ge_temp(i,j,k+1),ge_temp(i,j,k-1))).or. justpre
+c     + .or. (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+c     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5* 
+c     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+c     + .le. ge(i,j,k)
+     + )then
+        ge(i,j,k)=max(premin,ge(i,j,k))
+       e(i,j,k)=ge(i,j,k)/(gamma-1.0)+0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)+0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2)
+       else
+       ge(i,j,k) = (gamma-1.0)*(e(i,j,k)-0.5*(vx(i,j,k)**2
+     +   +vy(i,j,k)**2+vz(i,j,k)**2)*d(i,j,k)-0.5*
+     + (bxc(i,j,k)**2+byc(i,j,k)**2+bzc(i,j,k)**2))
+       ge(i,j,k)=max(premin,ge(i,j,k))
+          endif
+           enddo
+         enddo
+       enddo
+
+      endif
+
+      endif
+      
+
+      end

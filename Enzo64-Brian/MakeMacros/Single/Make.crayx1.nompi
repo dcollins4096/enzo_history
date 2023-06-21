@@ -1,0 +1,34 @@
+#
+# macros for Cray X-1
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /ptmp/n4342/hdf5
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+
+CPP          = /opt/PE/bin/cpp
+PROF         =
+
+## Fortran compiler
+FC           = ftn
+FC_OPT       = -Oscalar3,vector3,stream3,task0,inline0 -rm
+FREE90       =
+DEFINES      = -DCRAYX1
+
+## C Compiler
+CC           = cc
+CC_OPT       = -DCRAYX1
+
+## C++ Compiler
+CCxx	     = CC
+CCxx_OPT     = -DCRAYX1 -hscalar3 -hvector3 -hstream3 -htask0 -hinline0
+
+## Linker/loader
+LDR          =  CC
+LDR_OPT      =
+LIB          = -L$(HDF5_INSTALL)/lib -lhdf5 
+
+OPTS         = -c -I$(HDF5_INCLUDE)
+DEBUG        = 

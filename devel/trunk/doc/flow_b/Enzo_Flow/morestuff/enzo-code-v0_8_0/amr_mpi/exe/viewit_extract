@@ -1,0 +1,4 @@
+#!/bin/csh
+viewit -iformat HDF_SDS_RA -ioffset $1 -i amr_extract0000 -show_reg -stats \
+       -chunk 0 0 408 812 1 1 -show_reg -collapse -stats \
+       -oformat RAW -otype ASCII -o out.ascii

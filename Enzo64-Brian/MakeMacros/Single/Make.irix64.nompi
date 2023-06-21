@@ -1,0 +1,40 @@
+#
+# macros for Origin2000
+#
+
+ifeq ($(HDF5_INSTALL),$(null))
+HDF5_INSTALL = /afs/ncsa/packages/hdf5/5-1.4.5-irix64
+endif
+ifeq ($(HDF4_INSTALL),$(null))
+HDF4_INSTALL = /afs/ncsa/packages/hdf/4.1r5-irix64-64
+endif
+
+HDF5_INCLUDE = $(HDF5_INSTALL)/include
+HDF4_INCLUDE = $(HDF4_INSTALL)/include
+
+CPP          = /lib/cpp
+DEFINES      = -DIRIS4
+OPTIONS      = -DSGI_MATH -DIO_LOG
+
+## Fortran compiler
+FC           = f90 -64 -mips4
+FC_OPT       = -O3 -OPT:roundoff=3 -g3 -r10000
+
+## C Compiler
+CC           = cc -64 -mips4
+CC_OPT       = -g3 -r10000
+
+## C++ Compiler
+CCxx	     = CC -64 -mips4
+CCxx_OPT     = -O3 -TARG:platform=ip27 -OPT:Olimit=0,alias=typed -r10000
+
+## Linker/loader
+LDR          = CC -64 -mips4 -mp
+LDR_OPT      = -O3
+LIB          = $(HDF5_INSTALL)/lib/libhdf5.a $(HDF4_INSTALL)/lib/libz.a \
+               -lfortran /usr/lib64/mips4/libcomplib.sgimath.a -lblas -lm -lC
+
+INCLUDE      = -I$(HDF5_INSTALL)/include
+
+OPTS         = -c -DIRIS4 ${OPTIONS} ${INCLUDE}
+DEBUG        = -g3

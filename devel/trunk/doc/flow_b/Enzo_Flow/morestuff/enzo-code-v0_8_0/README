@@ -1,0 +1,40 @@
+=======================================================================
+ENZO README
+=======================================================================
+
+-----------------------------------------------------------------------
+Subdirectories and files
+-----------------------------------------------------------------------
+
+Information files
+
+   AUTHORS            List of people who have written or modified Enzo
+   CHANGES            List of modifications
+   INSTALL            Instructions for installing Enzo
+   README             This file
+   VERSION            Current version
+
+Subdirectories
+
+   amr_mpi/anyl       Enzo analysis tools
+   amr_mpi/exe        Enzo executable and input files
+   amr_mpi/src        Enzo source code and Makefiles
+   arch               Architecture/machine-dependent Makefile definitions
+   bin                All enzo executables, including inits and tools
+   config             Configuration makefile includes
+   enzo_jobs          Scripts for running jobs on various machines
+   enzo_tests         Some test input files
+   hdf5_tools         HDF5 tools
+   inits              Initial conditions generator
+   ring               Harkness's ring tool
+   uniglue            UniGlue Tool
+
+Other files
+
+   aclocal.m4         Autoconf file
+   config.guess       Autoconf file used to determine architecture
+   configure.ac       Autoconf file used to generate configure script
+   configure          Configuration script
+   install-sh         Autoconf file
+   Makefile.in        Autoconf file used to generate top-level Makefile
+   missing            Autoconf file

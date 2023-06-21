@@ -1,0 +1,40 @@
+#======================================================================
+#
+# Make.mach for diapason.ucsd.edu (Bordner's Pentium4 laptop)
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-06-21  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_DIAPASON)
+
+#======================================================================
+# Compiler flags for optimization and debugging
+#======================================================================
+
+FLAGS_OPT_WARN_ARCH       = -w2
+FLAGS_OPT_CHECK_ARCH      = 
+FLAGS_OPT_DEBUG_ARCH      = -g
+FLAGS_OPT_FAST_ARCH       = -O2
+FLAGS_OPT_AGGRESSIVE_ARCH = -O3
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+FLAGS_MPI_ARCH = 
+LIBS_MPI_ARCH = 
+
+#======================================================================
+# HDF5 libraries
+#======================================================================
+
+HDF4_DIR = /usr/local
+FLAGS_HDF4_ARCH = -I$(HDF4_DIR)/include
+LIBS_HDF4_ARCH = -L$(HDF4_DIR)/lib -lmfhdf -ldf -ljpeg -lz
+
+HDF5_DIR = /usr/local
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5

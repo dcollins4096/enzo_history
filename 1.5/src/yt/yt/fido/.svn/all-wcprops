@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido
+END
+OutputCollection.py
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido/OutputCollection.py
+END
+OutputWatcher.py
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido/OutputWatcher.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido/__init__.py
+END
+RunStandalones.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido/RunStandalones.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido/setup.py
+END
+FileHandling.py
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/yt/!svn/ver/666/branches/yt-1.0/yt/fido/FileHandling.py
+END

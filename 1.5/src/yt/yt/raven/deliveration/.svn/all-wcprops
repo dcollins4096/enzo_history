@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration
+END
+services_server.py
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration/services_server.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration/__init__.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration/setup.py
+END
+services.py
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration/services.py
+END
+upload.py
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration/upload.py
+END
+services_types.py
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/yt/!svn/ver/666/branches/yt-1.0/yt/raven/deliveration/services_types.py
+END

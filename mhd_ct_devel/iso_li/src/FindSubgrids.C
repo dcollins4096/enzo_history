@@ -1,0 +1,268 @@
+/*****************************************************************************
+ *                                                                           *
+ * Copyright 2004 Greg Bryan                                                 *
+ * Copyright 2004 Laboratory for Computational Astrophysics                  *
+ * Copyright 2004 Board of Trustees of the University of Illinois            *
+ * Copyright 2004 Regents of the University of California                    *
+ *                                                                           *
+ * This software is released under the terms of the "Enzo Public License"    *
+ * in the accompanying LICENSE file.                                         *
+ *                                                                           *
+ *****************************************************************************/
+/***********************************************************************
+/
+/  FIND SUBGRIDS FUNCTION
+/
+/  written by: Greg Bryan
+/  date:       April, 1996
+/  modified1:
+/
+/  PURPOSE:
+/
+************************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+#include "Fluxes.h"
+#include "GridList.h"
+#include "ExternalBoundary.h"
+#include "Grid.h"
+#include "TopGridData.h"
+#include "Hierarchy.h"
+#include "LevelHierarchy.h"
+
+/* function prototypes */
+
+int IdentifyNewSubgridsBySignature(ProtoSubgrid *SubgridList[],
+				   int &NumberOfSubgrids);
+
+
+
+int grid::WriteFlaggingField(int cycle, int level, int gridnumber)
+{
+
+  int size=1, i;
+
+  //The flagging field will write into this 'baryon field' 
+  //in the output file
+  int FieldToKludge=0;
+
+  //open meta file
+  char filename[30];
+  sprintf(filename,"dataWithFlagging%4.4d",cycle);
+  FILE *dccptr = fopen(filename,"a");
+  
+  //append 'grid' to the filename, to denote which file is the grid.
+  sprintf(filename,"dataWithFlagging%4.4d.grid",cycle);
+  
+  //cast flagging field to float.
+  for(i=0;i<GridRank; i++)
+    size*=GridDimension[i];
+  
+  float * FloatFlaggingField = new float[size];
+  
+  for(i=0;i<size;i++)
+    FloatFlaggingField[i] = (float) FlaggingField[i];
+  
+  //field kludge: save the pointer to the baryon field
+  //you wish to have represent the FlaggingField.
+  //Then point that barryon field to the Flagging Field, 
+  //so that when Write Grid writes that "baryon field" it instead writes
+  //the flagging field.
+  
+  float * ActualField = BaryonField[FieldToKludge];
+
+  BaryonField[FieldToKludge] = FloatFlaggingField;
+  
+  fprintf(stderr,"pooter %s gridnumber = %d level = %d\n"
+	  , filename, gridnumber, level);
+  
+  WriteGrid(dccptr, filename, 1000*level+gridnumber);
+
+  //unkludge
+  BaryonField[FieldToKludge] = ActualField;
+
+  delete [] FloatFlaggingField;
+
+  fclose(dccptr);
+
+
+  return SUCCESS;
+}
+int FindSubgrids(HierarchyEntry &Grid, int level,
+		 int gridnumber, int cycle)
+{
+  
+  /* declarations */
+#ifdef USE_MPI
+#ifdef MPI_INSTRUMENTATION
+  int GridMemory,CellsActive,CellsTotal;
+  float AxialRatio, GridVolume;
+#endif /* MPI_INSTRUMENTATION */
+#endif
+  int NumberOfFlaggedCells = INT_UNDEFINED, i;
+  grid *CurrentGrid = Grid.GridData;
+
+  /* Clear pointer to lower grids. */
+
+  Grid.NextGridNextLevel = NULL;
+
+  /* If this is the lowest allowed level, then return. */
+
+  if (level >= MaximumRefinementLevel)
+    return SUCCESS;
+
+  /* If this grid is not on this processor, then return. */
+
+  if (MyProcessorNumber != CurrentGrid->ReturnProcessorNumber())
+    return SUCCESS;
+
+  /* Clear the flagging field. */
+  
+  CurrentGrid->ClearFlaggingField();
+
+  /* Set the flagging field. */
+
+  if (CurrentGrid->SetFlaggingField(NumberOfFlaggedCells, level) == FAIL) {
+    fprintf(stderr, "Error in grid->SetFlaggingField.\n");
+    return FAIL;
+  }
+
+  /* Add a buffer region around each flagged cell. */
+
+  if (NumberOfFlaggedCells != 0)
+    for (i = 0; i < NumberOfBufferZones; i++)
+      NumberOfFlaggedCells = CurrentGrid->FlagBufferZones();
+
+  /* Set the static (permanent) regions. */
+
+  if (CurrentGrid->SetFlaggingFieldStaticRegions(level, NumberOfFlaggedCells) 
+      == FAIL) {
+    fprintf(stderr, "Error in grid->SetFlaggingFieldStaticRegions.\n");
+    return FAIL;
+  }
+
+  if (debug)
+    printf("RebuildHierarchy[%d]: NumberOfFlaggedCells = %d.\n", 
+	   level, NumberOfFlaggedCells);
+
+
+  //
+  // write out flagging field.
+  //
+  dccWriteFlaggingField = FALSE;
+  if( dccWriteFlaggingField == TRUE )
+    CurrentGrid->WriteFlaggingField(cycle, level, gridnumber);
+
+#ifdef USE_MPI
+#ifdef MPI_INSTRUMENTATION  
+  Grid.GridData->CollectGridInformation(GridMemory,GridVolume,
+       CellsActive,AxialRatio,CellsTotal);
+  flagging_count ++;
+  flagging_pct += float(NumberOfFlaggedCells) / CellsActive;     
+#endif
+#endif
+#ifndef HAOXU
+  fprintf(stderr, "======== Number Of Flagged Cells %d ====== \n", NumberOfFlaggedCells);
+#endif
+
+  
+  if (NumberOfFlaggedCells != 0) {
+
+    /* Create the base ProtoSubgrid which contains the whole grid. */
+
+    ProtoSubgrid **SubgridList = new ProtoSubgrid*[MAX_NUMBER_OF_SUBGRIDS];
+    int NumberOfSubgrids = 1;
+    SubgridList[0] = new ProtoSubgrid;
+    
+    /* Copy the flagged zones into the ProtoSubgrid. */
+
+    if (SubgridList[0]->CopyFlaggedZonesFromGrid(CurrentGrid) == FAIL) {
+      fprintf(stderr, "Error in ProtoSubgrid->CopyFlaggedZonesFromGrid.\n");
+      return FAIL;
+    }
+
+    /* Recursively break up this ProtoSubgrid and add new ones based on the
+       flagged cells. */
+
+    if (IdentifyNewSubgridsBySignature(SubgridList, NumberOfSubgrids) == FAIL){
+      fprintf(stderr, "Error in IdentifyNewSubgridsBySignature.\n");
+      return FAIL;
+    }
+
+    /* For each subgrid, create a new grid based on the current grid (i.e.
+       same parameters, etc.) */
+    
+    HierarchyEntry *PreviousGrid = &Grid, *ThisGrid;
+    
+    for (i = 0; i < NumberOfSubgrids; i++) {
+      
+      /* create hierarchy entry */
+      
+      ThisGrid = new HierarchyEntry;
+      
+      /* set hierarchy values */
+      
+      if (PreviousGrid == &Grid)
+	Grid.NextGridNextLevel = ThisGrid;
+      else
+	PreviousGrid->NextGridThisLevel = ThisGrid;
+      ThisGrid->NextGridNextLevel = NULL;
+      ThisGrid->NextGridThisLevel = NULL;
+      ThisGrid->ParentGrid        = &Grid;
+      
+      /* create new grid */
+      
+      ThisGrid->GridData = new grid;
+      
+      /* set some the new grid's properties (rank, field types, etc.)
+	 based on the current grid */
+      
+      ThisGrid->GridData->InheritProperties(Grid.GridData);
+      
+      /* Set the new grid's positional parameters.
+         (The zero indicates there are no particles (for now). */
+
+      ThisGrid->GridData->PrepareGrid(SubgridList[i]->ReturnGridRank(),
+				      SubgridList[i]->ReturnGridDimension(),
+				      SubgridList[i]->ReturnGridLeftEdge(),
+				      SubgridList[i]->ReturnGridRightEdge(),
+				      0);
+
+      ThisGrid->GridData->SetProcessorNumber(MyProcessorNumber);
+
+#ifdef UNUSED
+      /* Create a new LevelHierarchyEntry and fill it in. */
+
+      LevelHierarchyEntry *Temp2 = new LevelHierarchyEntry;
+      if (*ListOfNewGrids != NULL)
+	Temp2->NextGridThisLevel = (*ListOfNewGrids)->NextGridThisLevel;
+      else
+	Temp2->NextGridThisLevel = NULL;
+      Temp2->GridData           = ThisGrid->GridData;
+      Temp2->GridHierarchyEntry = ThisGrid;
+      *ListOfNewGrids = Temp2;
+#endif /* UNUSED */
+
+      /* Go on to the next subgrid */
+      
+      PreviousGrid = ThisGrid;
+      delete SubgridList[i];
+
+    } // next subgrid
+
+    delete [] SubgridList;
+  }
+  
+  /* De-allocate the flagging field. */
+  
+  CurrentGrid->DeleteFlaggingField();
+
+  /* done for this grid */
+
+  return SUCCESS;
+
+}

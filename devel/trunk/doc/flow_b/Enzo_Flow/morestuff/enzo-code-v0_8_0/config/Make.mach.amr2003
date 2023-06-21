@@ -1,0 +1,63 @@
+#======================================================================
+#
+# Make.mach for amr.uchicago.edu AMR Workshop 2003 SGI Altix system
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-09-14  Created
+#
+#======================================================================
+
+TEXT_MACH = $(TEXT_MACH_AMR2003)
+
+#======================================================================
+# Compilers
+#======================================================================
+
+#----------------------------------------------------------------------
+# Compilers if there IS NO distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_ARCH    = icc
+CXX_ARCH   = icc
+FC_ARCH    = ifc
+LD_ARCH    = icc
+
+#----------------------------------------------------------------------
+# Compilers if there IS a distinction for MPI and non-MPI programs
+#----------------------------------------------------------------------
+
+CC_MPI_ARCH    = 
+CXX_MPI_ARCH   = 
+FC_MPI_ARCH    = 
+LD_MPI_ARCH    = 
+
+CC_NOMPI_ARCH  = 
+CXX_NOMPI_ARCH = 
+FC_NOMPI_ARCH  = 
+LD_NOMPI_ARCH  = 
+
+#======================================================================
+# HDF libraries
+#======================================================================
+
+HDF5_DIR = /home/amr2003/bordner
+FLAGS_HDF5_ARCH = -I$(HDF5_DIR)/include
+LIBS_HDF5_ARCH = -L$(HDF5_DIR)/lib -lhdf5 -lz
+
+#======================================================================
+# MPI object files and libraries
+#======================================================================
+
+MPI_PATH = /usr
+FLAGS_MPI_ARCH = 
+LIBS_MPI_ARCH = 
+
+#======================================================================
+# PAPI libraries
+#======================================================================
+
+PERF_DIR = 
+FLAGS_PERF_ARCH = 
+LIBS_PERF_ARCH = 
+

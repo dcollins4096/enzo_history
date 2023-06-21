@@ -1,0 +1,126 @@
+#=======================================================================
+#
+# FILE:        Make.mach.bordner-krummhorn
+#
+# DESCRIPTION: Makefile settings for Bordner's laptop
+#
+# AUTHOR:      James Bordner (jobordner@ucsd.edu)
+#
+# DATE:        2007-02-23
+#
+#=======================================================================
+
+MACH_TEXT  = Bordner's Linux Dell D620
+MACH_VALID = 1
+MACH_FILE  = Make.mach.bordner-krummhorn
+
+#-----------------------------------------------------------------------
+# Install paths (local variables)
+#-----------------------------------------------------------------------
+
+LOCAL_MPI_INSTALL    = /usr/include/mpi
+LOCAL_FC_INSTALL     = /usr/local
+LOCAL_HDF5_INSTALL   = /usr/local/hdf5
+LOCAL_HDF4_INSTALL   = /usr/local/hdf4
+LOCAL_HYPRE_INSTALL  = $(HOME)
+LOCAL_JBPERF_INSTALL = $(HOME)/jbPerf
+LOCAL_SPRNG_INSTALL = $(HOME)/sprng
+LOCAL_PAPI_INSTALL   = 
+
+#-----------------------------------------------------------------------
+# Compiler settings
+#-----------------------------------------------------------------------
+
+MACH_CPP       = /usr/bin/cpp
+
+# With MPI
+
+MACH_CC_MPI    = mpicc
+MACH_CXX_MPI   = mpiCC
+MACH_FC_MPI    = mpif90
+MACH_F90_MPI   = mpif90
+MACH_LD_MPI    = mpiCC
+
+# Without MPI
+
+MACH_CC_NOMPI  = /usr/bin/gcc
+MACH_CXX_NOMPI = /usr/bin/g++
+MACH_FC_NOMPI  = /usr/bin/gfortran
+MACH_F90_NOMPI = /usr/bin/gfortran
+MACH_LD_NOMPI  = /usr/bin/g++
+
+#-----------------------------------------------------------------------
+# Machine-dependent defines
+#-----------------------------------------------------------------------
+
+MACH_DEFINES   = -DLINUX
+
+#-----------------------------------------------------------------------
+# Compiler flag settings
+#-----------------------------------------------------------------------
+
+MACH_CPPFLAGS = -P -traditional
+MACH_CFLAGS   = 
+MACH_CXXFLAGS = 
+MACH_FFLAGS   = -fno-second-underscore
+MACH_F90FLAGS = -fno-second-underscore
+MACH_LDFLAGS  = 
+
+#-----------------------------------------------------------------------
+# Precision-related flags
+#-----------------------------------------------------------------------
+
+MACH_FFLAGS_INTEGER_32 = 
+MACH_FFLAGS_INTEGER_64 = -fdefault-integer-8
+MACH_FFLAGS_REAL_32    = 
+MACH_FFLAGS_REAL_64    = -fdefault-real-8
+
+#-----------------------------------------------------------------------
+# Optimization flags
+#-----------------------------------------------------------------------
+
+MACH_OPT_WARN        = -Wall -g
+MACH_OPT_DEBUG       = -g -pg
+MACH_OPT_HIGH        = -O2
+MACH_OPT_AGGRESSIVE  = -O3
+
+#-----------------------------------------------------------------------
+# Includes
+#-----------------------------------------------------------------------
+
+LOCAL_INCLUDES_MPI    = -I$(LOCAL_MPI_INSTALL)
+LOCAL_INCLUDES_HDF5   = -I$(LOCAL_HDF5_INSTALL)/include
+LOCAL_INCLUDES_HYPRE  = -I$(LOCAL_HYPRE_INSTALL)/include
+LOCAL_INCLUDES_JBPERF = -I$(LOCAL_JBPERF_INSTALL)/include
+LOCAL_INCLUDES_PAPI   = -I$(LOCAL_PAPI_INSTALL)/include
+$ LOCAL_INCLUDES_SPRNG  = -I$(LOCAL_SPRNG_INSTALL)/include
+LOCAL_INCLUDES_SPRNG  = 
+
+# MACH_INCLUDES         = $(LOCAL_INCLUDES_HDF5) $(LOCAL_INCLUDES_SPRNG)
+MACH_INCLUDES         = $(LOCAL_INCLUDES_HDF5)
+MACH_INCLUDES_MPI     = $(LOCAL_INCLUDES_MPI)
+MACH_INCLUDES_HYPRE   = $(LOCAL_INCLUDES_HYPRE)
+MACH_INCLUDES_JBPERF  = $(LOCAL_INCLUDES_JBPERF)
+MACH_INCLUDES_PAPI    = $(LOCAL_INCLUDES_PAPI)
+
+#-----------------------------------------------------------------------
+# Libraries
+#-----------------------------------------------------------------------
+
+LOCAL_LIBS_MACH  = -L/usr/lib/gcc/x86_64-linux-gnu/4.2.3 -lgfortran
+
+LOCAL_LIBS_MPI   = 
+LOCAL_LIBS_HDF5  = -L$(LOCAL_HDF5_INSTALL)/lib -lhdf5 -ljpeg
+LOCAL_LIBS_HYPRE = -L$(LOCAL_HYPRE_INSTALL)/lib -lHYPRE
+LOCAL_LIBS_JBPERF = -L$(LOCAL_JBPERF_INSTALL)/lib -ljbperf
+# LOCAL_LIBS_SPRNG = -L$(LOCAL_SPRNG_INSTALL)/lib -llcg64
+LOCAL_LIBS_SPRNG = 
+LOCAL_LIBS_PAPI   = 
+
+MACH_LIBS        = $(LOCAL_LIBS_HDF5) $(LOCAL_LIBS_MACH) $(LOCAL_LIBS_SPRNG)
+MACH_LIBS_MPI    = $(LOCAL_LIBS_MPI)
+MACH_LIBS_HYPRE  = $(LOCAL_LIBS_HYPRE)
+MACH_LIBS_JBPERF = $(LOCAL_LIBS_JBPERF)
+MACH_LIBS_PAPI   = $(LOCAL_LIBS_PAPI)
+
+

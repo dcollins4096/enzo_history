@@ -1,0 +1,116 @@
+        subroutine biermann_battery_term(pressure,density,
+     +     bb1,bb2,bb3,
+     +     dx, dy, dz, idim, jdim, kdim,
+     +     i1,i2,j1,j2,k1,k2,
+     +     a, c, m_h, e, chi)
+
+c------------------------------------------------------
+c Computer the source terms of Biermann Battery
+c-----------------------------------------------------
+
+
+          implicit none
+
+c
+c          inpur variables
+c
+      integer idim,jdim,kdim
+      integer i1,i2,j1,j2,k1,k2,a
+
+      real pressure(idim,jdim,kdim),density(idim,jdim,kdim)
+      real bb1(idim,jdim,kdim)
+      real bb2(idim,jdim,kdim)
+      real bb3(idim,jdim,kdim)
+      real dx,dy,dz
+      real c,m_h,e,chi
+
+      integer i,j,k,is,ie,js,je,ks,ke
+      real gradient_p_1(idim-1,jdim-1,kdim-1)
+      real gradient_p_2(idim-1,jdim-1,kdim-1)
+      real gradient_p_3(idim-1,jdim-1,kdim-1)
+      real gradient_d_1(idim-1,jdim-1,kdim-1)
+      real gradient_d_2(idim-1,jdim-1,kdim-1)
+      real gradient_d_3(idim-1,jdim-1,kdim-1)
+
+      
+      is=i1-2
+      ie=i2+3
+      js=j1-2
+      je=j2+3
+      ks=k1-2
+      ke=k2+3
+            
+
+c---------------------------------------------------------
+c Computer Gradinets of pressure and density
+c---------------------------------------------------------
+      do i=is+1,ie-1
+        do j=js,je
+          do k=ks,ke
+        gradient_p_1(i,j,k)=0.5*(pressure(i+1,j,k)-pressure(i-1,j,k))/dx
+        gradient_d_1(i,j,k)=0.5*(density(i+1,j,k)-density(i-1,j,k))/dx
+          enddo
+        enddo
+      enddo
+
+      do i=is,ie
+        do j=js+1,je-1
+          do k=ks,ke
+        gradient_p_2(i,j,k)=0.5*(pressure(i,j+1,k)-pressure(i,j-1,k))/dx
+        gradient_d_2(i,j,k)=0.5*(density(i,j+1,k)-density(i,j-1,k))/dx
+          enddo
+        enddo
+      enddo
+
+       do i=is,ie
+        do j=js,je
+          do k=ks+1,ke-1
+        gradient_p_3(i,j,k)=0.5*(pressure(i,j,k+1)-pressure(i,j,k-1))/dx
+        gradient_d_3(i,j,k)=0.5*(density(i,j,k+1)-density(i,j,k-1))/dx  
+          enddo
+        enddo
+      enddo
+
+
+c-------------------------------------------------------------
+c Computer the Biermann Battery Terms
+c------------------------------------------------------------
+
+       do i=is,ie
+         do j=js+1,je-1
+           do k=ks+1,ke-1
+           bb1(i,j,k) = gradient_p_2(i,j,k)*gradient_d_3(i,j,k)
+     + - gradient_p_3(i,j,k)*gradient_d_2(i,j,k)
+           bb1(i,j,k) = bb1(i,j,k)*c*m_h/
+     +         ((1+chi)*e*density(i,j,k)**2)/(a*a)
+           enddo
+         enddo
+       enddo
+
+       do i=is+1,ie-1
+         do j=js,je
+           do k=ks+1,ke-1
+           bb2(i,j,k) = gradient_p_3(i,j,k)*gradient_d_1(i,j,k)
+     + - gradient_p_1(i,j,k)*gradient_d_3(i,j,k)
+            bb2(i,j,k) = bb2(i,j,k)*c*m_h/
+     +         ((1+chi)*e*density(i,j,k)**2)/(a*a) 
+           enddo
+         enddo
+       enddo
+
+       do i=is+1,ie-1
+         do j=js+1,je-1
+           do k=ks,ke
+           bb3(i,j,k) = gradient_p_1(i,j,k)*gradient_d_2(i,j,k)
+     + - gradient_p_2(i,j,k)*gradient_d_1(i,j,k)
+            bb3(i,j,k) = bb3(i,j,k)*c*m_h/
+     +         ((1+chi)*e*density(i,j,k)**2)/(a*a) 
+           enddo
+         enddo
+       enddo
+
+      
+       
+
+
+        end

@@ -1,0 +1,17 @@
+#======================================================================
+#
+# Make.io for HDF4
+#
+# James Bordner (jbordner@cosmos.ucsd.edu)
+#
+# 2003-05-13  Created
+#
+#======================================================================
+
+TEXT_IO = $(TEXT_IO_HDF4)
+
+DEFINES_IO = -DUSE_HDF4
+OBJS_IO = $(OBJS_HDF4)
+FLAGS_IO = $(FLAGS_HDF4_ARCH)
+LIBS_IO = $(LIBS_HDF4_ARCH)
+

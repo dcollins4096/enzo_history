@@ -1,0 +1,138 @@
+
+
+      subroutine curl_of_e(bx, by, bz, ex, ey, ez, 
+     +                   dx, dy, dz, 
+     +                   idim, jdim, kdim, 
+     +                   i1, i2, j1, j2, k1, k2,
+     +                   dt, centermeth)
+
+
+c
+c     Uptdate B from the curl of E.
+c     Expects the FACE CENTERED MAGNETIC FIELD.
+c     This is the bit that keeps this method divergence free.
+c     idim, jdim, and kdim are the dimensions of the cell centered
+c     volume, not of the electric or magnetic fields.
+c     dcc 03/29/04 
+c     Note; dtonly is only for debugging purposes.  It should be removed
+c     if you aren't debugging.
+
+      implicit none
+      integer idim, jdim, kdim, i1, i2, j1, j2, k1, k2, centermeth
+
+      real*8  bx(idim+1,jdim, kdim),
+     +        by(idim,jdim+1, kdim),
+     +        bz(idim,jdim, kdim+1),
+     +        ex(idim,jdim+1, kdim+1),
+     +        ey(idim+1,jdim, kdim+1),
+     +        ez(idim+1,jdim+1, kdim)
+
+      real*8 dx,dy,dz,dt
+
+
+
+      real*8 dtdx,dtdy,dtdz
+
+
+      integer is, ie, js, je, ks, ke
+      integer i,j,k, dtonly
+
+
+c	write(*,*) "======== in curl_of_e ========="
+      dtonly = 0
+
+c      write(*,*) "kludge: curl_of_e b=1"
+
+      if( centermeth .eq. 4 ) then
+         dtonly = 1
+      endif
+
+      if(dtonly .eq. 1) then
+      write(*,*)
+      write(*,*) "=================================================="
+      write(*,*) "===== warning: B contains dB/dt, not B ==========="
+      write(*,*) "=================================================="
+      endif
+
+      dtdx = dt/dx
+      dtdy = dt/dy
+
+      if( dz .ne. 0 ) then
+         dtdz = dt/dz
+      else
+         dtdz = 0
+      endif
+
+c     fortran starts at one, C starts at zero.
+      
+      is = i1+1
+      ie = i2+1
+      js = j1+1
+      je = j2+1
+      ks = k1+1
+      ke = k2+1
+
+      do k=ks, ke
+         do j=js, je
+            do i=is, ie+1
+               if(dtonly .eq. 1) then
+               bx(i,j,k)= 
+     +                   -(dtdy*(ez(i,j+1,k)- ez(i,j,k) )
+     +                   - dtdz*(ey(i,j,k+1)- ey(i,j,k)))
+               else
+               bx(i,j,k)=bx(i,j,k)
+     +                   -(dtdy*(ez(i,j+1,k)- ez(i,j,k) )
+     +                   - dtdz*(ey(i,j,k+1)- ey(i,j,k)))
+
+               endif
+
+c               bx(i,j,k) = 1.0
+
+            enddo
+         enddo
+      enddo
+
+c      write(*,*) "------------------- end of x loop"
+
+      do k=ks, ke
+         do j=js, je+1
+            do i=is, ie
+               if(dtonly .eq.1 ) then
+               by(i,j,k)=
+     +                   -(dtdz*(ex(i,j,k+1) - ex(i,j,k) )
+     +                   - dtdx*(ez(i+1,j,k) - ez(i,j,k)))
+               else
+               by(i,j,k)=by(i,j,k)
+     +                   -(dtdz*(ex(i,j,k+1) - ex(i,j,k) )
+     +                   - dtdx*(ez(i+1,j,k) - ez(i,j,k)))
+               endif
+c               by(i,j,k) = 1.0
+
+            enddo
+         enddo
+      enddo
+c      write(*,*) "------------------- end of y loop"
+
+      do k=ks, ke+1
+         do j=js, je
+            do i=is, ie
+               if(dtonly .eq. 1) then
+               bz(i,j,k)=
+     +                    -(dtdx*(ey(i+1,j,k) - ey(i,j,k) )
+     +                    -dtdy*(ex(i,j+1,k) - ex(i,j,k)))
+               else
+               bz(i,j,k)=bz(i,j,k)
+     +                    -(dtdx*(ey(i+1,j,k) - ey(i,j,k) )
+     +                    -dtdy*(ex(i,j+1,k) - ex(i,j,k)))
+               endif
+
+c               bz(i,j,k) = 1.0
+            enddo
+         enddo
+      enddo
+
+c      write(*,*) "------------------- end of z loop"
+
+      end
+
+

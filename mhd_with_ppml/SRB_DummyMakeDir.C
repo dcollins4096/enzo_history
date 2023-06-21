@@ -1,0 +1,31 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+ 
+#ifdef USE_MPI
+#include "mpi.h"
+#endif /* USE_MPI */
+ 
+#include "macros_and_parameters.h"
+#include "typedefs.h"
+#include "global_data.h"
+ 
+ 
+int MakeDir( char *subdirectory )
+{
+  char srbdir[120];
+ 
+  strcpy(srbdir, SRBprefix);
+ 
+#ifndef PPML
+  fprintf(stderr, "Dummy MakeDir %"ISYM": %s / %s\n", MyProcessorNumber, srbdir, subdirectory);
+#endif //PPML 
+  strcpy(SRBcwd, SRBprefix);
+  strcat(SRBcwd, "/");
+  strcat(SRBcwd, subdirectory);
+#ifndef PPML
+  fprintf(stderr, "SRB cwd %"ISYM": %s\n", MyProcessorNumber, SRBcwd);
+#endif //PPML
+  return (0);
+}
